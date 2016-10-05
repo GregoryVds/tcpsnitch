@@ -3,19 +3,6 @@
 #include <sys/socket.h>
 #include <dlfcn.h>
 
-/* Create a new socket of type TYPE in domain DOMAIN, using
-   protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
-   Returns a file descriptor for the new socket, or -1 for errors.  */
-typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
-
-int socket (int __domain, int __type, int __protocol)
-{
-	fprintf(stderr, "socket() called!\n");
-	orig_socket_type orig_socket;
-	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
-	return orig_socket(__domain, __type, __protocol);
-}
-
 /*
   ____   ___   ____ _  _______ _____      _    ____ ___ 
  / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
@@ -23,12 +10,45 @@ int socket (int __domain, int __type, int __protocol)
   ___) | |_| | |___| . \| |___  | |    / ___ \|  __/| | 
  |____/ \___/ \____|_|\_\_____| |_|   /_/   \_\_|  |___|
 
- Here we only consider the socket specific API: send(), sendto(), sendmsg() and
- recv(), recvfrom(), recvmsg().
+ sys/socket.h - Internet Protocol family
 
- Defined in "sys/socket.h"
+ functions: socket(), shutdown(), send(), sendto(), sendmsg(), recv(),
+ recvfrom(), recvmsg().
+
 */                                                               
 
+/* Create a new socket of type TYPE in domain DOMAIN, using
+   protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
+   Returns a file descriptor for the new socket, or -1 for errors.  */
+
+typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
+
+int socket (int __domain, int __type, int __protocol)
+{
+	orig_socket_type orig_socket;
+	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
+	int fd = orig_socket(__domain, __type, __protocol);
+	fprintf(stderr, "socket() created with fd %d!\n", fd);
+	return fd;
+}
+
+/* Shut down all or part of the connection open on socket FD.
+   HOW determines what to shut down:
+     SHUT_RD   = No more receptions;
+     SHUT_WR   = No more transmissions;
+     SHUT_RDWR = No more receptions or transmissions.
+   Returns 0 on success, -1 for errors.  */
+
+typedef int (*orig_shutdown_type)(int __fd, int __how);
+
+int shutdown (int __fd, int __how)
+{
+	orig_shutdown_type orig_shutdown;
+	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
+	fprintf(stderr, "socket shutdown() with fd %d & how %d !\n", __fd, 
+			__how);
+	return orig_shutdown(__fd, __how);
+}
 
 /* Send N bytes of BUF to socket FD.  Returns the number sent or -1. */
 
@@ -37,12 +57,11 @@ typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
 
 ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 {
-	fprintf(stderr, "send() called!\n");
+	fprintf(stderr, "send() called on fd %d!\n", __fd);
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
 	return orig_send(__fd, __buf, __n, __flags);
 }
-
 
 /* Read N bytes into BUF from socket FD.
    Returns the number read or -1 for errors. */
@@ -52,7 +71,7 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
 
 ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 {	
-	fprintf(stderr, "recv() called!\n");
+	fprintf(stderr, "recv() called on fd %d!\n", __fd);
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
 	return orig_recv(__fd, __buf, __n, __flags);
@@ -68,7 +87,7 @@ typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
 ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags, 
 		__CONST_SOCKADDR_ARG __addr, socklen_t __addr_len)
 {
-	fprintf(stderr, "sendto() called!\n");
+	fprintf(stderr, "sendto() called on fd %d!\n", __fd);
 	orig_sendto_type orig_sendto;
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
 	return orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -87,7 +106,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 			 int __flags, __SOCKADDR_ARG __addr,
 			 socklen_t *__restrict __addr_len) 
 {
-	fprintf(stderr, "recvfrom() called!\n");
+	fprintf(stderr, "recvfrom() called on fd %d!\n", __fd);
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type) dlsym(RTLD_NEXT, "recvfrom");
 	return orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -101,7 +120,7 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
 
 ssize_t sendmsg (int __fd, const struct msghdr *__message, int __flags) 
 {
-	fprintf(stderr, "sendmsg() called!\n");
+	fprintf(stderr, "sendmsg() called on fd %d!\n", __fd);
 	orig_sendmsg_type orig_sendmsg;
 	orig_sendmsg = (orig_sendmsg_type) dlsym(RTLD_NEXT, "sendmsg");
 	return orig_sendmsg(__fd, __message, __flags); 
@@ -115,25 +134,36 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
 
 ssize_t recvmsg (int __fd, struct msghdr *__message, int __flags)
 {
-	fprintf(stderr, "recvmsg() called!\n");
+	fprintf(stderr, "recvmsg() called on fd %d!\n", __fd);
 	orig_recvmsg_type orig_recvmsg;
 	orig_recvmsg = (orig_recvmsg_type) dlsym(RTLD_NEXT, "recvmsg");
 	return orig_recvmsg(__fd, __message, __flags); 
 }
 
-
 /*
-  ____ _____  _    _   _ ____    _    ____  ____       _    ____ ___ 
- / ___|_   _|/ \  | \ | |  _ \  / \  |  _ \|  _ \     / \  |  _ \_ _|
- \___ \ | | / _ \ |  \| | | | |/ _ \ | |_) | | | |   / _ \ | |_) | | 
-  ___) || |/ ___ \| |\  | |_| / ___ \|  _ <| |_| |  / ___ \|  __/| | 
- |____/ |_/_/   \_\_| \_|____/_/   \_\_| \_\____/  /_/   \_\_|  |___| 
-	
- We also need to consider the standard I/O api that could be used to write or
- read to a socket: write(), read(), writev(), readv(), sendfile().
+  _   _ _   _ ___ ____ _____ ____       _    ____ ___ 
+ | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
+ | | | |  \| || |\___ \ | | | | | |   / _ \ | |_) | | 
+ | |_| | |\  || | ___) || | | |_| |  / ___ \|  __/| | 
+  \___/|_| \_|___|____/ |_| |____/  /_/   \_\_|  |___|
 
- Defined in "unistd.h", "sys/uio.h", "sys/sendfile.h". 
+ unistd.h - standard symbolic constants and types
+
+ functions: close(), write(), read().
+
 */
+
+/* Close the file descriptor FD. */
+
+typedef int (*orig_close_type)(int __fd);
+  
+int close (int __fd)
+{
+	orig_close_type orig_close;
+	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
+	fprintf(stderr, "socket closed() with fd %d!\n", __fd);
+	return orig_close(__fd);
+}
 
 /* Write N bytes of BUF to FD.  Return the number written, or -1. */
 
@@ -154,11 +184,24 @@ typedef ssize_t (*orig_read_type)(int __fd, void *__buf, size_t __nbytes);
 
 ssize_t read (int __fd, void *__buf, size_t __nbytes)
 {	
-	fprintf(stderr, "read() called!\n");
+	fprintf(stderr, "read() called on fd %d!\n", __fd);
 	orig_read_type orig_read;
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
 	return orig_read(__fd, __buf, __nbytes); 
 }
+
+/*
+  _   _ ___ ___       _    ____ ___ 
+ | | | |_ _/ _ \     / \  |  _ \_ _|
+ | | | || | | | |   / _ \ | |_) | | 
+ | |_| || | |_| |  / ___ \|  __/| | 
+  \___/|___\___/  /_/   \_\_|  |___|
+                                           
+ sys/uio.h - definitions for vector I/O operations
+
+ functions: writev(), readv()
+
+*/
 
 /* Write data pointed by the buffers described by IOVEC, which
    is a vector of COUNT 'struct iovec's, to file descriptor FD.
@@ -171,7 +214,7 @@ typedef ssize_t (*orig_writev_type)(int __fd, const struct iovec *__iovec,
 	
 ssize_t writev (int __fd, const struct iovec *__iovec, int __count)
 {
-	fprintf(stderr, "writev() called!\n");
+	fprintf(stderr, "writev() called on fd %d!\n", __fd);
 	orig_writev_type orig_writev;
 	orig_writev = (orig_writev_type) dlsym(RTLD_NEXT, "writev");
 	return orig_writev(__fd, __iovec, __count); 
@@ -188,11 +231,23 @@ typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
 
 ssize_t readv (int __fd, const struct iovec *__iovec, int __count)
 {	
-	fprintf(stderr, "readv() called!\n");
+	fprintf(stderr, "readv() called on fd %d!\n", __fd);
 	orig_readv_type orig_readv;
 	orig_readv = (orig_readv_type) dlsym(RTLD_NEXT, "readv");
 	return orig_readv(__fd, __iovec, __count); 
 }   
+
+/*
+  ____  _____ _   _ ____  _____ ___ _     _____      _    ____ ___ 
+ / ___|| ____| \ | |  _ \|  ___|_ _| |   | ____|    / \  |  _ \_ _|
+ \___ \|  _| |  \| | | | | |_   | || |   |  _|     / _ \ | |_) | | 
+  ___) | |___| |\  | |_| |  _|  | || |___| |___   / ___ \|  __/| | 
+ |____/|_____|_| \_|____/|_|   |___|_____|_____| /_/   \_\_|  |___|
+                      
+ sendfile - transfer data between file descriptors
+
+ functions: sendfile()
+*/
 
 /* Send up to COUNT bytes from file associated with IN_FD starting at
    *OFFSET to descriptor OUT_FD.  Set *OFFSET to the IN_FD's file position
@@ -205,10 +260,9 @@ typedef ssize_t (*orig_sendfile_type)(int __out_fd, int __in_fd,
 
 ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 {
-	fprintf(stderr, "sendfile() called!\n");
+	fprintf(stderr, "sendfile() called on fd %d!\n", __out_fd);
 	orig_sendfile_type orig_sendfile;
 	orig_sendfile = (orig_sendfile_type) dlsym(RTLD_NEXT, "sendfile");
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count); 
 }   
-
 
