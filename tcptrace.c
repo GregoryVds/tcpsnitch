@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <dlfcn.h>
+#include <string.h>
 
 /*
   ____   ___   ____ _  _______ _____      _    ____ ___ 
@@ -12,7 +13,7 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), shutdown(), send(), sendto(), sendmsg(), recv(),
+ functions: socket(), conect(), shutdown(), send(), sendto(), sendmsg(), recv(),
  recvfrom(), recvmsg().
 
 */                                                               
@@ -28,8 +29,53 @@ int socket (int __domain, int __type, int __protocol)
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
 	int fd = orig_socket(__domain, __type, __protocol);
-	fprintf(stderr, "socket() created with fd %d!\n", fd);
+	fprintf(stderr, "socket() created with fd %d", fd);
+	
+	char domain[20];
+	switch(__domain) {
+		case AF_INET:
+			strncpy(domain, "AF_INET", sizeof(domain));
+			break;
+		case AF_INET6:
+			strncpy(domain, "AF_INET6", sizeof(domain));
+			break;
+		case AF_UNIX:
+			strncpy(domain, "AF_UNIX", sizeof(domain));
+			break;
+		default:
+			snprintf(domain, sizeof(domain), "%d", __domain);
+	}
+
+	char type[20];
+	switch(__type) {
+		case SOCK_STREAM:
+			strncpy(type, "SOCK_STREAM", sizeof(type));
+			break;
+		case SOCK_DGRAM:
+			strncpy(type, "SOCK_DGRAM", sizeof(type));
+			break;
+		default:
+			snprintf(type, sizeof(type), "%d", __type);
+	}
+
+	fprintf(stderr, " (of domain %s & type %s)\n", domain, type);
 	return fd;
+}
+
+/* Open a connection on socket FD to peer at ADDR (which LEN bytes long).
+   For connectionless socket types, just set the default address to send to
+   and the only address from which to accept transmissions.
+   Return 0 on success, -1 for errors. */
+
+typedef int (*orig_connect_type)(int __fd, __CONST_SOCKADDR_ARG __addr,
+		socklen_t __len);
+
+int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
+{
+	orig_connect_type orig_connect;
+	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
+	fprintf(stderr, "connect() called on fd %d!\n", __fd);
+	return orig_connect(__fd, __addr, __len);
 }
 
 /* Shut down all or part of the connection open on socket FD.
