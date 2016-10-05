@@ -1,7 +1,7 @@
 CC=g++
-CFLAGS=-Wall
+CFLAGS=-Wall -shared -fPIC -ldl 
 SOURCES=tcptrace.c
-EXECUTABLE=tcptrace
+EXECUTABLE=tcptrace.so
 
 all:
 	$(CC) $(CFLAGS) $(SOURCES) -o $(EXECUTABLE)
@@ -11,4 +11,4 @@ clean:
 	rm $(EXECUTABLE)
 
 run: all
-	./$(EXECUTABLE)
+	LD_PRELOAD=./$(EXECUTABLE) curl -s google.com > /dev/null
