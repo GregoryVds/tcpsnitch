@@ -4,6 +4,8 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#include "lib.h"
+
 /*
   ____   ___   ____ _  _______ _____      _    ____ ___ 
  / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
@@ -29,7 +31,6 @@ int socket (int __domain, int __type, int __protocol)
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
 	int fd = orig_socket(__domain, __type, __protocol);
-	fprintf(stderr, "socket() created with fd %d", fd);
 	
 	char domain[20];
 	switch(__domain) {
@@ -57,8 +58,9 @@ int socket (int __domain, int __type, int __protocol)
 		default:
 			snprintf(type, sizeof(type), "%d", __type);
 	}
-
-	fprintf(stderr, " (of domain %s & type %s)\n", domain, type);
+	
+	debug(INFO, "socket() created with fd %d (domain %s & type %s)", fd,
+			domain, type);
 	return fd;
 }
 
@@ -74,7 +76,7 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 {
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
-	fprintf(stderr, "connect() called on fd %d!\n", __fd);
+	debug(INFO, "connect() called on fd %d!", __fd);
 	return orig_connect(__fd, __addr, __len);
 }
 
@@ -91,8 +93,7 @@ int shutdown (int __fd, int __how)
 {
 	orig_shutdown_type orig_shutdown;
 	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
-	fprintf(stderr, "socket shutdown() with fd %d & how %d !\n", __fd, 
-			__how);
+	debug(INFO, "socket shutdown() with fd %d & how %d !", __fd, __how);
 	return orig_shutdown(__fd, __how);
 }
 
@@ -103,7 +104,7 @@ typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
 
 ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 {
-	fprintf(stderr, "send() called on fd %d!\n", __fd);
+	debug(INFO, "send() called on fd %d!", __fd);
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
 	return orig_send(__fd, __buf, __n, __flags);
@@ -117,7 +118,7 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
 
 ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 {	
-	fprintf(stderr, "recv() called on fd %d!\n", __fd);
+	debug(INFO, "recv() called on fd %d!", __fd);
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
 	return orig_recv(__fd, __buf, __n, __flags);
@@ -133,7 +134,7 @@ typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
 ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags, 
 		__CONST_SOCKADDR_ARG __addr, socklen_t __addr_len)
 {
-	fprintf(stderr, "sendto() called on fd %d!\n", __fd);
+	debug(INFO, "sendto() called on fd %d!", __fd);
 	orig_sendto_type orig_sendto;
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
 	return orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -152,7 +153,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 			 int __flags, __SOCKADDR_ARG __addr,
 			 socklen_t *__restrict __addr_len) 
 {
-	fprintf(stderr, "recvfrom() called on fd %d!\n", __fd);
+	debug(INFO, "recvfrom() called on fd %d!", __fd);
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type) dlsym(RTLD_NEXT, "recvfrom");
 	return orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -166,7 +167,7 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
 
 ssize_t sendmsg (int __fd, const struct msghdr *__message, int __flags) 
 {
-	fprintf(stderr, "sendmsg() called on fd %d!\n", __fd);
+	debug(INFO, "sendmsg() called on fd %d!", __fd);
 	orig_sendmsg_type orig_sendmsg;
 	orig_sendmsg = (orig_sendmsg_type) dlsym(RTLD_NEXT, "sendmsg");
 	return orig_sendmsg(__fd, __message, __flags); 
@@ -180,7 +181,7 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
 
 ssize_t recvmsg (int __fd, struct msghdr *__message, int __flags)
 {
-	fprintf(stderr, "recvmsg() called on fd %d!\n", __fd);
+	debug(INFO, "recvmsg() called on fd %d!", __fd);
 	orig_recvmsg_type orig_recvmsg;
 	orig_recvmsg = (orig_recvmsg_type) dlsym(RTLD_NEXT, "recvmsg");
 	return orig_recvmsg(__fd, __message, __flags); 
@@ -207,7 +208,7 @@ int close (int __fd)
 {
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
-	fprintf(stderr, "socket closed() with fd %d!\n", __fd);
+	debug(INFO, "socket closed() with fd %d!", __fd);
 	return orig_close(__fd);
 }
 
@@ -217,7 +218,7 @@ typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
 
 ssize_t write (int __fd, const void *__buf, size_t __n)
 {	
-	fprintf(stderr, "write() called!\n");
+	debug(INFO, "write() called!");
 	orig_write_type orig_write;
 	orig_write = (orig_write_type) dlsym(RTLD_NEXT, "write");
 	return orig_write(__fd, __buf, __n); 
@@ -230,7 +231,7 @@ typedef ssize_t (*orig_read_type)(int __fd, void *__buf, size_t __nbytes);
 
 ssize_t read (int __fd, void *__buf, size_t __nbytes)
 {	
-	fprintf(stderr, "read() called on fd %d!\n", __fd);
+	debug(INFO, "read() called on fd %d!", __fd);
 	orig_read_type orig_read;
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
 	return orig_read(__fd, __buf, __nbytes); 
@@ -260,7 +261,7 @@ typedef ssize_t (*orig_writev_type)(int __fd, const struct iovec *__iovec,
 	
 ssize_t writev (int __fd, const struct iovec *__iovec, int __count)
 {
-	fprintf(stderr, "writev() called on fd %d!\n", __fd);
+	debug(INFO, "writev() called on fd %d!", __fd);
 	orig_writev_type orig_writev;
 	orig_writev = (orig_writev_type) dlsym(RTLD_NEXT, "writev");
 	return orig_writev(__fd, __iovec, __count); 
@@ -277,7 +278,7 @@ typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
 
 ssize_t readv (int __fd, const struct iovec *__iovec, int __count)
 {	
-	fprintf(stderr, "readv() called on fd %d!\n", __fd);
+	debug(INFO, "readv() called on fd %d!", __fd);
 	orig_readv_type orig_readv;
 	orig_readv = (orig_readv_type) dlsym(RTLD_NEXT, "readv");
 	return orig_readv(__fd, __iovec, __count); 
@@ -306,7 +307,7 @@ typedef ssize_t (*orig_sendfile_type)(int __out_fd, int __in_fd,
 
 ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 {
-	fprintf(stderr, "sendfile() called on fd %d!\n", __out_fd);
+	debug(INFO, "sendfile() called on fd %d!", __out_fd);
 	orig_sendfile_type orig_sendfile;
 	orig_sendfile = (orig_sendfile_type) dlsym(RTLD_NEXT, "sendfile");
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count); 
