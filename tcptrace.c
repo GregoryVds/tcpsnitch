@@ -57,8 +57,14 @@ int socket (int __domain, int __type, int __protocol)
 	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
 	char type_buf[type_buf_size];
 	static const IntStrPair type_map[] = {
-		{ SOCK_STREAM, 	"SOCK_STREAM" },
-		{ SOCK_DGRAM, 	"SOCK_DGRAM"  }
+		{ SOCK_STREAM, 		"SOCK_STREAM" },
+		{ SOCK_DGRAM, 		"SOCK_DGRAM"  },
+		{ SOCK_RAW, 		"SOCK_RAW" },
+		{ SOCK_SEQPACKET, 	"SOCK_SEQPACKET" },
+		{ SOCK_DCCP,		"SOCK_DCCP" },
+		{ SOCK_PACKET,		"SOCK_PACKET" },
+		{ SOCK_CLOEXEC,		"SOCK_CLOEXEC" },
+		{ SOCK_NONBLOCK,	"SOCK_NONBLOCK" }
 	};
 
 	if (!string_from_cons(__type, type_buf, type_buf_size, type_map, 
