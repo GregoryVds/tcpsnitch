@@ -1,6 +1,7 @@
 #include <stdio.h> // fprintf
 #include <sys/types.h> // getpid
 #include <unistd.h> // getpid
+#include <stdbool.h> // boolean types
 
 enum debug_level
 {
@@ -16,4 +17,6 @@ typedef enum debug_level debug_level;
 	snprintf(formated_string, sizeof(formated_string), format, ##fs_args);\
 	fprintf(stderr, "%d: %s\n", pid, formated_string);\
 }
+
+bool is_socket(int fd);
 

@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-Wall -shared -fPIC -ldl 
-SOURCES=tcptrace.c
+SOURCES=tcptrace.c lib.c
 EXECUTABLE=tcptrace.so
 
 all:
