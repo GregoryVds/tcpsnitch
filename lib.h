@@ -31,7 +31,7 @@ bool is_socket(int fd);
 
 typedef struct {
 	int cons;
-	const char str[20]; 
+	const char str[30]; 
 } IntStrPair;
 
 int string_from_cons(int cons, char *buffer, int buffer_size, 

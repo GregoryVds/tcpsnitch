@@ -7,6 +7,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <linux/tcp.h>
 #include "lib.h"
 
 /*
@@ -151,6 +152,7 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 	int optname_buf_size=MEMBER_SIZE(IntStrPair, str);
 	char optname_buf[optname_buf_size];
 	static const IntStrPair optname_map[] = {
+		// Socket-level options
 		{ SO_DEBUG,  	"SO_DEBUG" },
 		{ SO_BROADCAST, "SO_BROADCAST" },
 		{ SO_REUSEADDR,	"SO_REUSEADDR" },
@@ -163,7 +165,32 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 		{ SO_RCVLOWAT,	"SO_RCVLOWAT" },
 		{ SO_RCVTIMEO, 	"SO_RCVTIMEO" },
 		{ SO_SNDLOWAT,	"SO_SNDLOWAT" },
-		{ SO_SNDTIMEO,	"SO_SNDTIMEO" }
+		{ SO_SNDTIMEO,	"SO_SNDTIMEO" },
+		// TCP-level options
+		{ TCP_NODELAY,  	"TCP_NODELAY" },
+		{ TCP_MAXSEG,		"TCP_MAXSEG" }, 
+		{ TCP_CORK, 		"TCP_CORK" },
+		{ TCP_KEEPIDLE, 	"TCP_KEEPIDLE" },
+		{ TCP_KEEPINTVL, 	"TCP_KEEPINTVL" },
+		{ TCP_KEEPCNT,		"TCP_KEEPCNT" },
+		{ TCP_SYNCNT, 		"TCP_SYNCNT" },
+		{ TCP_LINGER2, 		"TCP_LINGER2" },
+		{ TCP_DEFER_ACCEPT, 	"TCP_DEFER_ACCEPT" },
+		{ TCP_WINDOW_CLAMP, 	"TCP_WINDOW_CLAMP" },
+		{ TCP_INFO,		"TCP_INFO" },
+		{ TCP_QUICKACK,		"TCP_QUICKACK" },
+		{ TCP_CONGESTION,	"TCP_CONGESTION" },
+		{ TCP_MD5SIG,		"TCP_MD5SIG" },
+		{ TCP_THIN_LINEAR_TIMEOUTS, "TCP_THIN_LINEAR_TIMEOUTS" },
+		{ TCP_THIN_DUPACK,     	"TCP_THIN_DUPACK" },
+		{ TCP_USER_TIMEOUT,	"TCP_USER_TIMEOUT" },
+		{ TCP_REPAIR,		"TCP_REPAIR" },
+		{ TCP_REPAIR_QUEUE, 	"TCP_REPAIR_QUEUE" },
+		{ TCP_QUEUE_SEQ, 	"TCP_QUEUE_SEQ" },
+		{ TCP_REPAIR_OPTIONS,	"TCP_REPAIR_OPTIONS" },
+		{ TCP_FASTOPEN, 	"TCP_FASTOPEN" },
+		{ TCP_TIMESTAMP,	"TCP_TIMESTAMP" },
+		{ TCP_NOTSENT_LOWAT,	"TCP_NOTSENT_LOWAT" }
 	};
 
 	if (!string_from_cons(__optname, optname_buf, optname_buf_size,
