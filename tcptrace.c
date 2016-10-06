@@ -9,7 +9,7 @@
 #include <netdb.h>
 #include "lib.h"
 
-/* 
+/*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
 */
 
@@ -22,8 +22,8 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), connect(), shutdown(), listen(), send(), sendto(),
- sendmsg(), recv(), recvfrom(), recvmsg().
+ functions: socket(), connect(), shutdown(), listen(), getsockopt(),
+ setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg().
 
 */                                                               
 
@@ -39,35 +39,34 @@ int socket (int __domain, int __type, int __protocol)
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
 	int fd = orig_socket(__domain, __type, __protocol);
 	
-	char domain[20];
-	switch(__domain) {
-		case AF_INET:
-			strncpy(domain, "AF_INET", sizeof(domain));
-			break;
-		case AF_INET6:
-			strncpy(domain, "AF_INET6", sizeof(domain));
-			break;
-		case AF_UNIX:
-			strncpy(domain, "AF_UNIX", sizeof(domain));
-			break;
-		default:
-			snprintf(domain, sizeof(domain), "%d", __domain);
+	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char domain_buf[domain_buf_size];
+	static const IntStrPair domain_map[] = {
+		{ AF_INET, 	"AF_INET" },
+		{ AF_INET6, 	"AF_INET6" },
+		{ AF_UNIX, 	"AF_UNIX" }
+	};
+
+	if (!string_from_cons(__domain, domain_buf, domain_buf_size,
+				domain_map, 
+				sizeof(domain_map)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown socket domain: %d", __domain);
 	}
 
-	char type[20];
-	switch(__type) {
-		case SOCK_STREAM:
-			strncpy(type, "SOCK_STREAM", sizeof(type));
-			break;
-		case SOCK_DGRAM:
-			strncpy(type, "SOCK_DGRAM", sizeof(type));
-			break;
-		default:
-			snprintf(type, sizeof(type), "%d", __type);
+	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char type_buf[type_buf_size];
+	static const IntStrPair type_map[] = {
+		{ SOCK_STREAM, 	"SOCK_STREAM" },
+		{ SOCK_DGRAM, 	"SOCK_DGRAM"  }
+	};
+
+	if (!string_from_cons(__type, type_buf, type_buf_size, type_map, 
+			sizeof(type_map)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown socket type: %d", __type);	
 	}
-	
-	debug(INFO, "socket() created with fd %d (domain %s & type %s)", fd,
-			domain, type);
+
+	DEBUG(INFO, "socket() created with fd %d (domain %s & type %s)", fd,
+			domain_buf, type_buf);
 	return fd;
 }
 
@@ -83,7 +82,7 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 {
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
-	debug(INFO, "connect() on socket %d", __fd);
+	DEBUG(INFO, "connect() on socket %d", __fd);
 	return orig_connect(__fd, __addr, __len);
 }
 
@@ -100,7 +99,7 @@ int shutdown (int __fd, int __how)
 {
 	orig_shutdown_type orig_shutdown;
 	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
-	debug(INFO, "socket shutdown() with fd %d & how %d ", __fd, __how);
+	DEBUG(INFO, "socket shutdown() with fd %d & how %d ", __fd, __how);
 	return orig_shutdown(__fd, __how);
 }
 
@@ -114,7 +113,7 @@ int listen (int __fd, int __n)
 {
 	orig_listen_type orig_listen;
 	orig_listen = (orig_listen_type) dlsym(RTLD_NEXT, "listen");
-	debug(INFO, "listen() on socket %d", __fd);
+	DEBUG(INFO, "listen() on socket %d", __fd);
 	return orig_listen(__fd, __n);
 }
 
@@ -126,11 +125,11 @@ typedef int (*orig_getsockopt_type)(int __fd, int __level, int __optname,
 		       void *__optval, socklen_t *__optlen);
 
 int getsockopt (int __fd, int __level, int __optname, void *__optval,
-		       socklen_t *__optlen)
+		socklen_t *__optlen)
 {
 	orig_getsockopt_type orig_getsockopt;
 	orig_getsockopt = (orig_getsockopt_type) dlsym(RTLD_NEXT, "getsockopt");
-	debug(INFO, "getsockopt() on socket %d", __fd);
+	DEBUG(INFO, "getsockopt() on socket %d", __fd);
 	return orig_getsockopt(__fd, __level, __optname, __optval, __optlen);
 }
 
@@ -141,7 +140,7 @@ int getsockopt (int __fd, int __level, int __optname, void *__optval,
 typedef int (*orig_setsockopt_type)(int __fd, int __level, int __optname,
 		       const void *__optval, socklen_t __optlen);
 
-int setsockopt (int __fd, int __level, int __optname, const void *__optval, 
+int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 		socklen_t __optlen)
 {
 	orig_setsockopt_type orig_setsockopt;
@@ -149,9 +148,32 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 
 	struct protoent *protocole = getprotobynumber(__level);
 
-	debug(INFO, "setsockopt() on socket %d (level %s, option %d)", __fd, 
-			protocole->p_name, __optname);
-	
+	int optname_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char optname_buf[optname_buf_size];
+	static const IntStrPair optname_map[] = {
+		{ SO_DEBUG,  	"SO_DEBUG" },
+		{ SO_BROADCAST, "SO_BROADCAST" },
+		{ SO_REUSEADDR,	"SO_REUSEADDR" },
+		{ SO_KEEPALIVE, "SO_KEEPALIVE" },
+		{ SO_LINGER,	"SO_KEEPALIVE" },
+		{ SO_OOBINLINE, "SO_OOBINLINE" },
+		{ SO_SNDBUF,	"SO_SNDBUF" },
+		{ SO_RCVBUF,	"SO_RCVBUF" },
+		{ SO_DONTROUTE,	"SO_DONTROUTE" },
+		{ SO_RCVLOWAT,	"SO_RCVLOWAT" },
+		{ SO_RCVTIMEO, 	"SO_RCVTIMEO" },
+		{ SO_SNDLOWAT,	"SO_SNDLOWAT" },
+		{ SO_SNDTIMEO,	"SO_SNDTIMEO" }
+	};
+
+	if (!string_from_cons(__optname, optname_buf, optname_buf_size,
+			optname_map, sizeof(optname_map)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown setsockopt optname: %d", __optname);	
+	}
+
+	DEBUG(INFO, "setsockopt() on socket %d (level %s, optname %s)", __fd,
+			protocole->p_name, optname_buf);
+
 	return orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
 }
 
@@ -162,7 +184,7 @@ typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
 
 ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 {
-	debug(INFO, "send() on socket %d", __fd);
+	DEBUG(INFO, "send() on socket %d", __fd);
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
 	return orig_send(__fd, __buf, __n, __flags);
@@ -176,7 +198,7 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
 
 ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 {	
-	debug(INFO, "recv() on socket %d", __fd);
+	DEBUG(INFO, "recv() on socket %d", __fd);
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
 	return orig_recv(__fd, __buf, __n, __flags);
@@ -192,7 +214,7 @@ typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
 ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags, 
 		__CONST_SOCKADDR_ARG __addr, socklen_t __addr_len)
 {
-	debug(INFO, "sendto() on socket %d", __fd);
+	DEBUG(INFO, "sendto() on socket %d", __fd);
 	orig_sendto_type orig_sendto;
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
 	return orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -211,7 +233,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 			 int __flags, __SOCKADDR_ARG __addr,
 			 socklen_t *__restrict __addr_len) 
 {
-	debug(INFO, "recvfrom() on socket %d", __fd);
+	DEBUG(INFO, "recvfrom() on socket %d", __fd);
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type) dlsym(RTLD_NEXT, "recvfrom");
 	return orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -225,7 +247,7 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
 
 ssize_t sendmsg (int __fd, const struct msghdr *__message, int __flags) 
 {
-	debug(INFO, "sendmsg() on socket %d", __fd);
+	DEBUG(INFO, "sendmsg() on socket %d", __fd);
 	orig_sendmsg_type orig_sendmsg;
 	orig_sendmsg = (orig_sendmsg_type) dlsym(RTLD_NEXT, "sendmsg");
 	return orig_sendmsg(__fd, __message, __flags); 
@@ -239,7 +261,7 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
 
 ssize_t recvmsg (int __fd, struct msghdr *__message, int __flags)
 {
-	debug(INFO, "recvmsg() on socket %d", __fd);
+	DEBUG(INFO, "recvmsg() on socket %d", __fd);
 	orig_recvmsg_type orig_recvmsg;
 	orig_recvmsg = (orig_recvmsg_type) dlsym(RTLD_NEXT, "recvmsg");
 	return orig_recvmsg(__fd, __message, __flags); 
@@ -268,7 +290,7 @@ int close (int __fd)
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
 	
 	if (is_socket(__fd)) {
-		debug(INFO, "close() on socket %d", __fd);
+		DEBUG(INFO, "close() on socket %d", __fd);
 	}
 
 	return orig_close(__fd);
@@ -284,7 +306,7 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 	orig_write = (orig_write_type) dlsym(RTLD_NEXT, "write");
 
 	if (is_socket(__fd)) {
-		debug(INFO, "write() on socket %d", __fd);
+		DEBUG(INFO, "write() on socket %d", __fd);
 	}
 
 	return orig_write(__fd, __buf, __n); 
@@ -301,7 +323,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
 
 	if (is_socket(__fd)) {
-		debug(INFO, "read() on socket %d", __fd);
+		DEBUG(INFO, "read() on socket %d", __fd);
 	}
 
 	return orig_read(__fd, __buf, __nbytes); 
@@ -335,7 +357,7 @@ ssize_t writev (int __fd, const struct iovec *__iovec, int __count)
 	orig_writev = (orig_writev_type) dlsym(RTLD_NEXT, "writev");
 
 	if (is_socket(__fd)) {
-		debug(INFO, "writev() on socket %d", __fd);
+		DEBUG(INFO, "writev() on socket %d", __fd);
 	}
 
 	return orig_writev(__fd, __iovec, __count); 
@@ -356,7 +378,7 @@ ssize_t readv (int __fd, const struct iovec *__iovec, int __count)
 	orig_readv = (orig_readv_type) dlsym(RTLD_NEXT, "readv");
 
 	if (is_socket(__fd)) {
-		debug(INFO, "readv() on socket %d", __fd);
+		DEBUG(INFO, "readv() on socket %d", __fd);
 	}
 
 	return orig_readv(__fd, __iovec, __count); 
@@ -389,7 +411,7 @@ ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 	orig_sendfile = (orig_sendfile_type) dlsym(RTLD_NEXT, "sendfile");
 	
 	if (is_socket(__out_fd)) {
-		debug(INFO, "sendfile() on socket %d", __out_fd);
+		DEBUG(INFO, "sendfile() on socket %d", __out_fd);
 	}
 
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count); 
@@ -425,7 +447,7 @@ int poll (struct pollfd *__fds, nfds_t __nfds, int __timeout)
 	int i;
 	for (i=0; (unsigned long)i < ndfs; i++) {
 		if (is_socket(__fds[i].fd)) {
-			debug(INFO, "poll() on socket %d", __fds[i].fd);	
+			DEBUG(INFO, "poll() on socket %d", __fds[i].fd);	
 		}
 	}
 
