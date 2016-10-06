@@ -3,8 +3,15 @@
 #include <sys/socket.h>
 #include <dlfcn.h>
 #include <string.h>
-
+#include <poll.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <netdb.h>
 #include "lib.h"
+
+/* 
+ Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
+*/
 
 /*
   ____   ___   ____ _  _______ _____      _    ____ ___ 
@@ -15,8 +22,8 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), conect(), shutdown(), send(), sendto(), sendmsg(), recv(),
- recvfrom(), recvmsg().
+ functions: socket(), connect(), shutdown(), listen(), send(), sendto(),
+ sendmsg(), recv(), recvfrom(), recvmsg().
 
 */                                                               
 
@@ -95,6 +102,57 @@ int shutdown (int __fd, int __how)
 	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
 	debug(INFO, "socket shutdown() with fd %d & how %d ", __fd, __how);
 	return orig_shutdown(__fd, __how);
+}
+
+/* Prepare to accept connections on socket FD.
+   N connection requests will be queued before further requests are refused.
+   Returns 0 on success, -1 for errors.  */
+
+typedef int (*orig_listen_type)(int __fd, int __n);
+
+int listen (int __fd, int __n)
+{
+	orig_listen_type orig_listen;
+	orig_listen = (orig_listen_type) dlsym(RTLD_NEXT, "listen");
+	debug(INFO, "listen() on socket %d", __fd);
+	return orig_listen(__fd, __n);
+}
+
+/* Put the current value for socket FD's option OPTNAME at protocol level LEVEL
+   into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
+   actual length.  Returns 0 on success, -1 for errors.  */
+
+typedef int (*orig_getsockopt_type)(int __fd, int __level, int __optname,
+		       void *__optval, socklen_t *__optlen);
+
+int getsockopt (int __fd, int __level, int __optname, void *__optval,
+		       socklen_t *__optlen)
+{
+	orig_getsockopt_type orig_getsockopt;
+	orig_getsockopt = (orig_getsockopt_type) dlsym(RTLD_NEXT, "getsockopt");
+	debug(INFO, "getsockopt() on socket %d", __fd);
+	return orig_getsockopt(__fd, __level, __optname, __optval, __optlen);
+}
+
+
+/* Set socket FD's option OPTNAME at protocol level LEVEL
+   to *OPTVAL (which is OPTLEN bytes long).
+   Returns 0 on success, -1 for errors.  */
+typedef int (*orig_setsockopt_type)(int __fd, int __level, int __optname,
+		       const void *__optval, socklen_t __optlen);
+
+int setsockopt (int __fd, int __level, int __optname, const void *__optval, 
+		socklen_t __optlen)
+{
+	orig_setsockopt_type orig_setsockopt;
+	orig_setsockopt = (orig_setsockopt_type) dlsym(RTLD_NEXT, "setsockopt");
+
+	struct protoent *protocole = getprotobynumber(__level);
+
+	debug(INFO, "setsockopt() on socket %d (level %s, option %d)", __fd, 
+			protocole->p_name, __optname);
+	
+	return orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
 }
 
 /* Send N bytes of BUF to socket FD.  Returns the number sent or -1. */
@@ -337,3 +395,68 @@ ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count); 
 }   
 
+/*
+  ____   ___  _     _          _    ____ ___ 
+ |  _ \ / _ \| |   | |        / \  |  _ \_ _|
+ | |_) | | | | |   | |       / _ \ | |_) | | 
+ |  __/| |_| | |___| |___   / ___ \|  __/| | 
+ |_|    \___/|_____|_____| /_/   \_\_|  |___|
+
+ poll.h - definitions for the poll() function
+
+ functions: poll()
+*/
+ 
+/* Poll the file descriptors described by the NFDS structures starting at
+   FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for
+   an event to occur; if TIMEOUT is -1, block until an event occurs.
+   Returns the number of file descriptors with events, zero if timed out,
+   or -1 for errors.*/
+
+typedef int (*orig_poll_type)(struct pollfd *__fds, nfds_t __nfds, 
+		int __timeout);
+
+int poll (struct pollfd *__fds, nfds_t __nfds, int __timeout)
+{
+	orig_poll_type orig_poll;
+	orig_poll = (orig_poll_type) dlsym(RTLD_NEXT, "poll");
+
+	unsigned long ndfs = __nfds;
+	int i;
+	for (i=0; (unsigned long)i < ndfs; i++) {
+		if (is_socket(__fds[i].fd)) {
+			debug(INFO, "poll() on socket %d", __fds[i].fd);	
+		}
+	}
+
+	return orig_poll(__fds, __nfds, __timeout);
+}
+
+/*
+  ____  _____ _     _____ ____ _____      _    ____ ___ 
+ / ___|| ____| |   | ____/ ___|_   _|    / \  |  _ \_ _|
+ \___ \|  _| | |   |  _|| |     | |     / _ \ | |_) | | 
+  ___) | |___| |___| |__| |___  | |    / ___ \|  __/| | 
+ |____/|_____|_____|_____\____| |_|   /_/   \_\_|  |___|
+                                                               
+ sys/select.h - select types
+
+ functions: select()
+*/
+
+/* Check the first NFDS descriptors each in READFDS (if not NULL) for read
+   readiness, in WRITEFDS (if not NULL) for write readiness, and in EXCEPTFDS
+   (if not NULL) for exceptional conditions.  If TIMEOUT is not NULL, time out
+   after waiting the interval specified therein.  Returns the number of ready
+   descriptors, or -1 for errors.*/
+
+/*
+typedef int (*orig_select_type)(int __nfds, fd_set *__readfds, 
+		fd_set *__writefds, fd_set *__exceptfds,
+		struct timeval *__timeout);
+
+int select (int __nfds, fd_set *__restrict __readfds,
+		   fd_set *__restrict __writefds,
+		   fd_set *__restrict __exceptfds,
+		   struct timeval *__restrict __timeout);
+*/

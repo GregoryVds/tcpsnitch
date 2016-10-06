@@ -11,10 +11,10 @@ enum debug_level
 };
 typedef enum debug_level debug_level;
 
-#define debug(debug_level, format, fs_args...) { \
+#define debug(debug_level, format, args...) {\
 	pid_t pid = getpid();\
 	char formated_string[1024];\
-	snprintf(formated_string, sizeof(formated_string), format, ##fs_args);\
+	snprintf(formated_string, sizeof(formated_string), format, ##args);\
 	fprintf(stderr, "%d: %s\n", pid, formated_string);\
 }
 
