@@ -37,5 +37,7 @@ typedef struct {
 int string_from_cons(int cons, char *buffer, int buffer_size, 
 		const IntStrPair *map, int map_size);
 
+void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
+
 #endif
 

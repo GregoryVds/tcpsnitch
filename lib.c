@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include "lib.h"
 
 const char *string_from_debug_level(DebugLevel lvl) {
@@ -45,5 +46,30 @@ int string_from_cons(int cons, char *buffer, int buffer_size,
 	// No match found, just write the constant digit.
 	snprintf(buffer, buffer_size, "%d", cons);
 	return 0;
+}
+
+/* Extract IP address to human readable string */
+
+#define PORT_WIDTH 6
+
+void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
+{
+	const struct sockaddr_storage *addr_sto;
+	addr_sto = (const struct sockaddr_storage *) addr;
+	char port[PORT_WIDTH];
+
+	if (addr_sto->ss_family==AF_INET) {
+		const struct sockaddr_in *ipv4;
+		ipv4 = (const struct sockaddr_in *) addr;
+		inet_ntop(AF_INET, &(ipv4->sin_addr), buf, buf_size);
+		snprintf(port, PORT_WIDTH, ":%d", ntohs(ipv4->sin_port));
+	}
+	else if (addr_sto->ss_family==AF_INET6) {
+		const struct sockaddr_in6 *ipv6;
+		ipv6 = (const struct sockaddr_in6 *) addr;
+		inet_ntop(AF_INET6, &(ipv6->sin6_addr), buf, buf_size);
+		snprintf(port, PORT_WIDTH, ":%d", ntohs(ipv6->sin6_port));
+	}
+	strncat(buf, port, PORT_WIDTH);
 }
 

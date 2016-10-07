@@ -78,8 +78,10 @@ int socket (int __domain, int __type, int __protocol)
 	}
 
 	/* Inspect flag parameters */
-	bool sock_cloexec_flag = __type & SOCK_CLOEXEC;
-	bool sock_nonblock_flag = __type & SOCK_NONBLOCK;
+	char flags[30] = "";
+	if (__type & SOCK_CLOEXEC)  strcat(flags, " SOCK_CLOEXEC");
+	if (__type & SOCK_NONBLOCK) strcat(flags, " SOCK_NONBLOCK");
+	if (!strlen(flags)) 	    strcat(flags, " /");
 
 	int fd = orig_socket(__domain, __type, __protocol);
 	
@@ -87,9 +89,8 @@ int socket (int __domain, int __type, int __protocol)
 		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
 	}
 
-	DEBUG(INFO, "socket() created with fd %d (domain %s, type %s,"
-		    " SOCK_CLOEXEC %d, SOCK_NONBLOCK %d)", fd, domain_buf,
-		    type_buf, sock_cloexec_flag, sock_nonblock_flag);
+	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
+		"flags:%s)", fd, domain_buf, type_buf, __protocol, flags);
 	return fd;
 }
 
@@ -107,34 +108,17 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
 	
 	/* Extract IP address to human readable string */
-	const struct sockaddr_storage *addr_sto;
-	addr_sto = (const struct sockaddr_storage *) __addr;
-	char addr_buf[INET6_ADDRSTRLEN];
-	int port;
+	char addr_buf[50];
+	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
 
-	if (addr_sto->ss_family==AF_INET) {
-		const struct sockaddr_in *ipv4;
-		ipv4 = (const struct sockaddr_in *) __addr;
-		inet_ntop(AF_INET, &(ipv4->sin_addr), addr_buf, 
-				INET_ADDRSTRLEN);
-		port = (int) ipv4->sin_port;
-	}
-	else if (addr_sto->ss_family==AF_INET6) {
-		const struct sockaddr_in6 *ipv6;
-		ipv6 = (const struct sockaddr_in6 *) __addr;
-		inet_ntop(AF_INET6, &(ipv6->sin6_addr), addr_buf,
-				INET6_ADDRSTRLEN);
-		port = (int) ipv6->sin6_port;
-	}
-
-	DEBUG(INFO, "connect() on socket %d to %s:%d", __fd, addr_buf, port);
+	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr_buf);
 	
 	int ret = orig_connect(__fd, __addr, __len);
 
 	/* Log errno if connect() returns non-zero */
 	if (ret==-1) {
-		DEBUG(INFO, "connect() failed on socket %d to %s:%d. %s.", __fd,
-				addr_buf, port, strerror(errno));
+		DEBUG(INFO, "connect() failed on socket %d to %s. %s.", __fd,
+				addr_buf, strerror(errno));
 	}
 
 	return ret;
@@ -284,9 +268,11 @@ typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
 
 ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 {
-	DEBUG(INFO, "send() on socket %d", __fd);
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
+	
+	DEBUG(INFO, "send() on socket %d (%zu bytes)", __fd, __n);
+	
 	return orig_send(__fd, __buf, __n, __flags);
 }
 
@@ -298,9 +284,11 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
 
 ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 {	
-	DEBUG(INFO, "recv() on socket %d", __fd);
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
+	
+	DEBUG(INFO, "recv() on socket %d (%zu bytes)", __fd, __n);
+
 	return orig_recv(__fd, __buf, __n, __flags);
 }
 
@@ -314,9 +302,16 @@ typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
 ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags, 
 		__CONST_SOCKADDR_ARG __addr, socklen_t __addr_len)
 {
-	DEBUG(INFO, "sendto() on socket %d", __fd);
 	orig_sendto_type orig_sendto;
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
+	
+	/* Extract IP address to human readable string */
+	char addr_buf[50];
+	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
+
+	DEBUG(INFO, "sendto() on socket %d (%zu bytes to %s)", __fd, __n,
+			addr_buf);
+
 	return orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
 }
 
@@ -333,10 +328,20 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 			 int __flags, __SOCKADDR_ARG __addr,
 			 socklen_t *__restrict __addr_len) 
 {
-	DEBUG(INFO, "recvfrom() on socket %d", __fd);
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type) dlsym(RTLD_NEXT, "recvfrom");
-	return orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
+
+	ssize_t ret = orig_recvfrom(__fd, __buf, __n, __flags, __addr, 
+			__addr_len);
+	
+	/* Extract IP address to human readable string */
+	char addr_buf[50];
+	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
+
+	DEBUG(INFO, "recvfrom() on socket %d (%zu bytes from %s)", __fd, __n,
+			addr_buf);
+
+	return ret;
 }
 
 /* Send a message described MESSAGE on socket FD.
@@ -388,7 +393,7 @@ int close (int __fd)
 {
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
-	
+
 	if (is_socket(__fd)) {
 		DEBUG(INFO, "close() on socket %d", __fd);
 	}
