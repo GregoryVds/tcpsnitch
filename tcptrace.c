@@ -71,8 +71,8 @@ int socket (int __domain, int __type, int __protocol)
 		{ SOCK_PACKET,		"SOCK_PACKET" }
 	};
 
-	if (!string_from_cons(__type & SOCK_TYPE_MASK, type_buf, type_buf_size, type_map, 
-			sizeof(type_map)/sizeof(IntStrPair))) {
+	if (!string_from_cons(__type & SOCK_TYPE_MASK, type_buf, type_buf_size,
+			type_map, sizeof(type_map)/sizeof(IntStrPair))) {
 		DEBUG(WARN, "Unknown socket type: %d", __type);	
 	}
 
@@ -544,3 +544,85 @@ int select (int __nfds, fd_set *__restrict __readfds,
 		   fd_set *__restrict __exceptfds,
 		   struct timeval *__restrict __timeout);
 */
+
+/*
+  _   _ _____ _____ ____  ____       _    ____ ___ 
+ | \ | | ____|_   _|  _ \| __ )     / \  |  _ \_ _|
+ |  \| |  _|   | | | | | |  _ \    / _ \ | |_) | | 
+ | |\  | |___  | | | |_| | |_) |  / ___ \|  __/| | 
+ |_| \_|_____| |_| |____/|____/  /_/   \_\_|  |___|
+                                                         
+ netdb.h - definitions for network database operations
+
+ functions: gethostbyaddr(), gethostbyname(), getaddrinfo(), getnameinfo().
+
+ Note: the first 2 are obsolete and should not be used! It would be interesting
+ to inspect how many programs still use them.
+*/
+
+/* Obsolete DNS functions */
+
+/* Return entry from host data base which address match ADDR with
+   length LEN and type TYPE.   */
+
+typedef struct hostent *(*orig_gethostbyaddr_type)(const void *__addr,
+		__socklen_t __len, int __type);
+
+struct hostent *gethostbyaddr (const void *__addr, __socklen_t __len, 
+		int __type)
+{
+	orig_gethostbyaddr_type orig_gethostbyaddr;
+	orig_gethostbyaddr = (orig_gethostbyaddr_type) dlsym(RTLD_NEXT,
+			"gethostbyaddr");
+	DEBUG(INFO, "gethostbyaddr()");
+	return orig_gethostbyaddr(__addr, __len, __type);
+}
+
+/* Return entry from host data base for host with NAME. */
+
+typedef struct hostent *(*orig_gethostbyname_type)(const char *__name);
+
+struct hostent *gethostbyname (const char *__name)
+{
+	orig_gethostbyname_type orig_gethostbyname;
+	orig_gethostbyname = (orig_gethostbyname_type) dlsym(RTLD_NEXT,
+			"gethostbyname");
+	DEBUG(INFO, "gethostbyname() on %s", __name);
+	return orig_gethostbyname(__name);
+}
+
+/* Translate name of a service location and/or a service name to set of
+   socket addresses.*/
+
+typedef int (*orig_getaddrinfo_type)(const char *__name, const char *__service,
+		const struct addrinfo *__req, struct addrinfo **__pai);
+
+int getaddrinfo (const char *__name, const char *__service, 
+		const struct addrinfo *__req, struct addrinfo **__pai)
+{
+	orig_getaddrinfo_type orig_getaddrinfo;
+	orig_getaddrinfo = (orig_getaddrinfo_type) dlsym(RTLD_NEXT, 
+			"getaddrinfo");
+	DEBUG(INFO, "getaddrinfo() on %s (service %s)", __name, __service);
+	return orig_getaddrinfo(__name, __service, __req, __pai);
+}
+
+
+/* Translate a socket address to a location and service name.*/
+
+typedef int (*orig_getnameinfo_type)(const struct sockaddr *__sa,
+		socklen_t __salen, char *__host, socklen_t __hostlen,
+		char *__serv, socklen_t __servlen, int __flags);
+
+int getnameinfo (const struct sockaddr *__sa, socklen_t __salen, char *__host,
+			socklen_t __hostlen, char *__serv, socklen_t __servlen,
+			int __flags)
+{
+	orig_getnameinfo_type orig_getnameinfo;
+	orig_getnameinfo = (orig_getnameinfo_type) dlsym(RTLD_NEXT, 
+			"getnameinfo");
+	DEBUG(INFO, "getnameinfo()");
+	return orig_getnameinfo(__sa, __salen, __host, __hostlen, __serv,
+			__servlen, __flags);
+}
+
