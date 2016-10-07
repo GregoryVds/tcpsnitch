@@ -1,4 +1,4 @@
-## tcptrace
+## netspy
 
 First prototype aiming at basic gathering of TCP information on client applications using system calls interception with LD_PRELOAD.
 

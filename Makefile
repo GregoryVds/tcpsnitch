@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-Wall -shared -fPIC -ldl 
-SOURCES=tcptrace.c lib.c
-EXECUTABLE=tcptrace.so
+SOURCES=netspy.c lib.c
+EXECUTABLE=netspy.so
 
 all:
 	$(CC) $(CFLAGS) $(SOURCES) -o $(EXECUTABLE)
