@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <linux/tcp.h>
+#include <stdbool.h>
 #include "lib.h"
 
 /*
@@ -32,6 +33,8 @@
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
 
+#define SOCK_TYPE_MASK 0b1111
+
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
 
 int socket (int __domain, int __type, int __protocol)
@@ -40,6 +43,7 @@ int socket (int __domain, int __type, int __protocol)
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
 	int fd = orig_socket(__domain, __type, __protocol);
 	
+	/* Inspect socket domain */
 	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
 	char domain_buf[domain_buf_size];
 	static const IntStrPair domain_map[] = {
@@ -54,26 +58,31 @@ int socket (int __domain, int __type, int __protocol)
 		DEBUG(WARN, "Unknown socket domain: %d", __domain);
 	}
 
+	/* Inspect socket type */
 	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
 	char type_buf[type_buf_size];
 	static const IntStrPair type_map[] = {
 		{ SOCK_STREAM, 		"SOCK_STREAM" },
 		{ SOCK_DGRAM, 		"SOCK_DGRAM"  },
 		{ SOCK_RAW, 		"SOCK_RAW" },
+		{ SOCK_RDM,		"SOCK_RDM" },
 		{ SOCK_SEQPACKET, 	"SOCK_SEQPACKET" },
 		{ SOCK_DCCP,		"SOCK_DCCP" },
-		{ SOCK_PACKET,		"SOCK_PACKET" },
-		{ SOCK_CLOEXEC,		"SOCK_CLOEXEC" },
-		{ SOCK_NONBLOCK,	"SOCK_NONBLOCK" }
+		{ SOCK_PACKET,		"SOCK_PACKET" }
 	};
 
-	if (!string_from_cons(__type, type_buf, type_buf_size, type_map, 
+	if (!string_from_cons(__type & SOCK_TYPE_MASK, type_buf, type_buf_size, type_map, 
 			sizeof(type_map)/sizeof(IntStrPair))) {
 		DEBUG(WARN, "Unknown socket type: %d", __type);	
 	}
 
-	DEBUG(INFO, "socket() created with fd %d (domain %s & type %s)", fd,
-			domain_buf, type_buf);
+	/* Inspect flag parameters */
+	bool sock_cloexec_flag = __type & SOCK_CLOEXEC;
+	bool sock_nonblock_flag = __type & SOCK_NONBLOCK;
+
+	DEBUG(INFO, "socket() created with fd %d (domain %s, type %s,"
+		    " SOCK_CLOEXEC %d, SOCK_NONBLOCK %d)", fd, domain_buf,
+		    type_buf, sock_cloexec_flag, sock_nonblock_flag);
 	return fd;
 }
 
