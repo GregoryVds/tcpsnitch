@@ -10,6 +10,7 @@
 #include <linux/tcp.h>
 #include <stdbool.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include "lib.h"
 
 /*
@@ -42,7 +43,6 @@ int socket (int __domain, int __type, int __protocol)
 {
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
-	int fd = orig_socket(__domain, __type, __protocol);
 	
 	/* Inspect socket domain */
 	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
@@ -81,6 +81,12 @@ int socket (int __domain, int __type, int __protocol)
 	bool sock_cloexec_flag = __type & SOCK_CLOEXEC;
 	bool sock_nonblock_flag = __type & SOCK_NONBLOCK;
 
+	int fd = orig_socket(__domain, __type, __protocol);
+	
+	if (fd==-1) {
+		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
+	}
+
 	DEBUG(INFO, "socket() created with fd %d (domain %s, type %s,"
 		    " SOCK_CLOEXEC %d, SOCK_NONBLOCK %d)", fd, domain_buf,
 		    type_buf, sock_cloexec_flag, sock_nonblock_flag);
@@ -100,25 +106,38 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
 	
+	/* Extract IP address to human readable string */
 	const struct sockaddr_storage *addr_sto;
 	addr_sto = (const struct sockaddr_storage *) __addr;
-
 	char addr_buf[INET6_ADDRSTRLEN];
+	int port;
+
 	if (addr_sto->ss_family==AF_INET) {
 		const struct sockaddr_in *ipv4;
 		ipv4 = (const struct sockaddr_in *) __addr;
 		inet_ntop(AF_INET, &(ipv4->sin_addr), addr_buf, 
 				INET_ADDRSTRLEN);
+		port = (int) ipv4->sin_port;
 	}
 	else if (addr_sto->ss_family==AF_INET6) {
 		const struct sockaddr_in6 *ipv6;
 		ipv6 = (const struct sockaddr_in6 *) __addr;
 		inet_ntop(AF_INET6, &(ipv6->sin6_addr), addr_buf,
 				INET6_ADDRSTRLEN);
+		port = (int) ipv6->sin6_port;
 	}
 
-	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr_buf);
-	return orig_connect(__fd, __addr, __len);
+	DEBUG(INFO, "connect() on socket %d to %s:%d", __fd, addr_buf, port);
+	
+	int ret = orig_connect(__fd, __addr, __len);
+
+	/* Log errno if connect() returns non-zero */
+	if (ret==-1) {
+		DEBUG(INFO, "connect() failed on socket %d to %s:%d. %s.", __fd,
+				addr_buf, port, strerror(errno));
+	}
+
+	return ret;
 }
 
 /* Shut down all or part of the connection open on socket FD.
@@ -527,9 +546,22 @@ int poll (struct pollfd *__fds, nfds_t __nfds, int __timeout)
 	unsigned long ndfs = __nfds;
 	int i;
 	for (i=0; (unsigned long)i < ndfs; i++) {
-		if (is_socket(__fds[i].fd)) {
-			DEBUG(INFO, "poll() on socket %d", __fds[i].fd);	
-		}
+		struct pollfd *pollfd = __fds+i;
+
+		if (is_socket(pollfd->fd)) {
+			short events = pollfd->events;
+			char flags[100] = "events:";
+			if (events & POLLIN) 	strcat(flags, " POLLIN");	
+			if (events & POLLPRI) 	strcat(flags, " POLLPRI");
+			if (events & POLLOUT) 	strcat(flags, " POLLOUT");
+			if (events & POLLRDHUP) strcat(flags, " POLLRDHUP");
+			if (events & POLLERR) 	strcat(flags, " POLLERR");
+			if (events & POLLHUP) 	strcat(flags, " POLLHUP"); 
+			if (events & POLLNVAL) 	strcat(flags, " POLLNVAL");
+		
+			DEBUG(INFO, "poll() on socket %d (%s)", pollfd->fd, 
+					flags);
+		} 
 	}
 
 	return orig_poll(__fds, __nfds, __timeout);
