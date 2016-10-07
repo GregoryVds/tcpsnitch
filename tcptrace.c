@@ -9,7 +9,6 @@
 #include <netdb.h>
 #include <linux/tcp.h>
 #include <stdbool.h>
-#include <arpa/inet.h>
 #include "lib.h"
 
 /*
@@ -100,24 +99,22 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
 	
-	const struct sockaddr_storage *addr_sto;
-	addr_sto = (const struct sockaddr_storage *) __addr;
+	const struct sockaddr_storage *addr;
+	addr = (const struct sockaddr_storage *) __addr;
 
-	char addr_buf[INET6_ADDRSTRLEN];
-	if (addr_sto->ss_family==AF_INET) {
+	char addr[INET6_ADDRSTRLEN];
+	if (addr->ss_family==AF_INET) {
 		const struct sockaddr_in *ipv4;
 		ipv4 = (const struct sockaddr_in *) __addr;
-		inet_ntop(AF_INET, &(ipv4->sin_addr), addr_buf, 
-				INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &(ipv4->sin_addr), addr, INET_ADDRSTRLEN);
 	}
-	else if (addr_sto->ss_family==AF_INET6) {
+	else if (addr->ss_family==AF_INET6) {
 		const struct sockaddr_in6 *ipv6;
 		ipv6 = (const struct sockaddr_in6 *) __addr;
-		inet_ntop(AF_INET6, &(ipv6->sin6_addr), addr_buf,
-				INET6_ADDRSTRLEN);
+		inet_ntop(AF_INET6, &(ipv6->sin_addr), addr, INET6_ADDRSTRLEN);
 	}
 
-	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr_buf);
+	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr);
 	return orig_connect(__fd, __addr, __len);
 }
 
