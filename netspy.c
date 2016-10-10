@@ -394,7 +394,7 @@ int close (int __fd)
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
 
-	if (is_socket(__fd)) {
+	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "close() on socket %d", __fd);
 	}
 
@@ -410,7 +410,7 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 	orig_write_type orig_write;
 	orig_write = (orig_write_type) dlsym(RTLD_NEXT, "write");
 
-	if (is_socket(__fd)) {
+	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "write() on socket %d", __fd);
 	}
 
@@ -427,7 +427,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 	orig_read_type orig_read;
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
 
-	if (is_socket(__fd)) {
+	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "read() on socket %d", __fd);
 	}
 
@@ -461,7 +461,7 @@ ssize_t writev (int __fd, const struct iovec *__iovec, int __count)
 	orig_writev_type orig_writev;
 	orig_writev = (orig_writev_type) dlsym(RTLD_NEXT, "writev");
 
-	if (is_socket(__fd)) {
+	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "writev() on socket %d", __fd);
 	}
 
@@ -482,7 +482,7 @@ ssize_t readv (int __fd, const struct iovec *__iovec, int __count)
 	orig_readv_type orig_readv;
 	orig_readv = (orig_readv_type) dlsym(RTLD_NEXT, "readv");
 
-	if (is_socket(__fd)) {
+	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "readv() on socket %d", __fd);
 	}
 
@@ -515,7 +515,7 @@ ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 	orig_sendfile_type orig_sendfile;
 	orig_sendfile = (orig_sendfile_type) dlsym(RTLD_NEXT, "sendfile");
 	
-	if (is_socket(__out_fd)) {
+	if (is_inet_socket(__out_fd)) {
 		DEBUG(INFO, "sendfile() on socket %d", __out_fd);
 	}
 
@@ -553,7 +553,7 @@ int poll (struct pollfd *__fds, nfds_t __nfds, int __timeout)
 	for (i=0; (unsigned long)i < ndfs; i++) {
 		struct pollfd *pollfd = __fds+i;
 
-		if (is_socket(pollfd->fd)) {
+		if (is_inet_socket(pollfd->fd)) {
 			short events = pollfd->events;
 			char flags[100] = "events:";
 			if (events & POLLIN) 	strcat(flags, " POLLIN");	
@@ -659,7 +659,7 @@ int getaddrinfo (const char *__name, const char *__service,
 	orig_getaddrinfo_type orig_getaddrinfo;
 	orig_getaddrinfo = (orig_getaddrinfo_type) dlsym(RTLD_NEXT, 
 			"getaddrinfo");
-	DEBUG(INFO, "getaddrinfo() on %s (service %s)", __name, __service);
+	DEBUG(INFO, "getaddrinfo() for %s:%s", __name, __service);
 	return orig_getaddrinfo(__name, __service, __req, __pai);
 }
 

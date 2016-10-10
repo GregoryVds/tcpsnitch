@@ -24,6 +24,7 @@ const char *string_from_debug_level(DebugLevel lvl);
 		string_from_debug_level(debug_level), formated_string);\
 }
 
+void die_with_system_msg(const char *msg);
 
 bool is_socket(int fd);
 

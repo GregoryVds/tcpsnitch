@@ -4,6 +4,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <stdlib.h>
 #include "lib.h"
 
 const char *string_from_debug_level(DebugLevel lvl) {
@@ -16,6 +20,26 @@ bool is_socket(int fd)
 	struct stat statbuf;
 	fstat(fd, &statbuf);
 	return S_ISSOCK(statbuf.st_mode);
+}
+
+bool is_inet_socket(int fd)
+{
+	if (!is_socket(fd)) return false;
+
+	struct sockaddr name;
+	socklen_t length = sizeof(name);
+	if (!getsockname(fd, &name, &length)) {
+		die_with_system_msg("getsockname() failed.");
+	}
+
+	sa_family_t addr_fam = ((struct sockaddr_storage *) &name)->ss_family;
+	return (addr_fam == AF_INET || addr_fam == AF_INET6);
+}
+
+void die_with_system_msg(const char *msg)
+{
+	DEBUG(ERROR, "%s. %s", msg, strerror(errno));
+	exit(EXIT_FAILURE);
 }
 
 /* Allows to get a string from a constant.
