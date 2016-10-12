@@ -1,6 +1,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
-#include "data_collection.h"
+#include <string.h>
+#include "tcp_spy.h"
 #include "lib.h"
 
 /* We keep a mapping from file descriptors to TCP connections structs for all
@@ -52,7 +53,11 @@ TcpConnection *new_connection()
 	con->id = connections_count;
 	con->head = NULL;
 	con->tail = NULL;
-	con->eventsCount = 0;
+	con->events_count = 0;
+	con->connected = false;
+	con->bytes_sent = 0;
+	con->bytes_received = 0;
+	con->closed = false;
 	connections_count++;
 	return con;	
 }
@@ -63,13 +68,13 @@ void push(TcpConnection *con, TcpEvent *ev)
 	node->data = ev;
 	node->next = NULL;
 
-	if (!con->tail) 
+	if (!con->head) 
 		con->head = node;
 	else 
 		con->tail->next = node;
 
 	con->tail = node;
-	con->eventsCount++;
+	con->events_count++;
 }
 
 void dump_connection(TcpConnection *con) 
@@ -84,11 +89,13 @@ void free_tcp_event(TcpEvent *ev)
 
 void free_tcp_events_list(TcpEventNode *head) 
 {
-	TcpEventNode *cur = head;
-	while (cur != NULL) {
+	TcpEventNode *tmp;
+
+	while (head != NULL) {
 		free_tcp_event(head->data);
-		cur = head->next;
-		free(head);
+		tmp = head;
+		head = head->next;
+		free(tmp);
 	}
 }
 
@@ -103,6 +110,16 @@ void log_event(int fd, const char *msg)
 	DEBUG(TCP, "%d: %s.", fd_con_map[fd]->id, msg);
 }
 
+/*
+  _____                 _         _                 _        
+ | ____|_   _____ _ __ | |_ ___  | |__   ___   ___ | | _____ 
+ |  _| \ \ / / _ \ '_ \| __/ __| | '_ \ / _ \ / _ \| |/ / __|
+ | |___ \ V /  __/ | | | |_\__ \ | | | | (_) | (_) |   <\__ \
+ |_____| \_/ \___|_| |_|\__|___/ |_| |_|\___/ \___/|_|\_\___/
+
+ Functions for registering new events on a given connection.
+*/
+
 void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock)
 {
 	/* Check if connection was not properly closed. */
@@ -112,40 +129,75 @@ void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock)
 		tcp_sock_closed(fd);
 	}
 	
-	/* Track new connection */
+	/* Create new connection */
 	TcpConnection *con = new_connection();
+	fd_con_map[fd] = con;
+
+	/* Create event */
 	TcpEvent *ev = new_event(SOCK_OPENED);
 	push(con, ev);
-	fd_con_map[fd] = con;
 
 	log_event(fd, "socket opened");
 }
 
 void tcp_sock_closed(int fd)
 {
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];
+	con->closed = false;
+
+	/* Create event */
+	TcpEvent *ev = new_event(SOCK_CLOSED);
+	push(con, ev);
+
+	/* Save data */
+	dump_connection(con);
+	
 	log_event(fd, "socket closed");
-	dump_connection(fd_con_map[fd]);
-	free_connection(fd_con_map[fd]);
-	fd_con_map[fd] = NULL;
+	
+	/* Cleanup */
+	free_connection(con);
+	fd_con_map[fd] = NULL; // Must be done after log_event.
 }
 
 void tcp_data_sent(int fd, size_t bytes) 
 {
-	log_event(fd, "data sent");
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];
+	con->bytes_sent+=bytes;
 
-	DEBUG(INFO, "%zu bytes sent on TCP (id %d).", bytes,
-			fd_con_map[fd]->id); 
+	/* Create event */
+	TcpEvDataSent *ev = (TcpEvDataSent *) new_event(DATA_SENT);
+	ev->bytes = bytes;
+	push(con, (TcpEvent *) ev);
+	
+	log_event(fd, "data sent");
 }
 
 void tcp_data_received(int fd, size_t bytes)
 {
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];
+	con->bytes_received+=bytes;
+	
+	/* Create event */
+	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(DATA_RECEIVED);
+	ev->bytes = bytes;
+	push(con, (TcpEvent *) ev);
+
 	log_event(fd, "data received");
-	DEBUG(INFO, "%zu bytes received on TCP (id %d).", bytes,
-			fd_con_map[fd]->id);
 }
 
-void tcp_connected(int fd)
+void tcp_connected(int fd, const struct sockaddr *addr, socklen_t __len)
 {
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];	
+	memcpy(&(con->peer_addr), addr, __len);
+			
+	/* Create event */
+	TcpEvent *ev = new_event(CONNECTED);
+	push(con, ev);
+
 	log_event(fd, "connected");
 }
 

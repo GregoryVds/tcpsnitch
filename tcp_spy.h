@@ -2,6 +2,7 @@
 #define DATA_COLLECTION_H
 
 #include <stdio.h>
+#include <sys/socket.h>
 #include <time.h>
 
 typedef enum TcpEventType
@@ -40,8 +41,6 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
-	bool success;
-	int errno;
 } TcpEvConnected;
 
 typedef struct TcpEventNode TcpEventNode;
@@ -55,7 +54,13 @@ typedef struct {
 	int id;
 	TcpEventNode *head;
 	TcpEventNode *tail;
-	int eventsCount;
+	int events_count;
+	bool connected;
+	size_t bytes_out;
+	unsigned long bytes_sent;
+	unsigned long bytes_received;
+	struct sockaddr_storage peer_addr;
+	bool closed;
 } TcpConnection;
 
 TcpConnection *new_connection();
@@ -68,6 +73,6 @@ void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock);
 void tcp_sock_closed(int fd);
 void tcp_data_sent(int fd, size_t bytes);
 void tcp_data_received(int fd, size_t bytes);
-void tcp_connected(int fd);
+void tcp_connected(int fd, __CONST_SOCKADDR_ARG addr, socklen_t len);
 
 #endif

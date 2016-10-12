@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "lib.h"
-#include "data_collection.h"
+#include "tcp_spy.h"
 #include "strings.h"
 
 /*
@@ -66,7 +66,6 @@ int socket (int __domain, int __type, int __protocol)
 	char flags[30] = "";
 	bool sock_cloexec = __type & SOCK_CLOEXEC;
 	bool sock_nonblock = __type & SOCK_NONBLOCK;
-
 	if (sock_cloexec)  	strcat(flags, " SOCK_CLOEXEC");
 	if (sock_nonblock) 	strcat(flags, " SOCK_NONBLOCK");
 	if (!strlen(flags))	strcat(flags, " /");
@@ -75,14 +74,16 @@ int socket (int __domain, int __type, int __protocol)
 	
 	if (fd==-1) {
 		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
+		return fd;
 	}
+	
+	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
+		"flags:%s)", fd, domain_buf, type_buf, __protocol, flags);
 	
 	if (is_tcp_socket(fd)) {	
 		tcp_sock_opened(fd, sock_cloexec, sock_nonblock);
 	}
 
-	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
-		"flags:%s)", fd, domain_buf, type_buf, __protocol, flags);
 	return fd;
 }
 
@@ -94,7 +95,7 @@ int socket (int __domain, int __type, int __protocol)
 typedef int (*orig_connect_type)(int __fd, __CONST_SOCKADDR_ARG __addr,
 		socklen_t __len);
 
-int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
+int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 {
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
@@ -107,7 +108,7 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 	int ret = orig_connect(__fd, __addr, __len);
 	
 	if (is_tcp_socket(__fd)) {
-		tcp_connected(__fd);
+		tcp_connected(__fd, __addr, __len);
 	}
 
 	/* Log errno if connect() returns non-zero */
@@ -204,7 +205,7 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
 	
 	DEBUG(INFO, "recv() on socket %d (%zu bytes)", __fd, __n);
-
+	tcp_data_received(__fd, __n);
 	return orig_recv(__fd, __buf, __n, __flags);
 }
 
