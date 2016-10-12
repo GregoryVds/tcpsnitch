@@ -77,9 +77,8 @@ int socket (int __domain, int __type, int __protocol)
 		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
 	}
 	
-	/* If this is a TCP socket */
 	if (is_tcp_socket(fd)) {	
-		tcp_connection_opened(fd, sock_cloexec, sock_nonblock);
+		tcp_sock_opened(fd, sock_cloexec, sock_nonblock);
 	}
 
 	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
@@ -103,10 +102,13 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 	/* Extract IP address to human readable string */
 	char addr_buf[50];
 	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
-
 	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr_buf);
 	
 	int ret = orig_connect(__fd, __addr, __len);
+	
+	if (is_tcp_socket(__fd)) {
+		tcp_connected(__fd);
+	}
 
 	/* Log errno if connect() returns non-zero */
 	if (ret==-1) {
@@ -312,7 +314,7 @@ int close (int __fd)
 		DEBUG(INFO, "close() on socket %d", __fd);
 		
 		if (is_tcp_socket(__fd)) {
-			tcp_connection_closed(__fd);
+			tcp_sock_closed(__fd);
 		}
 	}
 

@@ -6,10 +6,11 @@
 
 typedef enum TcpEventType
 {
-	OPEN,
-	CLOSE,
-	SEND,
-	RECV
+	SOCK_OPENED,
+	SOCK_CLOSED,
+	DATA_SENT,
+	DATA_RECEIVED,
+	CONNECTED
 } TcpEventType;
 
 typedef struct {
@@ -21,21 +22,27 @@ typedef struct {
 	TcpEvent super;
 	bool sock_cloexec;
 	bool sock_nonblock;
-} TcpEventOpen;
+} TcpEvSockOpened;
 
 typedef struct {
 	TcpEvent super;
-} TcpEventClose;
-
-typedef struct {
-	TcpEvent super;
-	size_t bytes;
-} TcpEventSend;
+} TcpEvSockClosed;
 
 typedef struct {
 	TcpEvent super;
 	size_t bytes;
-} TcpEventRecv;
+} TcpEvDataSent;
+
+typedef struct {
+	TcpEvent super;
+	size_t bytes;
+} TcpEvDataReceived;
+
+typedef struct {
+	TcpEvent super;
+	bool success;
+	int errno;
+} TcpEvConnected;
 
 typedef struct TcpEventNode TcpEventNode;
 
@@ -57,9 +64,10 @@ TcpEvent *new_event(TcpEventType type);
 void fill_timestamp(TcpEvent *ev);
 void push(TcpConnection *con, TcpEvent *ev);
 
-void tcp_connection_opened(int fd, bool sock_cloexec, bool sock_nonblock);
-void tcp_connection_closed(int fd);
+void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock);
+void tcp_sock_closed(int fd);
 void tcp_data_sent(int fd, size_t bytes);
 void tcp_data_received(int fd, size_t bytes);
+void tcp_connected(int fd);
 
 #endif

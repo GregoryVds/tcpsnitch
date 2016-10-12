@@ -11,7 +11,7 @@
 #include "lib.h"
 
 const char *string_from_debug_level(DebugLevel lvl) {
-	static const char *strings[] = { "INFO", "WARN", "ERROR" };
+	static const char *strings[] = { "INFO", "TCP", "WARN", "ERROR" };
 	return strings[lvl];
 }
 

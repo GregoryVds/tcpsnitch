@@ -30,10 +30,16 @@ TcpEvent *new_event(TcpEventType type)
 	TcpEvent *ev;
 
 	switch(type) {
-		case OPEN:  ev = (TcpEvent *)  malloc(sizeof(TcpEventOpen)); 
-		case CLOSE: ev = (TcpEvent *)  malloc(sizeof(TcpEventClose));
-		case SEND:  ev = (TcpEvent *)  malloc(sizeof(TcpEventSend));
-		case RECV:  ev = (TcpEvent *)  malloc(sizeof(TcpEventRecv));
+		case SOCK_OPENED:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvSockOpened));
+		case SOCK_CLOSED:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvSockClosed));
+		case DATA_SENT:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvDataSent));
+		case DATA_RECEIVED:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvDataReceived));
+		case CONNECTED: 
+			ev = (TcpEvent *) malloc(sizeof(TcpEvConnected));	
 	}
 	
 	fill_timestamp(ev);
@@ -66,40 +72,80 @@ void push(TcpConnection *con, TcpEvent *ev)
 	con->eventsCount++;
 }
 
-void tcp_connection_opened(int fd, bool sock_cloexec, bool sock_nonblock)
+void dump_connection(TcpConnection *con) 
 {
-	DEBUG(INFO, "TCP (id %d) opened.", connections_count);
+	DEBUG(INFO, "Dumping connection info for %d.", con->id);
+}
 
+void free_tcp_event(TcpEvent *ev) 
+{
+	free(ev);
+}
+
+void free_tcp_events_list(TcpEventNode *head) 
+{
+	TcpEventNode *cur = head;
+	while (cur != NULL) {
+		free_tcp_event(head->data);
+		cur = head->next;
+		free(head);
+	}
+}
+
+void free_connection(TcpConnection *con)
+{
+	free_tcp_events_list(con->head);
+	free(con);
+}
+
+void log_event(int fd, const char *msg) 
+{
+	DEBUG(TCP, "%d: %s.", fd_con_map[fd]->id, msg);
+}
+
+void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock)
+{
 	/* Check if connection was not properly closed. */
 	if (fd_con_map[fd]) {
-		DEBUG(INFO, "Closing of TCP (id %d) was not properly detected."
-				"Now assuming it closed.", connections_count);
-		tcp_connection_closed(fd);
+		log_event(fd, "socket was closed earlier but close() was not "
+			"detected. Assuming it closed from now on.");
+		tcp_sock_closed(fd);
 	}
 	
 	/* Track new connection */
 	TcpConnection *con = new_connection();
-	TcpEvent *ev = new_event(OPEN);
+	TcpEvent *ev = new_event(SOCK_OPENED);
 	push(con, ev);
 	fd_con_map[fd] = con;
+
+	log_event(fd, "socket opened");
 }
 
-void tcp_connection_closed(int fd)
+void tcp_sock_closed(int fd)
 {
-	DEBUG(INFO, "TCP (id %d) closed.", fd_con_map[fd]->id);
-	/* TODO: Free structures & dump to file. */
+	log_event(fd, "socket closed");
+	dump_connection(fd_con_map[fd]);
+	free_connection(fd_con_map[fd]);
 	fd_con_map[fd] = NULL;
 }
 
 void tcp_data_sent(int fd, size_t bytes) 
 {
+	log_event(fd, "data sent");
+
 	DEBUG(INFO, "%zu bytes sent on TCP (id %d).", bytes,
 			fd_con_map[fd]->id); 
 }
 
 void tcp_data_received(int fd, size_t bytes)
 {
+	log_event(fd, "data received");
 	DEBUG(INFO, "%zu bytes received on TCP (id %d).", bytes,
 			fd_con_map[fd]->id);
+}
+
+void tcp_connected(int fd)
+{
+	log_event(fd, "connected");
 }
 
