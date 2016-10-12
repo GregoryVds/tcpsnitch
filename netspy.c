@@ -7,7 +7,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <linux/tcp.h>
+#include <netinet/tcp.h>
 #include <stdbool.h>
 #include <arpa/inet.h>
 #include <errno.h>

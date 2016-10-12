@@ -3,7 +3,7 @@
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <linux/tcp.h>
+#include <netinet/tcp.h>
 
 typedef struct {
 	int cons;
@@ -91,8 +91,7 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 	{ TCP_QUEUE_SEQ, 	"TCP_QUEUE_SEQ" },
 	{ TCP_REPAIR_OPTIONS,	"TCP_REPAIR_OPTIONS" },
 	{ TCP_FASTOPEN, 	"TCP_FASTOPEN" },
-	{ TCP_TIMESTAMP,	"TCP_TIMESTAMP" },
-	{ TCP_NOTSENT_LOWAT,	"TCP_NOTSENT_LOWAT" }
+	{ TCP_TIMESTAMP,	"TCP_TIMESTAMP" }
 };
 
 

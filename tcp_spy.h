@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <time.h>
 
 typedef enum TcpEventType
@@ -42,6 +43,11 @@ typedef struct {
 typedef struct {
 	TcpEvent super;
 } TcpEvConnected;
+
+typedef struct {
+	TcpEvent super;
+	struct tcp_info info;
+} TcpEvTcpInfoDump;
 
 typedef struct TcpEventNode TcpEventNode;
 
