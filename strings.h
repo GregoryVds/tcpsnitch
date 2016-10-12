@@ -94,6 +94,4 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 	{ TCP_TIMESTAMP,	"TCP_TIMESTAMP" }
 };
 
-
-
 #endif

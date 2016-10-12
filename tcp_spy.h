@@ -12,7 +12,8 @@ typedef enum TcpEventType
 	SOCK_CLOSED,
 	DATA_SENT,
 	DATA_RECEIVED,
-	CONNECTED
+	CONNECTED,
+	INFO_DUMP
 } TcpEventType;
 
 typedef struct {
@@ -47,7 +48,7 @@ typedef struct {
 typedef struct {
 	TcpEvent super;
 	struct tcp_info info;
-} TcpEvTcpInfoDump;
+} TcpEvInfoDump;
 
 typedef struct TcpEventNode TcpEventNode;
 
@@ -80,5 +81,6 @@ void tcp_sock_closed(int fd);
 void tcp_data_sent(int fd, size_t bytes);
 void tcp_data_received(int fd, size_t bytes);
 void tcp_connected(int fd, __CONST_SOCKADDR_ARG addr, socklen_t len);
+void tcp_info_dump(int fd);
 
 #endif

@@ -366,13 +366,13 @@ int close (int __fd)
 	}
 
 
-	if (is_tcp_socket(__fd)) {
-		tcp_info_dump(__fd);	
-		tcp_sock_closed(__fd);
-	}
-
+	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);	
 	/* Perform syscall */
 	int ret = orig_close(__fd);
+	if (is_tcp_socket(__fd)) {
+		tcp_sock_closed(__fd);
+		tcp_info_dump(__fd);
+	}
 
 	return ret;
 }
@@ -420,7 +420,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 	/* Perform syscall */
 	int ret = orig_read(__fd, __buf, __nbytes);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, __nbytes);
+		tcp_data_received(__fd, __bytes);
 		tcp_info_dump(__fd);
 	}
 

@@ -41,6 +41,8 @@ TcpEvent *new_event(TcpEventType type)
 			ev = (TcpEvent *) malloc(sizeof(TcpEvDataReceived));
 		case CONNECTED: 
 			ev = (TcpEvent *) malloc(sizeof(TcpEvConnected));	
+		case INFO_DUMP:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvInfoDump));
 	}
 	
 	fill_timestamp(ev);
@@ -199,5 +201,22 @@ void tcp_connected(int fd, const struct sockaddr *addr, socklen_t __len)
 	push(con, ev);
 
 	log_event(fd, "connected");
+}
+
+void tcp_info_dump(int fd)
+{
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];	
+			
+	/* Create event */
+	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(INFO_DUMP);
+	socklen_t tcp_info_len = sizeof(struct tcp_info);
+	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info), 
+				&tcp_info_len) == -1) {
+		die_with_system_msg("getsockopt() failed");		
+	}
+	push(con, (TcpEvent *) ev);
+
+	log_event(fd, "info dump");
 }
 
