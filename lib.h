@@ -6,13 +6,14 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-enum DebugLevel
+/* Debugging functions */
+
+typedef enum DebugLevel
 {
 	INFO,
 	WARN,
 	ERROR
-};
-typedef enum DebugLevel DebugLevel;
+} DebugLevel;
 
 const char *string_from_debug_level(DebugLevel lvl);
 
@@ -26,9 +27,15 @@ const char *string_from_debug_level(DebugLevel lvl);
 
 void die_with_system_msg(const char *msg);
 
+/* Helper functions */
+
 bool is_socket(int fd);
+bool is_inet_socket(int fd);
+bool is_tcp_socket(int fd);
 
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
+
+/* Helper for building log messages */
 
 typedef struct {
 	int cons;

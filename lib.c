@@ -26,19 +26,29 @@ bool is_inet_socket(int fd)
 {
 	if (!is_socket(fd)) return false;
 
-	struct sockaddr name;
-	socklen_t length = sizeof(name);
-	if (!getsockname(fd, &name, &length)) {
-		die_with_system_msg("getsockname() failed.");
-	}
+	int optval;
+	socklen_t optlen = sizeof(optval);
+	if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen) == -1)
+		die_with_system_msg("getsockopt() failed");
 
-	sa_family_t addr_fam = ((struct sockaddr_storage *) &name)->ss_family;
-	return (addr_fam == AF_INET || addr_fam == AF_INET6);
+	return (optval == AF_INET || optval == AF_INET6);
+}
+
+bool is_tcp_socket(int fd)
+{
+	if (!is_inet_socket(fd)) return false;
+	
+	int optval;
+	socklen_t optlen = sizeof(optval);
+	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == -1)
+		die_with_system_msg("getsockopt() failed");
+
+	return optval == SOCK_STREAM;
 }
 
 void die_with_system_msg(const char *msg)
 {
-	DEBUG(ERROR, "%s. %s", msg, strerror(errno));
+	DEBUG(ERROR, "%s. %s.", msg, strerror(errno));
 	exit(EXIT_FAILURE);
 }
 

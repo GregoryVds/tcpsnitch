@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "lib.h"
+#include "data_collection.h"
 
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
@@ -79,14 +80,22 @@ int socket (int __domain, int __type, int __protocol)
 
 	/* Inspect flag parameters */
 	char flags[30] = "";
-	if (__type & SOCK_CLOEXEC)  strcat(flags, " SOCK_CLOEXEC");
-	if (__type & SOCK_NONBLOCK) strcat(flags, " SOCK_NONBLOCK");
-	if (!strlen(flags)) 	    strcat(flags, " /");
+	bool sock_cloexec = __type & SOCK_CLOEXEC;
+	bool sock_nonblock = __type & SOCK_NONBLOCK;
+
+	if (sock_cloexec)  	strcat(flags, " SOCK_CLOEXEC");
+	if (sock_nonblock) 	strcat(flags, " SOCK_NONBLOCK");
+	if (!strlen(flags))	strcat(flags, " /");
 
 	int fd = orig_socket(__domain, __type, __protocol);
 	
 	if (fd==-1) {
 		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
+	}
+	
+	/* If this is a TCP socket */
+	if (is_tcp_socket(fd)) {	
+		tcp_connection_opened(fd, sock_cloexec, sock_nonblock);
 	}
 
 	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
@@ -154,23 +163,6 @@ int listen (int __fd, int __n)
 	DEBUG(INFO, "listen() on socket %d", __fd);
 	return orig_listen(__fd, __n);
 }
-
-/* Put the current value for socket FD's option OPTNAME at protocol level LEVEL
-   into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
-   actual length.  Returns 0 on success, -1 for errors.  */
-
-typedef int (*orig_getsockopt_type)(int __fd, int __level, int __optname,
-		       void *__optval, socklen_t *__optlen);
-
-int getsockopt (int __fd, int __level, int __optname, void *__optval,
-		socklen_t *__optlen)
-{
-	orig_getsockopt_type orig_getsockopt;
-	orig_getsockopt = (orig_getsockopt_type) dlsym(RTLD_NEXT, "getsockopt");
-	DEBUG(INFO, "getsockopt() on socket %d", __fd);
-	return orig_getsockopt(__fd, __level, __optname, __optval, __optlen);
-}
-
 
 /* Set socket FD's option OPTNAME at protocol level LEVEL
    to *OPTVAL (which is OPTLEN bytes long).
@@ -272,7 +264,7 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
 	
 	DEBUG(INFO, "send() on socket %d (%zu bytes)", __fd, __n);
-	
+	tcp_data_sent(__fd, __n);	
 	return orig_send(__fd, __buf, __n, __flags);
 }
 
@@ -396,6 +388,10 @@ int close (int __fd)
 
 	if (is_inet_socket(__fd)) {
 		DEBUG(INFO, "close() on socket %d", __fd);
+		
+		if (is_tcp_socket(__fd)) {
+			tcp_connection_closed(__fd);
+		}
 	}
 
 	return orig_close(__fd);
