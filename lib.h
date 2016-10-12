@@ -35,16 +35,6 @@ bool is_tcp_socket(int fd);
 
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
-/* Helper for building log messages */
-
-typedef struct {
-	int cons;
-	const char str[30]; 
-} IntStrPair;
-
-int string_from_cons(int cons, char *buffer, int buffer_size, 
-		const IntStrPair *map, int map_size);
-
 void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
 
 #endif
