@@ -1,5 +1,5 @@
-#ifndef DATA_COLLECTION_H
-#define DATA_COLLECTION_H
+#ifndef TCP_SPY_H
+#define TCP_SPY_H
 
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -16,6 +16,8 @@ typedef enum TcpEventType
 	CONNECTED,
 	INFO_DUMP
 } TcpEventType;
+
+const char *string_from_tcp_event_type(TcpEventType type);
 
 typedef struct {
 	TcpEventType type;

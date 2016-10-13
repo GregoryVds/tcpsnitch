@@ -22,6 +22,15 @@
 TcpConnection *fd_con_map[MAX_FD];
 int connections_count = 0;
 
+const char *string_from_tcp_event_type(TcpEventType type)
+{
+	
+	static const char *strings[] = { "SOCK_OPENED", "SOCK_CLOSED", 
+		"DATA_SENT", "DATA_RECEIVED", "CONNECTED", "INFO_DUMP" };
+	return strings[type];
+}
+
+
 void fill_timestamp(TcpEvent *event)
 {
 	gettimeofday(&(event->timestamp), NULL);

@@ -64,39 +64,53 @@ json_t *build_event(TcpEvent *ev)
 	}
 }
 
+void build_shared_fields(json_t *json_ev, TcpEvent *ev)
+{
+	const char *type_str = string_from_tcp_event_type(ev->type);
+	json_object_set_new(json_ev, "type", json_string(type_str));
+	json_object_set_new(json_ev, "timestampSec", json_integer(ev->timestamp.tv_sec));
+	json_object_set_new(json_ev, "timestampUsec", json_integer(ev->timestamp.tv_usec));
+}
+
 json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
 json_t *build_sock_closed_ev(TcpEvSockClosed *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
 json_t *build_data_sent_ev(TcpEvDataSent *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
 json_t *build_data_received_ev(TcpEvDataReceived *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
 json_t *build_connected_ev(TcpEvConnected *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
 json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 {
 	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
 
