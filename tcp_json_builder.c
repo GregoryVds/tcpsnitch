@@ -24,11 +24,16 @@ json_t *build_tcp_connection(TcpConnection *con)
 	json_t *json_con = json_object();
 	json_t *events = json_array();
 
-	json_object_set_new(json_con, "id", json_integer(con->id));
-	json_object_set_new(json_con, "eventsCount", json_integer(con->events_count));
-	json_object_set_new(json_con, "bytesSent", json_integer(con->bytes_sent));
-	json_object_set_new(json_con, "bytesReceived", json_integer(con->bytes_received));
-	json_object_set_new(json_con, "events", events);
+	json_object_set_new(json_con, "id",
+			json_integer(con->id));
+	json_object_set_new(json_con, "eventsCount", 
+			json_integer(con->events_count));
+	json_object_set_new(json_con, "bytesSent", 
+			json_integer(con->bytes_sent));
+	json_object_set_new(json_con, "bytesReceived", 
+			json_integer(con->bytes_received));
+	json_object_set_new(json_con, "events",
+			events);
 
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
@@ -51,7 +56,7 @@ json_t *build_event(TcpEvent *ev)
 		case DATA_SENT:     
 			return build_data_sent_ev((TcpEvDataSent *) ev);
 		case DATA_RECEIVED: 
-			return build_data_received_ev((TcpEvDataReceived *) ev);
+			return build_data_received_ev((TcpEvDataReceived *)ev);
 		case CONNECTED:	    
 			return build_connected_ev((TcpEvConnected *) ev);
 		case INFO_DUMP:     
@@ -67,15 +72,25 @@ json_t *build_event(TcpEvent *ev)
 void build_shared_fields(json_t *json_ev, TcpEvent *ev)
 {
 	const char *type_str = string_from_tcp_event_type(ev->type);
-	json_object_set_new(json_ev, "type", json_string(type_str));
-	json_object_set_new(json_ev, "timestampSec", json_integer(ev->timestamp.tv_sec));
-	json_object_set_new(json_ev, "timestampUsec", json_integer(ev->timestamp.tv_usec));
+	json_object_set_new(json_ev, "eventType", json_string(type_str));
+
+	/* Time stamp */	
+	json_t *timestamp_json = json_object();
+	json_object_set_new(timestamp_json, "sec",
+			json_integer(ev->timestamp.tv_sec));
+	json_object_set_new(timestamp_json, "usec",
+			json_integer(ev->timestamp.tv_usec));
+	json_object_set_new(json_ev, "timestamp", timestamp_json);
 }
 
 json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
+	json_object_set_new(json_ev, "sockCloexec", 
+			json_boolean(ev->sock_cloexec));
+	json_object_set_new(json_ev, "sockNonblock", 
+			json_boolean(ev->sock_nonblock));
 	return json_ev;
 }
 
@@ -90,6 +105,7 @@ json_t *build_data_sent_ev(TcpEvDataSent *ev)
 {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
+	json_object_set_new(json_ev, "bytes", json_integer(ev->bytes));
 	return json_ev;
 }
 
@@ -97,6 +113,7 @@ json_t *build_data_received_ev(TcpEvDataReceived *ev)
 {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
+	json_object_set_new(json_ev, "bytes", json_integer(ev->bytes));
 	return json_ev;
 }
 
@@ -113,5 +130,4 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 	return json_ev;
 }
-
 
