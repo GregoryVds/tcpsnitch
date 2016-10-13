@@ -1,8 +1,9 @@
-#include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include "tcp_spy.h"
 #include "lib.h"
+#include "tcp_json_builder.h"
 
 /* We keep a mapping from file descriptors to TCP connections structs for all
  * opened connections. This allows to easily identify to which connection a 
@@ -44,7 +45,8 @@ TcpEvent *new_event(TcpEventType type)
 		case INFO_DUMP:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvInfoDump));
 	}
-	
+
+	ev->type = type;
 	fill_timestamp(ev);
 	return ev;
 }
@@ -77,11 +79,6 @@ void push(TcpConnection *con, TcpEvent *ev)
 
 	con->tail = node;
 	con->events_count++;
-}
-
-void dump_connection(TcpConnection *con) 
-{
-	DEBUG(INFO, "Dumping connection info for %d.", con->id);
 }
 
 void free_tcp_event(TcpEvent *ev) 
@@ -153,10 +150,10 @@ void tcp_sock_closed(int fd)
 	push(con, ev);
 
 	/* Save data */
-	dump_connection(con);
-	
+	char *json = build_tcp_connection_json(con);
 	log_event(fd, "socket closed");
-	
+	DEBUG(INFO, "%s", json);
+
 	/* Cleanup */
 	free_connection(con);
 	fd_con_map[fd] = NULL; // Must be done after log_event.

@@ -1,6 +1,6 @@
 CC=g++
-CFLAGS=-Wall -shared -fPIC -ldl -ljansson
-SOURCES=syscall_hooks.c lib.c tcp_spy.c strings.c logger.c
+CFLAGS=-Wall -shared -fPIC -ldl 
+SOURCES=syscall_hooks.c lib.c tcp_spy.c strings.c tcp_json_builder.c /usr/local/lib/libjansson.a
 EXECUTABLE=netspy.so
 
 all:

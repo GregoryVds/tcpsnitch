@@ -1,10 +1,11 @@
 #ifndef DATA_COLLECTION_H
 #define DATA_COLLECTION_H
 
-#include <stdio.h>
+#include <stdbool.h>
 #include <sys/socket.h>
-#include <netinet/tcp.h>
 #include <time.h>
+#include <stdio.h>
+#include <netinet/tcp.h>
 
 typedef enum TcpEventType
 {
@@ -63,24 +64,18 @@ typedef struct {
 	TcpEventNode *tail;
 	int events_count;
 	bool connected;
-	size_t bytes_out;
 	unsigned long bytes_sent;
 	unsigned long bytes_received;
 	struct sockaddr_storage peer_addr;
 	bool closed;
 } TcpConnection;
 
-TcpConnection *new_connection();
-TcpEvent *new_event(TcpEventType type);
-
-void fill_timestamp(TcpEvent *ev);
-void push(TcpConnection *con, TcpEvent *ev);
 
 void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock);
 void tcp_sock_closed(int fd);
 void tcp_data_sent(int fd, size_t bytes);
 void tcp_data_received(int fd, size_t bytes);
-void tcp_connected(int fd, __CONST_SOCKADDR_ARG addr, socklen_t len);
+void tcp_connected(int fd, const struct sockaddr *addr, socklen_t len);
 void tcp_info_dump(int fd);
 
 #endif
