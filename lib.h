@@ -18,12 +18,12 @@ typedef enum DebugLevel
 
 const char *string_from_debug_level(DebugLevel lvl);
 
+void log(DebugLevel debug_lvl, char *formated_str); 
+
 #define DEBUG(debug_level, format, args...) {\
-	pid_t pid = getpid();\
 	char formated_string[1024];\
 	snprintf(formated_string, sizeof(formated_string), format, ##args);\
-	fprintf(stderr, "%d %s: %s\n", pid,\
-		string_from_debug_level(debug_level), formated_string);\
+	log(debug_level, formated_string);\
 }
 
 void die_with_system_msg(const char *msg);

@@ -28,7 +28,8 @@ const char *string_from_tcp_event_type(TcpEventType type)
 {
 	
 	static const char *strings[] = { "SOCK_OPENED", "SOCK_CLOSED", 
-		"DATA_SENT", "DATA_RECEIVED", "CONNECTED", "INFO_DUMP" };
+		"DATA_SENT", "DATA_RECEIVED", "CONNECTED", "INFO_DUMP",
+		"SETSOCKOPT" };
 	return strings[type];
 }
 
@@ -45,16 +46,28 @@ TcpEvent *new_event(TcpEventType type)
 	switch(type) {
 		case SOCK_OPENED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSockOpened));
+			break;
 		case SOCK_CLOSED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSockClosed));
+			break;
 		case DATA_SENT:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvDataSent));
+			break;
 		case DATA_RECEIVED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvDataReceived));
-		case CONNECTED: 
-			ev = (TcpEvent *) malloc(sizeof(TcpEvConnected));	
+			break;
+		case CONNECT: 
+			ev = (TcpEvent *) malloc(sizeof(TcpEvConnect));	
+			break;
 		case INFO_DUMP:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvInfoDump));
+			break;
+		case SETSOCKOPT:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvSetsockopt));
+			break;
+		default:
+			DEBUG(ERROR, "Event type not managed.");
+			exit(EXIT_FAILURE);
 	}
 
 	ev->type = type;
@@ -200,13 +213,13 @@ void tcp_data_received(int fd, size_t bytes)
 	log_event(fd, "data received");
 }
 
-void tcp_connected(int fd, const struct sockaddr *addr, socklen_t len)
+void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvConnected *ev = (TcpEvConnected *) new_event(CONNECTED);
+	TcpEvConnect *ev = (TcpEvConnect *) new_event(CONNECT);
 	memcpy(&(ev->addr), addr, len);
 	push(con, (TcpEvent *) ev);
 
@@ -228,5 +241,19 @@ void tcp_info_dump(int fd)
 	push(con, (TcpEvent *) ev);
 
 	log_event(fd, "info dump");
+}
+
+void tcp_setsockopt(int fd, int level, int optname)
+{
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];	
+			
+	/* Create event */
+	TcpEvSetsockopt *ev = (TcpEvSetsockopt *) new_event(SETSOCKOPT);
+	ev->level = level;
+	ev->optname = optname;
+	push(con, (TcpEvent *) ev);
+
+	log_event(fd, "setsockopt");
 }
 

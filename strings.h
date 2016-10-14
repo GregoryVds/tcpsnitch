@@ -34,7 +34,7 @@ static const IntStrPair SOCKET_TYPES[] = {
 
 /* Socket options */
 static const IntStrPair SOCKET_OPTIONS[] = {
-	// Socket-level options
+	// Socket-level options (asm-generic/socket.h) 
 	{ SO_DEBUG,  	"SO_DEBUG" },
 	{ SO_BROADCAST, "SO_BROADCAST" },
 	{ SO_REUSEADDR,	"SO_REUSEADDR" },
@@ -48,7 +48,7 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 	{ SO_RCVTIMEO, 	"SO_RCVTIMEO" },
 	{ SO_SNDLOWAT,	"SO_SNDLOWAT" },
 	{ SO_SNDTIMEO,	"SO_SNDTIMEO" },
-	// IP-level options		
+	// IP-level options (linux/in.h) Wrong place?		
 	{ IP_TOS,		"IP_TOS" },		
 	{ IP_TTL,		"IP_TTL" },
 	{ IP_HDRINCL,		"IP_HDRINCL" },
@@ -68,7 +68,7 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 	{ IP_XFRM_POLICY,	"IP_XFRM_POLICY" },
 	{ IP_PASSSEC,		"IP_PASSSEC" },
 	{ IP_TRANSPARENT,	"IP_TRANSPARENT" },
-	// TCP-level options
+	// TCP-level options (netinet/tcp.h)
 	{ TCP_NODELAY,  	"TCP_NODELAY" },
 	{ TCP_MAXSEG,		"TCP_MAXSEG" }, 
 	{ TCP_CORK, 		"TCP_CORK" },

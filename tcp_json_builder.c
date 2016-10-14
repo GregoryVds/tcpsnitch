@@ -1,4 +1,5 @@
 #include <jansson.h>
+#include <netdb.h>
 #include "tcp_json_builder.h"
 #include "strings.h"
 #include "lib.h"
@@ -9,8 +10,9 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
 json_t *build_sock_closed_ev(TcpEvSockClosed *ev);
 json_t *build_data_sent_ev(TcpEvDataSent *ev);
 json_t *build_data_received_ev(TcpEvDataReceived *ev);
-json_t *build_connected_ev(TcpEvConnected *ev);
+json_t *build_connect_ev(TcpEvConnect *ev);
 json_t *build_info_dump_ev(TcpEvInfoDump *ev);
+json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 
 char *build_tcp_connection_json(TcpConnection *con) 
 {
@@ -57,15 +59,16 @@ json_t *build_event(TcpEvent *ev)
 			return build_data_sent_ev((TcpEvDataSent *) ev);
 		case DATA_RECEIVED: 
 			return build_data_received_ev((TcpEvDataReceived *)ev);
-		case CONNECTED:	    
-			return build_connected_ev((TcpEvConnected *) ev);
+		case CONNECT:	    
+			return build_connect_ev((TcpEvConnect *) ev);
 		case INFO_DUMP:     
 			return build_info_dump_ev((TcpEvInfoDump *) ev);
+		case SETSOCKOPT:
+			return build_setsockopt_ev((TcpEvSetsockopt *) ev);
 		default:
 			DEBUG(ERROR, "build_event() failed. Unrecognized event"
 					" type %d.", ev->type);
 			exit(EXIT_FAILURE);
-			return NULL; // Will not reach this.
 	}
 }
 
@@ -157,7 +160,7 @@ json_t *build_data_received_ev(TcpEvDataReceived *ev)
 	return json_ev;
 }
 
-json_t *build_connected_ev(TcpEvConnected *ev)
+json_t *build_connect_ev(TcpEvConnect *ev)
 {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
@@ -230,3 +233,29 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 	return json_ev;
 }
 
+json_t *build_setsockopt_ev(TcpEvSetsockopt *ev)
+{
+	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
+
+	/* Translate level to protocol name */
+	struct protoent *protocol = getprotobynumber(ev->level);
+
+	/* Translate optname */
+	int optname_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char optname_buf[optname_buf_size];
+	if (!string_from_cons(ev->optname, optname_buf, optname_buf_size,
+		SOCKET_OPTIONS, sizeof(SOCKET_OPTIONS)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown setsockopt optname: %d", ev->optname);	
+		snprintf(optname_buf, optname_buf_size, "%d", ev->optname);
+	}
+
+	json_t *json_details = json_object();
+	json_object_set_new(json_details, "level", json_string(protocol->p_name));
+	json_object_set_new(json_details, "optname", json_string(optname_buf));
+	json_object_set_new(json_ev, "details", json_details);
+
+	return json_ev;
+}
+
+	

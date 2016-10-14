@@ -80,11 +80,11 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 	/* Perform syscall */
 	int ret = orig_connect(__fd, __addr, __len);
 	if (is_tcp_socket(__fd)) {
-		tcp_connected(__fd, __addr, __len);
+		tcp_connect(__fd, __addr, __len);
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "connect() called.");
+
 	return ret;
 }
 
@@ -143,23 +143,15 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 	orig_setsockopt_type orig_setsockopt;
 	orig_setsockopt = (orig_setsockopt_type) dlsym(RTLD_NEXT, "setsockopt");
 
-	struct protoent *protocole = getprotobynumber(__level);
-
-	int optname_buf_size=MEMBER_SIZE(IntStrPair, str);
-	char optname_buf[optname_buf_size];
-	if (!string_from_cons(__optname, optname_buf, optname_buf_size,
-		SOCKET_OPTIONS, sizeof(SOCKET_OPTIONS)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown setsockopt optname: %d", __optname);	
+	if (is_tcp_socket(__fd)) {
+		tcp_info_dump(__fd);
+		tcp_setsockopt(__fd, __level, __optname);
 	}
-
-	DEBUG(INFO, "setsockopt() on socket %d (level %s, optname %s)", __fd,
-			protocole->p_name, optname_buf);
-
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);	
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 
+	DEBUG(INFO, "setsockopt() called.");
 	return ret;
 }
 

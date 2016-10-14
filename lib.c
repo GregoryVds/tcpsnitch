@@ -10,9 +10,18 @@
 #include <stdlib.h>
 #include "lib.h"
 
-const char *string_from_debug_level(DebugLevel lvl) {
+const char *string_from_debug_level(DebugLevel lvl)
+{
 	static const char *strings[] = { "INFO", "TCP", "WARN", "ERROR" };
 	return strings[lvl];
+}
+
+void log(DebugLevel debug_lvl, char *formated_str)
+{
+	pid_t pid = getpid();
+	fprintf(stderr, "%d-%s(%s:%d): %s\n", pid, 
+		 string_from_debug_level(debug_lvl), __FILE__, __LINE__,
+			formated_str);
 }
 
 bool is_socket(int fd)
