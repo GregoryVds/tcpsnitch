@@ -5,6 +5,8 @@
 #include "lib.h"
 #include "tcp_json_builder.h"
 
+#define ENV_NETSPY_PATH "NETSPY_PATH"
+
 /* We keep a mapping from file descriptors to TCP connections structs for all
  * opened connections. This allows to easily identify to which connection a 
  * given function call belongs to. 
@@ -160,8 +162,11 @@ void tcp_sock_closed(int fd)
 
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
+	const char *file_path = getenv(ENV_NETSPY_PATH);
+	if (append_string_to_file((const char *) json, file_path) == -1) {
+		DEBUG(ERROR, "Problems when dumping to file.");
+	}
 	log_event(fd, "socket closed");
-	DEBUG(INFO, "%s", json);
 
 	/* Cleanup */
 	free_connection(con);

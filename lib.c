@@ -77,3 +77,25 @@ void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
 	strncat(buf, port, PORT_WIDTH);
 }
 
+int append_string_to_file(const char *str, const char *path) 
+{
+	FILE *fp = fopen(path, "a");
+	if (fp==NULL) {
+		DEBUG(ERROR, "fopen() failed. %s", strerror(errno));
+		return -1;
+	}
+
+	if (fputs(str, fp) == EOF) {
+		DEBUG(ERROR, "fputs() failed.");
+		fclose(fp);
+		return -1;
+	}
+
+	if (fclose(fp) == EOF) {
+		DEBUG(ERROR, "fclose() failed. %s", strerror(errno));
+		return -1;
+	}
+	
+	return 0;
+}
+

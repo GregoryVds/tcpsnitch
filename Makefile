@@ -11,4 +11,4 @@ clean:
 	rm $(EXECUTABLE)
 
 run: all
-	LD_PRELOAD=./$(EXECUTABLE) curl -s google.com > /dev/null
+	NETSPY_PATH=~/host/dump.json LD_PRELOAD=./$(EXECUTABLE) curl -s google.com > /dev/null

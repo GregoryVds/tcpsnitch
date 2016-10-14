@@ -89,7 +89,7 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "sockCloexec", 
+	json_object_set_new(json_details, "sockCloexec",
 			json_boolean(ev->sock_cloexec));
 	json_object_set_new(json_details, "sockNonblock", 
 			json_boolean(ev->sock_nonblock));

@@ -38,5 +38,7 @@ bool is_tcp_socket(int fd);
 
 void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
 
+int append_string_to_file(const char *str, const char *path);
+
 #endif
 
