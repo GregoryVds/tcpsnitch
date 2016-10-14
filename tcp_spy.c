@@ -200,15 +200,15 @@ void tcp_data_received(int fd, size_t bytes)
 	log_event(fd, "data received");
 }
 
-void tcp_connected(int fd, const struct sockaddr *addr, socklen_t __len)
+void tcp_connected(int fd, const struct sockaddr *addr, socklen_t len)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
-	memcpy(&(con->peer_addr), addr, __len);
 			
 	/* Create event */
-	TcpEvent *ev = new_event(CONNECTED);
-	push(con, ev);
+	TcpEvConnected *ev = (TcpEvConnected *) new_event(CONNECTED);
+	memcpy(&(ev->addr), addr, len);
+	push(con, (TcpEvent *) ev);
 
 	log_event(fd, "connected");
 }

@@ -59,13 +59,7 @@ int socket (int __domain, int __type, int __protocol)
 		tcp_info_dump(fd);
 	}
 
-	if (fd==-1) {
-		DEBUG(INFO, "socket() failed. %s.", strerror(errno));		
-		return fd;
-	}
-	
 	DEBUG(INFO, "socket() called.");
-	
 	return fd;
 }
 
@@ -82,11 +76,6 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
 	
-	/* Extract IP address to human readable string */
-	char addr_buf[50];
-	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
-	DEBUG(INFO, "connect() on socket %d to %s", __fd, addr_buf);
-	
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_connect(__fd, __addr, __len);
@@ -95,12 +84,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 		tcp_info_dump(__fd);
 	}
 
-	/* Log errno if connect() returns non-zero */
-	if (ret==-1) {
-		DEBUG(INFO, "connect() failed on socket %d to %s. %s.", __fd,
-				addr_buf, strerror(errno));
-	}
-
+	DEBUG(INFO, "connect() called.");
 	return ret;
 }
 

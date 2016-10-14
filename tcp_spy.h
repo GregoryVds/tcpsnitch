@@ -49,6 +49,7 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
+	struct sockaddr_storage addr;
 } TcpEvConnected;
 
 typedef struct {
@@ -71,7 +72,6 @@ typedef struct {
 	bool connected;
 	unsigned long bytes_sent;
 	unsigned long bytes_received;
-	struct sockaddr_storage peer_addr;
 	bool closed;
 } TcpConnection;
 

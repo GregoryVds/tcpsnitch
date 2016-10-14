@@ -34,7 +34,12 @@ bool is_socket(int fd);
 bool is_inet_socket(int fd);
 bool is_tcp_socket(int fd);
 
+#define PORT_WIDTH 6
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
+void addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+		int buf_size);
+void port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+		int buf_size);
 
 void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
 

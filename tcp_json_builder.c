@@ -106,7 +106,6 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 		snprintf(type_buf, type_buf_size, "%d", ev->type);
 	}
 
-
 	json_t *json_details = json_object();
 	json_object_set_new(json_details, "domain", 
 			json_string(domain_buf));
@@ -163,7 +162,15 @@ json_t *build_connected_ev(TcpEvConnected *ev)
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
+	/* Extract IP address to human readable string */
+	char addr_buf[50];
+	addr_string_from_sockaddr(&(ev->addr), addr_buf, sizeof(addr_buf));
+	char port_buf[PORT_WIDTH];
+	port_string_from_sockaddr(&(ev->addr), port_buf, sizeof(port_buf));
+
 	json_t *json_details = json_object();
+	json_object_set_new(json_details, "addr", json_string(addr_buf));
+	json_object_set_new(json_details, "port", json_string(port_buf));
 	json_object_set_new(json_ev, "details", json_details);
 
 	return json_ev;

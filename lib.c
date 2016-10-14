@@ -54,26 +54,49 @@ void die_with_system_msg(const char *msg)
 
 /* Extract IP address to human readable string */
 
-#define PORT_WIDTH 6
+void addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+		int buf_size)
+{
+	const char *r;
+	if (addr->ss_family==AF_INET) {
+		const struct sockaddr_in *ipv4;
+		ipv4 = (const struct sockaddr_in *) addr;
+		r = inet_ntop(AF_INET, &(ipv4->sin_addr), buf, buf_size);
+	}
+	else if (addr->ss_family==AF_INET6) {
+		const struct sockaddr_in6 *ipv6;
+		ipv6 = (const struct sockaddr_in6 *) addr;
+		r = inet_ntop(AF_INET6, &(ipv6->sin6_addr), buf, buf_size);
+	}
+	if (r == NULL) DEBUG(ERROR, "inet_ntop() failed. %s", strerror(errno));	
+}
+
+void port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+		int buf_size)
+{
+	int n;
+	if (addr->ss_family==AF_INET) {
+		const struct sockaddr_in *ipv4;
+		ipv4 = (const struct sockaddr_in *) addr;
+	 	n = snprintf(buf, buf_size, "%d", ntohs(ipv4->sin_port));
+	}
+	else if (addr->ss_family==AF_INET6) {
+		const struct sockaddr_in6 *ipv6;
+		ipv6 = (const struct sockaddr_in6 *) addr;
+		n = snprintf(buf, buf_size, "%d", ntohs(ipv6->sin6_port));
+	}
+	if (n < 0) DEBUG(ERROR, "snprintf() failed. %s", strerror(errno));
+	if (n >= buf_size) DEBUG(ERROR, "snprintf() failed (truncated).");
+}
 
 void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
 {
 	const struct sockaddr_storage *addr_sto;
 	addr_sto = (const struct sockaddr_storage *) addr;
+	addr_string_from_sockaddr(addr_sto, buf, buf_size-(PORT_WIDTH+1));
+	strncat(buf, ":", 1);
 	char port[PORT_WIDTH];
-
-	if (addr_sto->ss_family==AF_INET) {
-		const struct sockaddr_in *ipv4;
-		ipv4 = (const struct sockaddr_in *) addr;
-		inet_ntop(AF_INET, &(ipv4->sin_addr), buf, buf_size);
-		snprintf(port, PORT_WIDTH, ":%d", ntohs(ipv4->sin_port));
-	}
-	else if (addr_sto->ss_family==AF_INET6) {
-		const struct sockaddr_in6 *ipv6;
-		ipv6 = (const struct sockaddr_in6 *) addr;
-		inet_ntop(AF_INET6, &(ipv6->sin6_addr), buf, buf_size);
-		snprintf(port, PORT_WIDTH, ":%d", ntohs(ipv6->sin6_port));
-	}
+	port_string_from_sockaddr(addr_sto, buf, PORT_WIDTH);
 	strncat(buf, port, PORT_WIDTH);
 }
 
