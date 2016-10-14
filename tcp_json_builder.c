@@ -1,5 +1,6 @@
 #include <jansson.h>
 #include "tcp_json_builder.h"
+#include "strings.h"
 #include "lib.h"
 
 json_t *build_tcp_connection(TcpConnection *con);
@@ -23,7 +24,6 @@ json_t *build_tcp_connection(TcpConnection *con)
 {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
-
 	json_object_set_new(json_con, "id",
 			json_integer(con->id));
 	json_object_set_new(json_con, "eventsCount", 
@@ -88,7 +88,32 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
+	/* Translate socket domain */
+	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char domain_buf[domain_buf_size];
+	if (!string_from_cons(ev->domain, domain_buf, domain_buf_size,
+		SOCKET_DOMAINS, sizeof(SOCKET_DOMAINS)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown translation socket domain: %d", ev->domain);
+		snprintf(domain_buf, domain_buf_size, "%d", ev->domain);
+	} 
+
+	/* Translates socket type */
+	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char type_buf[type_buf_size];
+	if (!string_from_cons(ev->type, type_buf, type_buf_size,
+		SOCKET_TYPES, sizeof(SOCKET_TYPES)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown translation socket type: %d", ev->type);	
+		snprintf(type_buf, type_buf_size, "%d", ev->type);
+	}
+
+
 	json_t *json_details = json_object();
+	json_object_set_new(json_details, "domain", 
+			json_string(domain_buf));
+	json_object_set_new(json_details, "type", 
+			json_string(type_buf));
+	json_object_set_new(json_details, "protocol", 
+			json_integer(ev->protocol));
 	json_object_set_new(json_details, "sockCloexec",
 			json_boolean(ev->sock_cloexec));
 	json_object_set_new(json_details, "sockNonblock", 

@@ -64,15 +64,8 @@ TcpEvent *new_event(TcpEventType type)
 
 TcpConnection *new_connection() 
 {
-	TcpConnection *con = (TcpConnection *) malloc(sizeof(TcpConnection));
+	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
-	con->head = NULL;
-	con->tail = NULL;
-	con->events_count = 0;
-	con->connected = false;
-	con->bytes_sent = 0;
-	con->bytes_received = 0;
-	con->closed = false;
 	connections_count++;
 	return con;	
 }
@@ -130,7 +123,8 @@ void log_event(int fd, const char *msg)
  Functions for registering new events on a given connection.
 */
 
-void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock)
+void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
+		bool sock_nonblock)
 {
 	/* Check if connection was not properly closed. */
 	if (fd_con_map[fd]) {
@@ -144,8 +138,13 @@ void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock)
 	fd_con_map[fd] = con;
 
 	/* Create event */
-	TcpEvent *ev = new_event(SOCK_OPENED);
-	push(con, ev);
+	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(SOCK_OPENED);
+	ev->domain = domain;
+	ev->type = SOCK_STREAM;
+	ev->protocol = protocol;
+	ev->sock_cloexec = sock_cloexec;
+	ev->sock_nonblock = sock_nonblock;
+	push(con, (TcpEvent *) ev);
 
 	log_event(fd, "socket opened");
 }

@@ -26,6 +26,9 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
+	int domain;
+	int type;
+	int protocol;
 	bool sock_cloexec;
 	bool sock_nonblock;
 } TcpEvSockOpened;
@@ -73,7 +76,8 @@ typedef struct {
 } TcpConnection;
 
 
-void tcp_sock_opened(int fd, bool sock_cloexec, bool sock_nonblock);
+void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec, 
+		bool sock_nonblock);
 void tcp_sock_closed(int fd);
 void tcp_data_sent(int fd, size_t bytes);
 void tcp_data_received(int fd, size_t bytes);

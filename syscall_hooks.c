@@ -37,6 +37,7 @@
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
 
+
 #define SOCK_TYPE_MASK 0b1111
 
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
@@ -46,34 +47,15 @@ int socket (int __domain, int __type, int __protocol)
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
 	
-	/* Inspect socket domain */
-	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
-	char domain_buf[domain_buf_size];
-	if (!string_from_cons(__domain, domain_buf, domain_buf_size,
-		SOCKET_DOMAINS, sizeof(SOCKET_DOMAINS)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown socket domain: %d", __domain);
-	}
-
-	/* Inspect socket type */
-	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
-	char type_buf[type_buf_size];
-	if (!string_from_cons(__type & SOCK_TYPE_MASK, type_buf, type_buf_size,
-		SOCKET_TYPES, sizeof(SOCKET_TYPES)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown socket type: %d", __type);	
-	}
-
 	/* Inspect flag parameters */
-	char flags[30] = "";
-	bool sock_cloexec = __type & SOCK_CLOEXEC;
+	bool sock_cloexec  = __type & SOCK_CLOEXEC;
 	bool sock_nonblock = __type & SOCK_NONBLOCK;
-	if (sock_cloexec)  	strcat(flags, " SOCK_CLOEXEC");
-	if (sock_nonblock) 	strcat(flags, " SOCK_NONBLOCK");
-	if (!strlen(flags))	strcat(flags, " /");
 
 	/* Perform syscall */
 	int fd = orig_socket(__domain, __type, __protocol);
 	if (is_tcp_socket(fd)) {	
-		tcp_sock_opened(fd, sock_cloexec, sock_nonblock);
+		tcp_sock_opened(fd, __domain, __protocol, sock_cloexec, 
+				sock_nonblock);
 		tcp_info_dump(fd);
 	}
 
@@ -82,8 +64,7 @@ int socket (int __domain, int __type, int __protocol)
 		return fd;
 	}
 	
-	DEBUG(INFO, "socket() created (fd %d, domain %s, type %s, proto %d, "
-		"flags:%s)", fd, domain_buf, type_buf, __protocol, flags);
+	DEBUG(INFO, "socket() called.");
 	
 	return fd;
 }
