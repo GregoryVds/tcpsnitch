@@ -105,7 +105,7 @@ void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
 	addr_string_from_sockaddr(addr_sto, buf, buf_size-(PORT_WIDTH+1));
 	strncat(buf, ":", 1);
 	char port[PORT_WIDTH];
-	port_string_from_sockaddr(addr_sto, buf, PORT_WIDTH);
+	port_string_from_sockaddr(addr_sto, port, PORT_WIDTH);
 	strncat(buf, port, PORT_WIDTH);
 }
 
