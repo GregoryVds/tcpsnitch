@@ -40,7 +40,7 @@ void fill_timestamp(TcpEvent *event)
 	gettimeofday(&(event->timestamp), NULL);
 }
 
-TcpEvent *new_event(TcpEventType type) 
+TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 {
 	TcpEvent *ev;
 
@@ -71,8 +71,19 @@ TcpEvent *new_event(TcpEventType type)
 			exit(EXIT_FAILURE);
 	}
 
-	ev->type = type;
 	fill_timestamp(ev);
+	ev->type = type;
+	ev->return_value = return_value;
+	ev->success = success;
+	if (success) 
+		ev->error_str = NULL;
+	else { // Fill error string form errno.
+		char *err_str = strerror(errno);
+		size_t str_len = strlen(err_str)+1;
+		ev->error_str = (char *) malloc(str_len);
+		strncpy(ev->error_str, err_str, str_len);	
+	}
+
 	return ev;
 }
 
@@ -101,15 +112,7 @@ void push(TcpConnection *con, TcpEvent *ev)
 
 void free_tcp_event(TcpEvent *ev) 
 {
-	switch (ev->type) {
-		case CONNECT: 
-		{
-			TcpEvConnect *cast = (TcpEvConnect *) ev;
-			if (cast->error_str != NULL) free(cast->error_str);
-			break;
-		}
-		default: break;
-	}
+	if (ev->error_str != NULL) free(ev->error_str);
 	free(ev);
 }
 
@@ -153,7 +156,7 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	if (fd_con_map[fd]) {
 		log_event(fd, "socket was closed earlier but close() was not "
 			"detected. Assuming it closed from now on.");
-		tcp_sock_closed(fd);
+		tcp_sock_closed(fd, 0, false);
 	}
 	
 	/* Create new connection */
@@ -161,7 +164,8 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	fd_con_map[fd] = con;
 
 	/* Create event */
-	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(SOCK_OPENED);
+	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(SOCK_OPENED, true, 
+			fd);
 	ev->domain = domain;
 	ev->type = SOCK_STREAM;
 	ev->protocol = protocol;
@@ -172,15 +176,17 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	log_event(fd, "socket opened");
 }
 
-void tcp_sock_closed(int fd)
+void tcp_sock_closed(int fd, int return_value, bool detected)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];
 	con->closed = false;
 
 	/* Create event */
-	TcpEvent *ev = new_event(SOCK_CLOSED);
-	push(con, ev);
+	TcpEvSockClosed *ev = (TcpEvSockClosed *) new_event(SOCK_CLOSED,
+			return_value!=-1, return_value);
+	ev->detected = detected;
+	push(con, (TcpEvent *) ev);
 
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
@@ -195,52 +201,46 @@ void tcp_sock_closed(int fd)
 	fd_con_map[fd] = NULL; // Must be done after log_event.
 }
 
-void tcp_data_sent(int fd, size_t bytes) 
+void tcp_data_sent(int fd, int return_value, size_t bytes) 
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];
 	con->bytes_sent+=bytes;
 
 	/* Create event */
-	TcpEvDataSent *ev = (TcpEvDataSent *) new_event(DATA_SENT);
+	TcpEvDataSent *ev = (TcpEvDataSent *) new_event(DATA_SENT,
+			return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
 	
 	log_event(fd, "data sent");
 }
 
-void tcp_data_received(int fd, size_t bytes)
+void tcp_data_received(int fd, int return_value, size_t bytes)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];
 	con->bytes_received+=bytes;
 	
 	/* Create event */
-	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(DATA_RECEIVED);
+	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(DATA_RECEIVED,
+			return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
 
 	log_event(fd, "data received");
 }
 
-void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len, 
-		int return_value)
+void tcp_connect(int fd, int return_value, const struct sockaddr *addr, 
+		socklen_t len)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvConnect *ev = (TcpEvConnect *) new_event(CONNECT);
+	TcpEvConnect *ev = (TcpEvConnect *) new_event(CONNECT,
+			return_value!=-1, return_value);
 	memcpy(&(ev->addr), addr, len);
-	ev->return_value = return_value;
-	if (return_value == -1) {
-		char *err_str = strerror(errno);
-		size_t str_len = strlen(err_str)+1;
-		ev->error_str = (char *) malloc(str_len);
-		strncpy(ev->error_str, err_str, str_len);
-	} else
-		ev->error_str = NULL;
-
 	push(con, (TcpEvent *) ev);
 
 	log_event(fd, "connect");
@@ -252,7 +252,7 @@ void tcp_info_dump(int fd)
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(INFO_DUMP);
+	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(INFO_DUMP, true, 0);
 	socklen_t tcp_info_len = sizeof(struct tcp_info);
 	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info), 
 				&tcp_info_len) == -1) {
@@ -263,13 +263,14 @@ void tcp_info_dump(int fd)
 	log_event(fd, "info dump");
 }
 
-void tcp_setsockopt(int fd, int level, int optname)
+void tcp_setsockopt(int fd, int return_value, int level, int optname)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvSetsockopt *ev = (TcpEvSetsockopt *) new_event(SETSOCKOPT);
+	TcpEvSetsockopt *ev = (TcpEvSetsockopt *) new_event(SETSOCKOPT,
+			return_value!=1, return_value);
 	ev->level = level;
 	ev->optname = optname;
 	push(con, (TcpEvent *) ev);

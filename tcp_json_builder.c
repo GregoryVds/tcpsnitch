@@ -79,6 +79,11 @@ void build_shared_fields(json_t *json_ev, TcpEvent *ev)
 	json_object_set_new(timestamp_json, "usec",
 			json_integer(ev->timestamp.tv_usec));
 	json_object_set_new(json_ev, "timestamp", timestamp_json);
+	
+	/* Return value & err string */ 
+	json_object_set_new(json_ev, "returnValue", json_integer(ev->return_value));
+	json_object_set_new(json_ev, "success", json_boolean(ev->success));
+	json_object_set_new(json_ev, "errorStr", json_string(ev->error_str));
 }
 
 json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
@@ -126,8 +131,8 @@ json_t *build_sock_closed_ev(TcpEvSockClosed *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
+	json_object_set_new(json_details, "detected", json_boolean(ev->detected));
 	json_object_set_new(json_ev, "details", json_details);
-
 	return json_ev;
 }
 
@@ -169,8 +174,6 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	json_t *json_details = json_object();
 	json_object_set_new(json_details, "addr", json_string(addr_buf));
 	json_object_set_new(json_details, "port", json_string(port_buf));
-	json_object_set_new(json_details, "return_value", json_integer(ev->return_value));
-	json_object_set_new(json_details, "error_str", json_string(ev->error_str));
 	json_object_set_new(json_ev, "details", json_details);
 	return json_ev;
 }

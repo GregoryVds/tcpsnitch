@@ -23,6 +23,9 @@ const char *string_from_tcp_event_type(TcpEventType type);
 typedef struct {
 	TcpEventType type;
 	struct timeval timestamp;
+	int return_value;
+	bool success;
+	char *error_str;
 } TcpEvent;
 
 typedef struct {
@@ -36,6 +39,7 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
+	bool detected;
 } TcpEvSockClosed;
 
 typedef struct {
@@ -51,8 +55,6 @@ typedef struct {
 typedef struct {
 	TcpEvent super;
 	struct sockaddr_storage addr;
-	int return_value;
-	char *error_str;
 } TcpEvConnect;
 
 typedef struct {
@@ -87,11 +89,11 @@ typedef struct {
 
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec, 
 		bool sock_nonblock);
-void tcp_sock_closed(int fd);
-void tcp_data_sent(int fd, size_t bytes);
-void tcp_data_received(int fd, size_t bytes);
-void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len,
-		int return_val);
+void tcp_sock_closed(int fd, int return_value, bool detected);
+void tcp_data_sent(int fd, int return_value, size_t bytes);
+void tcp_data_received(int fd, int return_value, size_t bytes);
+void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
+		socklen_t len);
 void tcp_info_dump(int fd);
-void tcp_setsockopt(int fd, int level, int optname);
+void tcp_setsockopt(int fd, int return_value, int level, int optname);
 #endif

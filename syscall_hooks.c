@@ -79,7 +79,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 	/* Perform syscall */
 	int ret = orig_connect(__fd, __addr, __len);
 	if (is_tcp_socket(__fd)) {
-		tcp_connect(__fd, __addr, __len, ret);
+		tcp_connect(__fd, ret, __addr, __len);
 		tcp_info_dump(__fd);
 	}
 
@@ -142,10 +142,12 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 	orig_setsockopt_type orig_setsockopt;
 	orig_setsockopt = (orig_setsockopt_type) dlsym(RTLD_NEXT, "setsockopt");
 
-	if (is_tcp_socket(__fd)) tcp_setsockopt(__fd, __level, __optname);
 	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);	
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
+	if (is_tcp_socket(__fd)) {
+		tcp_setsockopt(__fd, ret, __level, __optname);
+		tcp_info_dump(__fd);
+	}
 
 	DEBUG(INFO, "setsockopt() called.");
 	return ret;
@@ -167,7 +169,7 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 	/* Perform syscall */
 	ssize_t ret = orig_send(__fd, __buf, __n, __flags);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, __n);	
+		tcp_data_sent(__fd, ret, __n);	
 		tcp_info_dump(__fd);
 	}
 
@@ -191,7 +193,7 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 	/* Perform syscall */
 	ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, __n);
+		tcp_data_received(__fd, ret, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -222,7 +224,7 @@ ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags,
 	/* Perform syscall */
 	ssize_t ret = orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, __n);	
+		tcp_data_sent(__fd, ret, __n);	
 		tcp_info_dump(__fd);
 	}
 
@@ -250,7 +252,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 	ssize_t ret = orig_recvfrom(__fd, __buf, __n, __flags, __addr, 
 			__addr_len);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, __n);	
+		tcp_data_received(__fd, ret, __n);	
 		tcp_info_dump(__fd);
 	}
 
@@ -318,14 +320,12 @@ int close (int __fd)
 		DEBUG(INFO, "close() on socket %d", __fd);
 	}
 
-
-	if (is_tcp_socket(__fd)) {
-		tcp_info_dump(__fd);	
-		tcp_sock_closed(__fd);
-	}
+	bool is_tcp = is_tcp_socket(__fd);
 
 	/* Perform syscall */
 	int ret = orig_close(__fd);
+
+	if (is_tcp) tcp_sock_closed(__fd, ret, true);
 
 	return ret;
 }
@@ -348,7 +348,7 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 	/* Perform syscall */
 	int ret = orig_write(__fd, __buf, __n);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, __n);
+		tcp_data_sent(__fd, ret, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -373,7 +373,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 	/* Perform syscall */
 	int ret = orig_read(__fd, __buf, __nbytes);
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, __nbytes);
+		tcp_data_received(__fd, ret, __nbytes);
 		tcp_info_dump(__fd);
 	}
 
