@@ -76,11 +76,10 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
 	
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_connect(__fd, __addr, __len);
 	if (is_tcp_socket(__fd)) {
-		tcp_connect(__fd, __addr, __len);
+		tcp_connect(__fd, __addr, __len, ret);
 		tcp_info_dump(__fd);
 	}
 
@@ -143,10 +142,7 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 	orig_setsockopt_type orig_setsockopt;
 	orig_setsockopt = (orig_setsockopt_type) dlsym(RTLD_NEXT, "setsockopt");
 
-	if (is_tcp_socket(__fd)) {
-		tcp_info_dump(__fd);
-		tcp_setsockopt(__fd, __level, __optname);
-	}
+	if (is_tcp_socket(__fd)) tcp_setsockopt(__fd, __level, __optname);
 	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);	
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);

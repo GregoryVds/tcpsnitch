@@ -26,16 +26,11 @@ json_t *build_tcp_connection(TcpConnection *con)
 {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
-	json_object_set_new(json_con, "id",
-			json_integer(con->id));
-	json_object_set_new(json_con, "eventsCount", 
-			json_integer(con->events_count));
-	json_object_set_new(json_con, "bytesSent", 
-			json_integer(con->bytes_sent));
-	json_object_set_new(json_con, "bytesReceived", 
-			json_integer(con->bytes_received));
-	json_object_set_new(json_con, "events",
-			events);
+	json_object_set_new(json_con, "id", json_integer(con->id));
+	json_object_set_new(json_con, "eventsCount", json_integer(con->events_count));
+	json_object_set_new(json_con, "bytesSent", json_integer(con->bytes_sent));
+	json_object_set_new(json_con, "bytesReceived", json_integer(con->bytes_received));
+	json_object_set_new(json_con, "events",	events);
 
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
@@ -174,8 +169,9 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	json_t *json_details = json_object();
 	json_object_set_new(json_details, "addr", json_string(addr_buf));
 	json_object_set_new(json_details, "port", json_string(port_buf));
+	json_object_set_new(json_details, "return_value", json_integer(ev->return_value));
+	json_object_set_new(json_details, "error_str", json_string(ev->error_str));
 	json_object_set_new(json_ev, "details", json_details);
-
 	return json_ev;
 }
 

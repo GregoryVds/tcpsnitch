@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <errno.h>
 #include "tcp_spy.h"
 #include "lib.h"
 #include "tcp_json_builder.h"
@@ -28,7 +29,7 @@ const char *string_from_tcp_event_type(TcpEventType type)
 {
 	
 	static const char *strings[] = { "SOCK_OPENED", "SOCK_CLOSED", 
-		"DATA_SENT", "DATA_RECEIVED", "CONNECTED", "INFO_DUMP",
+		"DATA_SENT", "DATA_RECEIVED", "CONNECT", "INFO_DUMP",
 		"SETSOCKOPT" };
 	return strings[type];
 }
@@ -100,6 +101,15 @@ void push(TcpConnection *con, TcpEvent *ev)
 
 void free_tcp_event(TcpEvent *ev) 
 {
+	switch (ev->type) {
+		case CONNECT: 
+		{
+			TcpEvConnect *cast = (TcpEvConnect *) ev;
+			if (cast->error_str != NULL) free(cast->error_str);
+			break;
+		}
+		default: break;
+	}
 	free(ev);
 }
 
@@ -213,7 +223,8 @@ void tcp_data_received(int fd, size_t bytes)
 	log_event(fd, "data received");
 }
 
-void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len)
+void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len, 
+		int return_value)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
@@ -221,9 +232,18 @@ void tcp_connect(int fd, const struct sockaddr *addr, socklen_t len)
 	/* Create event */
 	TcpEvConnect *ev = (TcpEvConnect *) new_event(CONNECT);
 	memcpy(&(ev->addr), addr, len);
+	ev->return_value = return_value;
+	if (return_value == -1) {
+		char *err_str = strerror(errno);
+		size_t str_len = strlen(err_str)+1;
+		ev->error_str = (char *) malloc(str_len);
+		strncpy(ev->error_str, err_str, str_len);
+	} else
+		ev->error_str = NULL;
+
 	push(con, (TcpEvent *) ev);
 
-	log_event(fd, "connected");
+	log_event(fd, "connect");
 }
 
 void tcp_info_dump(int fd)
