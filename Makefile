@@ -14,6 +14,9 @@ clean:
 curl: all
 	$(ENV) curl -s google.com > /dev/null
 
-curl_angular: all
+angular: all
 	$(ENV) curl -s https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js > /dev/null
+
+valgrind: all
+	$(ENV) valgrind --leak-check=yes gdb curl -s google.com > /dev/null
 

@@ -11,7 +11,6 @@
 typedef enum DebugLevel
 {
 	INFO,
-	TCP,
 	WARN,
 	ERROR
 } DebugLevel;

@@ -78,9 +78,6 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 		case TCP_EV_LISTEN:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvListen));
 			break;
-		default:
-			DEBUG(ERROR, "Event type not managed.");
-			exit(EXIT_FAILURE);
 	}
 
 	fill_timestamp(ev);
@@ -146,11 +143,6 @@ void free_connection(TcpConnection *con)
 	free(con);
 }
 
-void log_event(int fd, const char *msg) 
-{
-	DEBUG(TCP, "%d: %s.", fd_con_map[fd]->id, msg);
-}
-
 /*
   _____                 _         _                 _        
  | ____|_   _____ _ __ | |_ ___  | |__   ___   ___ | | _____ 
@@ -165,12 +157,8 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 		bool sock_nonblock)
 {
 	/* Check if connection was not properly closed. */
-	if (fd_con_map[fd]) {
-		log_event(fd, "socket was closed earlier but close() was not "
-			"detected. Assuming it closed from now on.");
-		tcp_sock_closed(fd, 0, false);
-	}
-	
+	if (fd_con_map[fd]) tcp_sock_closed(fd, 0, false);
+
 	/* Create new connection */
 	TcpConnection *con = new_connection();
 	fd_con_map[fd] = con;
@@ -184,8 +172,6 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	ev->sock_cloexec = sock_cloexec;
 	ev->sock_nonblock = sock_nonblock;
 	push(con, (TcpEvent *) ev);
-
-	log_event(fd, "socket opened");
 }
 
 void tcp_sock_closed(int fd, int return_value, bool detected)
@@ -206,11 +192,10 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 	if (append_string_to_file((const char *) json, file_path) == -1) {
 		DEBUG(ERROR, "Problems when dumping to file.");
 	}
-	log_event(fd, "socket closed");
 
 	/* Cleanup */
 	free_connection(con);
-	fd_con_map[fd] = NULL; // Must be done after log_event.
+	fd_con_map[fd] = NULL;
 }
 
 void tcp_data_sent(int fd, int return_value, size_t bytes) 
@@ -224,8 +209,6 @@ void tcp_data_sent(int fd, int return_value, size_t bytes)
 			return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
-	
-	log_event(fd, "data sent");
 }
 
 void tcp_data_received(int fd, int return_value, size_t bytes)
@@ -239,8 +222,6 @@ void tcp_data_received(int fd, int return_value, size_t bytes)
 			TCP_EV_DATA_RECEIVED, return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
-
-	log_event(fd, "data received");
 }
 
 void tcp_connect(int fd, int return_value, const struct sockaddr *addr, 
@@ -254,12 +235,12 @@ void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 			return_value!=-1, return_value);
 	memcpy(&(ev->addr), addr, len);
 	push(con, (TcpEvent *) ev);
-
-	log_event(fd, "connect");
 }
 
 void tcp_info_dump(int fd)
 {
+	DEBUG(INFO, "tcp_info_dump() called.");
+	
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
 			
@@ -272,8 +253,6 @@ void tcp_info_dump(int fd)
 		die_with_system_msg("getsockopt() failed");		
 	}
 	push(con, (TcpEvent *) ev);
-
-	log_event(fd, "info dump");
 }
 
 void tcp_setsockopt(int fd, int return_value, int level, int optname)
@@ -287,8 +266,6 @@ void tcp_setsockopt(int fd, int return_value, int level, int optname)
 	ev->level = level;
 	ev->optname = optname;
 	push(con, (TcpEvent *) ev);
-
-	log_event(fd, "setsockopt");
 }
 
 void tcp_shutdown(int fd, int return_value, int how) 
@@ -302,8 +279,6 @@ void tcp_shutdown(int fd, int return_value, int how)
 	ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
 	ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
 	push(con, (TcpEvent *) ev);
-	
-	log_event(fd, "shutdown");
 }
 
 void tcp_listen(int fd, int return_value, int backlog) 
@@ -316,6 +291,4 @@ void tcp_listen(int fd, int return_value, int backlog)
 			return_value!=-1, return_value);
 	ev->backlog = backlog;
 	push(con, (TcpEvent *) ev);
-	
-	log_event(fd, "listen");
 }

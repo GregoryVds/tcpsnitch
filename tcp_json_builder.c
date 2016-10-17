@@ -51,30 +51,37 @@ json_t *build_tcp_connection(TcpConnection *con)
 
 json_t *build_event(TcpEvent *ev)
 {	
+	json_t *r;
 	switch(ev->type) {
 		case TCP_EV_SOCK_OPENED:   
-			return build_sock_opened_ev((TcpEvSockOpened *) ev);
+			r = build_sock_opened_ev((TcpEvSockOpened *) ev);
+			break;
 		case TCP_EV_SOCK_CLOSED:   
-			return build_sock_closed_ev((TcpEvSockClosed *) ev);
+			r = build_sock_closed_ev((TcpEvSockClosed *) ev);
+			break;
 		case TCP_EV_DATA_SENT:     
-			return build_data_sent_ev((TcpEvDataSent *) ev);
+			r = build_data_sent_ev((TcpEvDataSent *) ev);
+			break;
 		case TCP_EV_DATA_RECEIVED: 
-			return build_data_received_ev((TcpEvDataReceived *)ev);
+			r = build_data_received_ev((TcpEvDataReceived *)ev);
+			break;
 		case TCP_EV_CONNECT:	    
-			return build_connect_ev((TcpEvConnect *) ev);
+			r = build_connect_ev((TcpEvConnect *) ev);
+			break;
 		case TCP_EV_INFO_DUMP:     
-			return build_info_dump_ev((TcpEvInfoDump *) ev);
+			r = build_info_dump_ev((TcpEvInfoDump *) ev);
+			break;
 		case TCP_EV_SETSOCKOPT:
-			return build_setsockopt_ev((TcpEvSetsockopt *) ev);
+			r = build_setsockopt_ev((TcpEvSetsockopt *) ev);
+			break;
 		case TCP_EV_SHUTDOWN:
-			return build_shutdown_ev((TcpEvShutdown *) ev);
+			r = build_shutdown_ev((TcpEvShutdown *) ev);
+			break;
 		case TCP_EV_LISTEN:
-			return build_listen_ev((TcpEvListen *) ev);
-		default:
-			DEBUG(ERROR, "build_event() failed. Unrecognized event"
-					" type %d.", ev->type);
-			exit(EXIT_FAILURE);
+			r = build_listen_ev((TcpEvListen *) ev);
+			break;
 	}
+	return r;
 }
 
 void build_shared_fields(json_t *json_ev, TcpEvent *ev)

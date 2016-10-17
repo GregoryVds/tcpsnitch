@@ -46,7 +46,8 @@ int socket (int __domain, int __type, int __protocol)
 {
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
-	
+	DEBUG(INFO, "socket() called");
+
 	/* Inspect flag parameters */
 	bool sock_cloexec  = __type & SOCK_CLOEXEC;
 	bool sock_nonblock = __type & SOCK_NONBLOCK;
@@ -59,7 +60,6 @@ int socket (int __domain, int __type, int __protocol)
 		tcp_info_dump(fd);
 	}
 
-	DEBUG(INFO, "socket() called (socket %d).", fd);
 	return fd;
 }
 
@@ -75,7 +75,8 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 {
 	orig_connect_type orig_connect;
 	orig_connect = (orig_connect_type) dlsym(RTLD_NEXT, "connect");
-	
+	DEBUG(INFO, "connect() called on socket %d.", __fd);
+
 	/* Perform syscall */
 	int ret = orig_connect(__fd, __addr, __len);
 	if (is_tcp_socket(__fd)) {
@@ -83,7 +84,6 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "connect() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -100,6 +100,7 @@ int shutdown (int __fd, int __how)
 {
 	orig_shutdown_type orig_shutdown;
 	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
+	DEBUG(INFO, "shutdown() called on socket %d.", __fd);
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
@@ -109,7 +110,6 @@ int shutdown (int __fd, int __how)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "shutdown() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -123,6 +123,7 @@ int listen (int __fd, int __n)
 {
 	orig_listen_type orig_listen;
 	orig_listen = (orig_listen_type) dlsym(RTLD_NEXT, "listen");
+	DEBUG(INFO, "listen() called on socket %d.", __fd);
 
 	/* Perform syscall */
 	int ret = orig_listen(__fd, __n);
@@ -131,7 +132,6 @@ int listen (int __fd, int __n)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "listen() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -146,6 +146,7 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 {
 	orig_setsockopt_type orig_setsockopt;
 	orig_setsockopt = (orig_setsockopt_type) dlsym(RTLD_NEXT, "setsockopt");
+	DEBUG(INFO, "setsockopt() called on socket %d.", __fd);
 
 	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);	
@@ -154,7 +155,6 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "setsockopt() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -167,6 +167,7 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 {
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
+	DEBUG(INFO, "send() called on socket %d.", __fd);
 	
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
@@ -176,7 +177,6 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "send() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -190,6 +190,7 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 {	
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
+	DEBUG(INFO, "recv() called on socket %d.", __fd);
 	
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
@@ -199,7 +200,6 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "recv() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -249,6 +249,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 {
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type) dlsym(RTLD_NEXT, "recvfrom");
+	DEBUG(INFO, "recvfrom() called.");
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
@@ -318,13 +319,14 @@ int close (int __fd)
 {
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
+	if (is_inet_socket(__fd)) DEBUG(INFO, "close() on socket %d", __fd);
 
 	bool is_tcp = is_tcp_socket(__fd);
+
 	/* Perform syscall */
 	int ret = orig_close(__fd);
 	if (is_tcp) tcp_sock_closed(__fd, ret, true);
 
-	if (is_inet_socket(__fd)) DEBUG(INFO, "close() on socket %d", __fd);
 	return ret;
 }
 
@@ -336,6 +338,7 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 {	
 	orig_write_type orig_write;
 	orig_write = (orig_write_type) dlsym(RTLD_NEXT, "write");
+	if (is_inet_socket(__fd)) DEBUG(INFO, "write() on socket %d", __fd);
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);	
 	/* Perform syscall */
@@ -345,7 +348,6 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 		tcp_info_dump(__fd);
 	}
 
-	if (is_inet_socket(__fd)) DEBUG(INFO, "write() on socket %d", __fd);
 	return ret;
 }
 
@@ -358,6 +360,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 {	
 	orig_read_type orig_read;
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
+	if (is_inet_socket(__fd)) DEBUG(INFO, "read() on socket %d", __fd);
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);	
 	/* Perform syscall */
@@ -367,7 +370,6 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 		tcp_info_dump(__fd);
 	}
 
-	if (is_inet_socket(__fd)) DEBUG(INFO, "read() on socket %d", __fd);
 	return ret;
 }
 
