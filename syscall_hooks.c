@@ -59,7 +59,7 @@ int socket (int __domain, int __type, int __protocol)
 		tcp_info_dump(fd);
 	}
 
-	DEBUG(INFO, "socket() called.");
+	DEBUG(INFO, "socket() called (socket %d).", fd);
 	return fd;
 }
 
@@ -83,7 +83,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "connect() called.");
+	DEBUG(INFO, "connect() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -109,7 +109,7 @@ int shutdown (int __fd, int __how)
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "shutdown() called.");
+	DEBUG(INFO, "shutdown() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -123,7 +123,6 @@ int listen (int __fd, int __n)
 {
 	orig_listen_type orig_listen;
 	orig_listen = (orig_listen_type) dlsym(RTLD_NEXT, "listen");
-	DEBUG(INFO, "listen() on socket %d", __fd);
 
 	/* Perform syscall */
 	int ret = orig_listen(__fd, __n);
@@ -131,6 +130,8 @@ int listen (int __fd, int __n)
 		tcp_listen(__fd, ret, __n);
 		tcp_info_dump(__fd);
 	}
+
+	DEBUG(INFO, "listen() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -153,7 +154,7 @@ int setsockopt (int __fd, int __level, int __optname, const void *__optval,
 		tcp_info_dump(__fd);
 	}
 
-	DEBUG(INFO, "setsockopt() called.");
+	DEBUG(INFO, "setsockopt() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -167,8 +168,6 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 	orig_send_type orig_send;
 	orig_send = (orig_send_type) dlsym(RTLD_NEXT, "send");
 	
-	DEBUG(INFO, "send() on socket %d (%zu bytes)", __fd, __n);
-
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	ssize_t ret = orig_send(__fd, __buf, __n, __flags);
@@ -177,6 +176,7 @@ ssize_t send (int __fd, const void *__buf, size_t __n, int __flags)
 		tcp_info_dump(__fd);
 	}
 
+	DEBUG(INFO, "send() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -191,8 +191,6 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type) dlsym(RTLD_NEXT, "recv");
 	
-	DEBUG(INFO, "recv() on socket %d (%zu bytes)", __fd, __n);
-
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
@@ -201,6 +199,7 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
 		tcp_info_dump(__fd);
 	}
 
+	DEBUG(INFO, "recv() called on socket %d.", __fd);
 	return ret;
 }
 
@@ -278,7 +277,7 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
 
 ssize_t sendmsg (int __fd, const struct msghdr *__message, int __flags) 
 {
-	DEBUG(INFO, "sendmsg() on socket %d", __fd);
+	DEBUG(WARN, "NOT IMPLEMENTED: sendmsg() on socket %d", __fd);
 	orig_sendmsg_type orig_sendmsg;
 	orig_sendmsg = (orig_sendmsg_type) dlsym(RTLD_NEXT, "sendmsg");
 	return orig_sendmsg(__fd, __message, __flags); 
@@ -292,7 +291,7 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
 
 ssize_t recvmsg (int __fd, struct msghdr *__message, int __flags)
 {
-	DEBUG(INFO, "recvmsg() on socket %d", __fd);
+	DEBUG(WARN, "NOT IMPLEMENTED: recvmsg() on socket %d", __fd);
 	orig_recvmsg_type orig_recvmsg;
 	orig_recvmsg = (orig_recvmsg_type) dlsym(RTLD_NEXT, "recvmsg");
 	return orig_recvmsg(__fd, __message, __flags); 
@@ -320,17 +319,12 @@ int close (int __fd)
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
 
-	if (is_inet_socket(__fd)) {
-		DEBUG(INFO, "close() on socket %d", __fd);
-	}
-
 	bool is_tcp = is_tcp_socket(__fd);
-
 	/* Perform syscall */
 	int ret = orig_close(__fd);
-
 	if (is_tcp) tcp_sock_closed(__fd, ret, true);
 
+	if (is_inet_socket(__fd)) DEBUG(INFO, "close() on socket %d", __fd);
 	return ret;
 }
 
@@ -343,11 +337,6 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 	orig_write_type orig_write;
 	orig_write = (orig_write_type) dlsym(RTLD_NEXT, "write");
 
-	if (is_inet_socket(__fd)) {
-		DEBUG(INFO, "write() on socket %d", __fd);
-	}
-
-
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);	
 	/* Perform syscall */
 	int ret = orig_write(__fd, __buf, __n);
@@ -356,6 +345,7 @@ ssize_t write (int __fd, const void *__buf, size_t __n)
 		tcp_info_dump(__fd);
 	}
 
+	if (is_inet_socket(__fd)) DEBUG(INFO, "write() on socket %d", __fd);
 	return ret;
 }
 
@@ -369,10 +359,6 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 	orig_read_type orig_read;
 	orig_read = (orig_read_type) dlsym(RTLD_NEXT, "read");
 
-	if (is_inet_socket(__fd)) {
-		DEBUG(INFO, "read() on socket %d", __fd);
-	}
-
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);	
 	/* Perform syscall */
 	int ret = orig_read(__fd, __buf, __nbytes);
@@ -381,6 +367,7 @@ ssize_t read (int __fd, void *__buf, size_t __nbytes)
 		tcp_info_dump(__fd);
 	}
 
+	if (is_inet_socket(__fd)) DEBUG(INFO, "read() on socket %d", __fd);
 	return ret;
 }
 
@@ -412,7 +399,7 @@ ssize_t writev (int __fd, const struct iovec *__iovec, int __count)
 	orig_writev = (orig_writev_type) dlsym(RTLD_NEXT, "writev");
 
 	if (is_inet_socket(__fd)) {
-		DEBUG(INFO, "writev() on socket %d", __fd);
+		DEBUG(WARN, "NOT IMPLEMENTED: writev() on socket %d", __fd);
 	}
 
 	return orig_writev(__fd, __iovec, __count); 
@@ -433,7 +420,7 @@ ssize_t readv (int __fd, const struct iovec *__iovec, int __count)
 	orig_readv = (orig_readv_type) dlsym(RTLD_NEXT, "readv");
 
 	if (is_inet_socket(__fd)) {
-		DEBUG(INFO, "readv() on socket %d", __fd);
+		DEBUG(WARN, "NOT IMPLEMENTED: readv() on socket %d", __fd);
 	}
 
 	return orig_readv(__fd, __iovec, __count); 
@@ -466,7 +453,7 @@ ssize_t sendfile (int __out_fd, int __in_fd, off_t *__offset, size_t __count)
 	orig_sendfile = (orig_sendfile_type) dlsym(RTLD_NEXT, "sendfile");
 	
 	if (is_inet_socket(__out_fd)) {
-		DEBUG(INFO, "sendfile() on socket %d", __out_fd);
+		DEBUG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", __out_fd);
 	}
 
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count); 
