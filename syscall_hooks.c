@@ -83,7 +83,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 		tcp_info_dump(__fd);
 	}
 
-
+	DEBUG(INFO, "connect() called.");
 	return ret;
 }
 
@@ -91,7 +91,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
    HOW determines what to shut down:
      SHUT_RD   = No more receptions;
      SHUT_WR   = No more transmissions;
-     SHUT_RDWR = No more receptions or transmissions.
+     SHUT_RDWR = No more receptions and transmissions;
    Returns 0 on success, -1 for errors.  */
 
 typedef int (*orig_shutdown_type)(int __fd, int __how);
@@ -100,13 +100,16 @@ int shutdown (int __fd, int __how)
 {
 	orig_shutdown_type orig_shutdown;
 	orig_shutdown = (orig_shutdown_type) dlsym(RTLD_NEXT, "shutdown");
-	DEBUG(INFO, "socket shutdown() with fd %d & how %d ", __fd, __how);
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_shutdown(__fd, __how);
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
+	if (is_tcp_socket(__fd)) {
+		tcp_shutdown(__fd, ret, __how); 
+		tcp_info_dump(__fd);
+	}
 
+	DEBUG(INFO, "shutdown() called.");
 	return ret;
 }
 

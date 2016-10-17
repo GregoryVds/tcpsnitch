@@ -30,7 +30,7 @@ const char *string_from_tcp_event_type(TcpEventType type)
 	
 	static const char *strings[] = { "SOCK_OPENED", "SOCK_CLOSED", 
 		"DATA_SENT", "DATA_RECEIVED", "CONNECT", "INFO_DUMP",
-		"SETSOCKOPT" };
+		"SETSOCKOPT", "SHUTDOWN" };
 	return strings[type];
 }
 
@@ -65,6 +65,9 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 			break;
 		case SETSOCKOPT:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSetsockopt));
+			break;
+		case SHUTDOWN:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvShutdown));
 			break;
 		default:
 			DEBUG(ERROR, "Event type not managed.");
@@ -277,4 +280,20 @@ void tcp_setsockopt(int fd, int return_value, int level, int optname)
 
 	log_event(fd, "setsockopt");
 }
+
+void tcp_shutdown(int fd, int return_value, int how) 
+{
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];
+
+	/* Create event */
+	TcpEvShutdown *ev = (TcpEvShutdown *) new_event(SHUTDOWN,
+			return_value!=-1, return_value);
+	ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
+	ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
+	push(con, (TcpEvent *) ev);
+	
+	log_event(fd, "shutdown");
+}
+
 
