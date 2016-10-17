@@ -16,7 +16,8 @@ typedef enum TcpEventType
 	TCP_EV_CONNECT,
 	TCP_EV_INFO_DUMP,
 	TCP_EV_SETSOCKOPT,
-	TCP_EV_SHUTDOWN
+	TCP_EV_SHUTDOWN,
+	TCP_EV_LISTEN
 } TcpEventType;
 
 const char *string_from_tcp_event_type(TcpEventType type);
@@ -75,6 +76,11 @@ typedef struct {
 	bool shut_wr;
 } TcpEvShutdown;
 
+typedef struct {
+	TcpEvent super;
+	int backlog;
+} TcpEvListen;
+
 typedef struct TcpEventNode TcpEventNode;
 
 struct TcpEventNode {
@@ -104,5 +110,6 @@ void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 void tcp_info_dump(int fd);
 void tcp_setsockopt(int fd, int return_value, int level, int optname);
 void tcp_shutdown(int fd, int return_value, int how);
+void tcp_listen(int fd, int return_value, int backlog);
 
 #endif

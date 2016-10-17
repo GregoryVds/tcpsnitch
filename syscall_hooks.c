@@ -125,11 +125,12 @@ int listen (int __fd, int __n)
 	orig_listen = (orig_listen_type) dlsym(RTLD_NEXT, "listen");
 	DEBUG(INFO, "listen() on socket %d", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_listen(__fd, __n);
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-
+	if (is_tcp_socket(__fd)) {
+		tcp_listen(__fd, ret, __n);
+		tcp_info_dump(__fd);
+	}
 	return ret;
 }
 

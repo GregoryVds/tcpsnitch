@@ -18,6 +18,7 @@ json_t *build_connect_ev(TcpEvConnect *ev);
 json_t *build_info_dump_ev(TcpEvInfoDump *ev);
 json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 json_t *build_shutdown_ev(TcpEvShutdown *ev);
+json_t *build_listen_ev(TcpEvListen *ev);
 
 char *build_tcp_connection_json(TcpConnection *con) 
 {
@@ -67,6 +68,8 @@ json_t *build_event(TcpEvent *ev)
 			return build_setsockopt_ev((TcpEvSetsockopt *) ev);
 		case TCP_EV_SHUTDOWN:
 			return build_shutdown_ev((TcpEvShutdown *) ev);
+		case TCP_EV_LISTEN:
+			return build_listen_ev((TcpEvListen *) ev);
 		default:
 			DEBUG(ERROR, "build_event() failed. Unrecognized event"
 					" type %d.", ev->type);
@@ -269,3 +272,13 @@ json_t *build_shutdown_ev(TcpEvShutdown *ev)
 	return json_ev;
 }
 
+json_t *build_listen_ev(TcpEvListen *ev)
+{
+	json_t *json_ev = json_object();
+	build_shared_fields(json_ev, (TcpEvent *) ev);
+
+	json_t *json_details = json_object();
+	add(json_details, "backlog", json_integer(ev->backlog));
+	add(json_ev, "details", json_details);
+	return json_ev;
+}

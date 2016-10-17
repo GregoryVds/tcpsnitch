@@ -35,7 +35,8 @@ const char *string_from_tcp_event_type(TcpEventType type)
 					 "TCP_EV_CONNECT",
 					 "TCP_EV_INFO_DUMP",
 					 "TCP_EV_SETSOCKOPT",
-					 "TCP_EV_SHUTDOWN" };
+					 "TCP_EV_SHUTDOWN",
+					 "TCP_EV_LISTEN" };
 	return strings[type];
 }
 
@@ -73,6 +74,9 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 			break;
 		case TCP_EV_SHUTDOWN:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvShutdown));
+			break;
+		case TCP_EV_LISTEN:
+			ev = (TcpEvent *) malloc(sizeof(TcpEvListen));
 			break;
 		default:
 			DEBUG(ERROR, "Event type not managed.");
@@ -302,4 +306,16 @@ void tcp_shutdown(int fd, int return_value, int how)
 	log_event(fd, "shutdown");
 }
 
+void tcp_listen(int fd, int return_value, int backlog) 
+{
+	/* Update con */
+	TcpConnection *con = fd_con_map[fd];
 
+	/* Create event */
+	TcpEvListen *ev = (TcpEvListen *) new_event(TCP_EV_LISTEN,
+			return_value!=-1, return_value);
+	ev->backlog = backlog;
+	push(con, (TcpEvent *) ev);
+	
+	log_event(fd, "listen");
+}
