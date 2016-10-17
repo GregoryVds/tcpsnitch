@@ -28,9 +28,14 @@ int connections_count = 0;
 const char *string_from_tcp_event_type(TcpEventType type)
 {
 	
-	static const char *strings[] = { "TCP_EV_SOCK_OPENED", "TCP_EV_SOCK_CLOSED", 
-		"TCP_EV_DATA_SENT", "TCP_EV_DATA_RECEIVED", "TCP_EV_CONNECT", "TCP_EV_INFO_DUMP",
-		"TCP_EV_SETSOCKOPT", "TCP_EV_SHUTDOWN" };
+	static const char *strings[] = { "TCP_EV_SOCK_OPENED", 
+					 "TCP_EV_SOCK_CLOSED", 
+					 "TCP_EV_DATA_SENT",
+					 "TCP_EV_DATA_RECEIVED",
+					 "TCP_EV_CONNECT",
+					 "TCP_EV_INFO_DUMP",
+					 "TCP_EV_SETSOCKOPT",
+					 "TCP_EV_SHUTDOWN" };
 	return strings[type];
 }
 
@@ -167,8 +172,8 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	fd_con_map[fd] = con;
 
 	/* Create event */
-	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(TCP_EV_SOCK_OPENED, true, 
-			fd);
+	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(TCP_EV_SOCK_OPENED,
+			true, fd);
 	ev->domain = domain;
 	ev->type = SOCK_STREAM;
 	ev->protocol = protocol;
@@ -226,8 +231,8 @@ void tcp_data_received(int fd, int return_value, size_t bytes)
 	con->bytes_received+=bytes;
 	
 	/* Create event */
-	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(TCP_EV_DATA_RECEIVED,
-			return_value!=-1, return_value);
+	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(
+			TCP_EV_DATA_RECEIVED, return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
 
@@ -255,7 +260,8 @@ void tcp_info_dump(int fd)
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(TCP_EV_INFO_DUMP, true, 0);
+	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(TCP_EV_INFO_DUMP, true,
+			0);
 	socklen_t tcp_info_len = sizeof(struct tcp_info);
 	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info), 
 				&tcp_info_len) == -1) {
