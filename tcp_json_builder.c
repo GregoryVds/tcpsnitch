@@ -4,6 +4,10 @@
 #include "strings.h"
 #include "lib.h"
 
+/* Save reference to pointer with shorter name */
+typedef int (*add_type)(json_t *o, const char *k, json_t *v);
+add_type add = &json_object_set_new;
+
 json_t *build_tcp_connection(TcpConnection *con);
 json_t *build_event(TcpEvent *ev);
 json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
@@ -27,11 +31,11 @@ json_t *build_tcp_connection(TcpConnection *con)
 {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
-	json_object_set_new(json_con, "id", json_integer(con->id));
-	json_object_set_new(json_con, "eventsCount", json_integer(con->events_count));
-	json_object_set_new(json_con, "bytesSent", json_integer(con->bytes_sent));
-	json_object_set_new(json_con, "bytesReceived", json_integer(con->bytes_received));
-	json_object_set_new(json_con, "events",	events);
+	add(json_con, "id", json_integer(con->id));
+	add(json_con, "eventsCount", json_integer(con->events_count));
+	add(json_con, "bytesSent", json_integer(con->bytes_sent));
+	add(json_con, "bytesReceived", json_integer(con->bytes_received));
+	add(json_con, "events",	events);
 
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
@@ -73,20 +77,18 @@ json_t *build_event(TcpEvent *ev)
 void build_shared_fields(json_t *json_ev, TcpEvent *ev)
 {
 	const char *type_str = string_from_tcp_event_type(ev->type);
-	json_object_set_new(json_ev, "eventType", json_string(type_str));
+	add(json_ev, "eventType", json_string(type_str));
 
 	/* Time stamp */	
 	json_t *timestamp_json = json_object();
-	json_object_set_new(timestamp_json, "sec",
-			json_integer(ev->timestamp.tv_sec));
-	json_object_set_new(timestamp_json, "usec",
-			json_integer(ev->timestamp.tv_usec));
-	json_object_set_new(json_ev, "timestamp", timestamp_json);
+	add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
+	add(timestamp_json, "usec", json_integer(ev->timestamp.tv_usec));
+	add(json_ev, "timestamp", timestamp_json);
 	
 	/* Return value & err string */ 
-	json_object_set_new(json_ev, "returnValue", json_integer(ev->return_value));
-	json_object_set_new(json_ev, "success", json_boolean(ev->success));
-	json_object_set_new(json_ev, "errorStr", json_string(ev->error_str));
+	add(json_ev, "returnValue", json_integer(ev->return_value));
+	add(json_ev, "success", json_boolean(ev->success));
+	add(json_ev, "errorStr", json_string(ev->error_str));
 }
 
 json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
@@ -113,17 +115,12 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 	}
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "domain", 
-			json_string(domain_buf));
-	json_object_set_new(json_details, "type", 
-			json_string(type_buf));
-	json_object_set_new(json_details, "protocol", 
-			json_integer(ev->protocol));
-	json_object_set_new(json_details, "sockCloexec",
-			json_boolean(ev->sock_cloexec));
-	json_object_set_new(json_details, "sockNonblock", 
-			json_boolean(ev->sock_nonblock));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "domain", json_string(domain_buf));
+	add(json_details, "type", json_string(type_buf));
+	add(json_details, "protocol", json_integer(ev->protocol));
+	add(json_details, "sockCloexec", json_boolean(ev->sock_cloexec));
+	add(json_details, "sockNonblock", json_boolean(ev->sock_nonblock));
+	add(json_ev, "details", json_details);
 	
 	return json_ev;
 }
@@ -134,8 +131,8 @@ json_t *build_sock_closed_ev(TcpEvSockClosed *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "detected", json_boolean(ev->detected));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "detected", json_boolean(ev->detected));
+	add(json_ev, "details", json_details);
 	return json_ev;
 }
 
@@ -145,8 +142,8 @@ json_t *build_data_sent_ev(TcpEvDataSent *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "bytes", json_integer(ev->bytes));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
@@ -157,8 +154,8 @@ json_t *build_data_received_ev(TcpEvDataReceived *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "bytes", json_integer(ev->bytes));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
@@ -175,9 +172,9 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	port_string_from_sockaddr(&(ev->addr), port_buf, sizeof(port_buf));
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "addr", json_string(addr_buf));
-	json_object_set_new(json_details, "port", json_string(port_buf));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "addr", json_string(addr_buf));
+	add(json_details, "port", json_string(port_buf));
+	add(json_ev, "details", json_details);
 	return json_ev;
 }
 
@@ -189,48 +186,48 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 	struct tcp_info i = ev->info;
 	json_t *json_details = json_object();
 
-	json_object_set_new(json_details, "state", json_integer(i.tcpi_state));
-	json_object_set_new(json_details, "ca_state", json_integer(i.tcpi_ca_state));
-	json_object_set_new(json_details, "retransmits", json_integer(i.tcpi_retransmits));
-	json_object_set_new(json_details, "probes", json_integer(i.tcpi_probes));
-	json_object_set_new(json_details, "backoff", json_integer(i.tcpi_backoff));
-	json_object_set_new(json_details, "options", json_integer(i.tcpi_options));
-	json_object_set_new(json_details, "snd_wscale", json_integer(i.tcpi_snd_wscale));
-	json_object_set_new(json_details, "rcv_wscale", json_integer(i.tcpi_rcv_wscale));
+	add(json_details, "state", json_integer(i.tcpi_state));
+	add(json_details, "ca_state", json_integer(i.tcpi_ca_state));
+	add(json_details, "retransmits", json_integer(i.tcpi_retransmits));
+	add(json_details, "probes", json_integer(i.tcpi_probes));
+	add(json_details, "backoff", json_integer(i.tcpi_backoff));
+	add(json_details, "options", json_integer(i.tcpi_options));
+	add(json_details, "snd_wscale", json_integer(i.tcpi_snd_wscale));
+	add(json_details, "rcv_wscale", json_integer(i.tcpi_rcv_wscale));
 
-	json_object_set_new(json_details, "rto", json_integer(i.tcpi_rto));
-	json_object_set_new(json_details, "ato", json_integer(i.tcpi_ato));
-	json_object_set_new(json_details, "snd_mss", json_integer(i.tcpi_snd_mss));
-	json_object_set_new(json_details, "rcv_mss", json_integer(i.tcpi_rcv_mss));
+	add(json_details, "rto", json_integer(i.tcpi_rto));
+	add(json_details, "ato", json_integer(i.tcpi_ato));
+	add(json_details, "snd_mss", json_integer(i.tcpi_snd_mss));
+	add(json_details, "rcv_mss", json_integer(i.tcpi_rcv_mss));
 
-	json_object_set_new(json_details, "unacked", json_integer(i.tcpi_unacked));
-	json_object_set_new(json_details, "sacked", json_integer(i.tcpi_sacked));
-	json_object_set_new(json_details, "lost", json_integer(i.tcpi_lost));
-	json_object_set_new(json_details, "retrans", json_integer(i.tcpi_retrans));
-	json_object_set_new(json_details, "fackets", json_integer(i.tcpi_fackets));
+	add(json_details, "unacked", json_integer(i.tcpi_unacked));
+	add(json_details, "sacked", json_integer(i.tcpi_sacked));
+	add(json_details, "lost", json_integer(i.tcpi_lost));
+	add(json_details, "retrans", json_integer(i.tcpi_retrans));
+	add(json_details, "fackets", json_integer(i.tcpi_fackets));
 
 	/* Times */
-	json_object_set_new(json_details, "last_data_sent", json_integer(i.tcpi_last_data_sent));
-	json_object_set_new(json_details, "last_ack_sent", json_integer(i.tcpi_last_ack_sent));
-	json_object_set_new(json_details, "last_data_recv", json_integer(i.tcpi_last_data_recv));
-	json_object_set_new(json_details, "last_ack_recv", json_integer(i.tcpi_last_ack_recv));
+	add(json_details, "last_data_sent", json_integer(i.tcpi_last_data_sent));
+	add(json_details, "last_ack_sent", json_integer(i.tcpi_last_ack_sent));
+	add(json_details, "last_data_recv", json_integer(i.tcpi_last_data_recv));
+	add(json_details, "last_ack_recv", json_integer(i.tcpi_last_ack_recv));
 	
 	/* Metrics */
-	json_object_set_new(json_details, "pmtu", json_integer(i.tcpi_pmtu));
-	json_object_set_new(json_details, "rcv_ssthresh", json_integer(i.tcpi_rcv_ssthresh));
-	json_object_set_new(json_details, "rtt", json_integer(i.tcpi_rtt));
-	json_object_set_new(json_details, "rttvar", json_integer(i.tcpi_rttvar));
-	json_object_set_new(json_details, "snd_ssthresh", json_integer(i.tcpi_snd_ssthresh));
-	json_object_set_new(json_details, "snd_cwnd", json_integer(i.tcpi_snd_cwnd));
-	json_object_set_new(json_details, "advmss", json_integer(i.tcpi_advmss));
-	json_object_set_new(json_details, "reordering", json_integer(i.tcpi_reordering));
+	add(json_details, "pmtu", json_integer(i.tcpi_pmtu));
+	add(json_details, "rcv_ssthresh", json_integer(i.tcpi_rcv_ssthresh));
+	add(json_details, "rtt", json_integer(i.tcpi_rtt));
+	add(json_details, "rttvar", json_integer(i.tcpi_rttvar));
+	add(json_details, "snd_ssthresh", json_integer(i.tcpi_snd_ssthresh));
+	add(json_details, "snd_cwnd", json_integer(i.tcpi_snd_cwnd));
+	add(json_details, "advmss", json_integer(i.tcpi_advmss));
+	add(json_details, "reordering", json_integer(i.tcpi_reordering));
 
-	json_object_set_new(json_details, "rcv_rtt", json_integer(i.tcpi_rcv_rtt));
-	json_object_set_new(json_details, "rcv_space", json_integer(i.tcpi_rcv_space));
+	add(json_details, "rcv_rtt", json_integer(i.tcpi_rcv_rtt));
+	add(json_details, "rcv_space", json_integer(i.tcpi_rcv_space));
 
-	json_object_set_new(json_details, "total_retrans", json_integer(i.tcpi_total_retrans));
+	add(json_details, "total_retrans", json_integer(i.tcpi_total_retrans));
 	
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
@@ -253,9 +250,9 @@ json_t *build_setsockopt_ev(TcpEvSetsockopt *ev)
 	}
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "level", json_string(protocol->p_name));
-	json_object_set_new(json_details, "optname", json_string(optname_buf));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "level", json_string(protocol->p_name));
+	add(json_details, "optname", json_string(optname_buf));
+	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
@@ -266,9 +263,9 @@ json_t *build_shutdown_ev(TcpEvShutdown *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	json_t *json_details = json_object();
-	json_object_set_new(json_details, "shut_rd", json_boolean(ev->shut_rd));
-	json_object_set_new(json_details, "shut_wr", json_boolean(ev->shut_wr));
-	json_object_set_new(json_ev, "details", json_details);
+	add(json_details, "shut_rd", json_boolean(ev->shut_rd));
+	add(json_details, "shut_wr", json_boolean(ev->shut_wr));
+	add(json_ev, "details", json_details);
 	return json_ev;
 }
 
