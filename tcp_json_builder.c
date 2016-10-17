@@ -51,21 +51,21 @@ json_t *build_tcp_connection(TcpConnection *con)
 json_t *build_event(TcpEvent *ev)
 {	
 	switch(ev->type) {
-		case SOCK_OPENED:   
+		case TCP_EV_SOCK_OPENED:   
 			return build_sock_opened_ev((TcpEvSockOpened *) ev);
-		case SOCK_CLOSED:   
+		case TCP_EV_SOCK_CLOSED:   
 			return build_sock_closed_ev((TcpEvSockClosed *) ev);
-		case DATA_SENT:     
+		case TCP_EV_DATA_SENT:     
 			return build_data_sent_ev((TcpEvDataSent *) ev);
-		case DATA_RECEIVED: 
+		case TCP_EV_DATA_RECEIVED: 
 			return build_data_received_ev((TcpEvDataReceived *)ev);
-		case CONNECT:	    
+		case TCP_EV_CONNECT:	    
 			return build_connect_ev((TcpEvConnect *) ev);
-		case INFO_DUMP:     
+		case TCP_EV_INFO_DUMP:     
 			return build_info_dump_ev((TcpEvInfoDump *) ev);
-		case SETSOCKOPT:
+		case TCP_EV_SETSOCKOPT:
 			return build_setsockopt_ev((TcpEvSetsockopt *) ev);
-		case SHUTDOWN:
+		case TCP_EV_SHUTDOWN:
 			return build_shutdown_ev((TcpEvShutdown *) ev);
 		default:
 			DEBUG(ERROR, "build_event() failed. Unrecognized event"

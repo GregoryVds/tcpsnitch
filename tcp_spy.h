@@ -9,14 +9,14 @@
 
 typedef enum TcpEventType
 {
-	SOCK_OPENED,
-	SOCK_CLOSED,
-	DATA_SENT,
-	DATA_RECEIVED,
-	CONNECT,
-	INFO_DUMP,
-	SETSOCKOPT,
-	SHUTDOWN
+	TCP_EV_SOCK_OPENED,
+	TCP_EV_SOCK_CLOSED,
+	TCP_EV_DATA_SENT,
+	TCP_EV_DATA_RECEIVED,
+	TCP_EV_CONNECT,
+	TCP_EV_INFO_DUMP,
+	TCP_EV_SETSOCKOPT,
+	TCP_EV_SHUTDOWN
 } TcpEventType;
 
 const char *string_from_tcp_event_type(TcpEventType type);

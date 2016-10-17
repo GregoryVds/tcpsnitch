@@ -28,9 +28,9 @@ int connections_count = 0;
 const char *string_from_tcp_event_type(TcpEventType type)
 {
 	
-	static const char *strings[] = { "SOCK_OPENED", "SOCK_CLOSED", 
-		"DATA_SENT", "DATA_RECEIVED", "CONNECT", "INFO_DUMP",
-		"SETSOCKOPT", "SHUTDOWN" };
+	static const char *strings[] = { "TCP_EV_SOCK_OPENED", "TCP_EV_SOCK_CLOSED", 
+		"TCP_EV_DATA_SENT", "TCP_EV_DATA_RECEIVED", "TCP_EV_CONNECT", "TCP_EV_INFO_DUMP",
+		"TCP_EV_SETSOCKOPT", "TCP_EV_SHUTDOWN" };
 	return strings[type];
 }
 
@@ -45,28 +45,28 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 	TcpEvent *ev;
 
 	switch(type) {
-		case SOCK_OPENED:
+		case TCP_EV_SOCK_OPENED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSockOpened));
 			break;
-		case SOCK_CLOSED:
+		case TCP_EV_SOCK_CLOSED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSockClosed));
 			break;
-		case DATA_SENT:
+		case TCP_EV_DATA_SENT:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvDataSent));
 			break;
-		case DATA_RECEIVED:
+		case TCP_EV_DATA_RECEIVED:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvDataReceived));
 			break;
-		case CONNECT: 
+		case TCP_EV_CONNECT: 
 			ev = (TcpEvent *) malloc(sizeof(TcpEvConnect));	
 			break;
-		case INFO_DUMP:
+		case TCP_EV_INFO_DUMP:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvInfoDump));
 			break;
-		case SETSOCKOPT:
+		case TCP_EV_SETSOCKOPT:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvSetsockopt));
 			break;
-		case SHUTDOWN:
+		case TCP_EV_SHUTDOWN:
 			ev = (TcpEvent *) malloc(sizeof(TcpEvShutdown));
 			break;
 		default:
@@ -167,7 +167,7 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	fd_con_map[fd] = con;
 
 	/* Create event */
-	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(SOCK_OPENED, true, 
+	TcpEvSockOpened *ev = (TcpEvSockOpened *) new_event(TCP_EV_SOCK_OPENED, true, 
 			fd);
 	ev->domain = domain;
 	ev->type = SOCK_STREAM;
@@ -186,7 +186,7 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 	con->closed = false;
 
 	/* Create event */
-	TcpEvSockClosed *ev = (TcpEvSockClosed *) new_event(SOCK_CLOSED,
+	TcpEvSockClosed *ev = (TcpEvSockClosed *) new_event(TCP_EV_SOCK_CLOSED,
 			return_value!=-1, return_value);
 	ev->detected = detected;
 	push(con, (TcpEvent *) ev);
@@ -211,7 +211,7 @@ void tcp_data_sent(int fd, int return_value, size_t bytes)
 	con->bytes_sent+=bytes;
 
 	/* Create event */
-	TcpEvDataSent *ev = (TcpEvDataSent *) new_event(DATA_SENT,
+	TcpEvDataSent *ev = (TcpEvDataSent *) new_event(TCP_EV_DATA_SENT,
 			return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
@@ -226,7 +226,7 @@ void tcp_data_received(int fd, int return_value, size_t bytes)
 	con->bytes_received+=bytes;
 	
 	/* Create event */
-	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(DATA_RECEIVED,
+	TcpEvDataReceived *ev = (TcpEvDataReceived *) new_event(TCP_EV_DATA_RECEIVED,
 			return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
@@ -241,7 +241,7 @@ void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvConnect *ev = (TcpEvConnect *) new_event(CONNECT,
+	TcpEvConnect *ev = (TcpEvConnect *) new_event(TCP_EV_CONNECT,
 			return_value!=-1, return_value);
 	memcpy(&(ev->addr), addr, len);
 	push(con, (TcpEvent *) ev);
@@ -255,7 +255,7 @@ void tcp_info_dump(int fd)
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(INFO_DUMP, true, 0);
+	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(TCP_EV_INFO_DUMP, true, 0);
 	socklen_t tcp_info_len = sizeof(struct tcp_info);
 	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info), 
 				&tcp_info_len) == -1) {
@@ -272,7 +272,7 @@ void tcp_setsockopt(int fd, int return_value, int level, int optname)
 	TcpConnection *con = fd_con_map[fd];	
 			
 	/* Create event */
-	TcpEvSetsockopt *ev = (TcpEvSetsockopt *) new_event(SETSOCKOPT,
+	TcpEvSetsockopt *ev = (TcpEvSetsockopt *) new_event(TCP_EV_SETSOCKOPT,
 			return_value!=1, return_value);
 	ev->level = level;
 	ev->optname = optname;
@@ -287,7 +287,7 @@ void tcp_shutdown(int fd, int return_value, int how)
 	TcpConnection *con = fd_con_map[fd];
 
 	/* Create event */
-	TcpEvShutdown *ev = (TcpEvShutdown *) new_event(SHUTDOWN,
+	TcpEvShutdown *ev = (TcpEvShutdown *) new_event(TCP_EV_SHUTDOWN,
 			return_value!=-1, return_value);
 	ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
 	ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
