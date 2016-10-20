@@ -96,7 +96,7 @@ typedef struct {
 	bool connected;
 	unsigned long bytes_sent;
 	unsigned long bytes_received;
-	bool closed;
+ 	char kernel[30];
 } TcpConnection;
 
 

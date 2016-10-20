@@ -44,5 +44,7 @@ void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
 
 int append_string_to_file(const char *str, const char *path);
 
+int get_kernel_version(char *buf, int buf_size);
+
 #endif
 

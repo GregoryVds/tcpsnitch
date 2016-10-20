@@ -101,6 +101,11 @@ TcpConnection *new_connection()
 	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
 	connections_count++;
+
+	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {
+		strcpy(con->kernel, "Could not get kernel version.");
+	}
+	
 	return con;	
 }
 
@@ -178,7 +183,6 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];
-	con->closed = false;
 
 	/* Create event */
 	TcpEvSockClosed *ev = (TcpEvSockClosed *) new_event(TCP_EV_SOCK_CLOSED,

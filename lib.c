@@ -132,3 +132,26 @@ int append_string_to_file(const char *str, const char *path)
 	return 0;
 }
 
+int get_kernel_version(char *buf, int buf_size)
+{
+	FILE *fp;
+
+	if ((fp = popen("uname -r", "r")) == NULL) {
+		DEBUG(ERROR, "open() failed. %s", strerror(errno));
+		return -1;
+	}
+
+	if (fgets(buf, buf_size, fp) == NULL) {
+		DEBUG(ERROR, "fgets() failed. Error or end of file occured "
+				"while not characters have been read");
+		return -1;
+	}
+
+	if (pclose(fp) == -1) {
+		DEBUG(ERROR, "pclose() failed. %s", strerror(errno));
+		return -1;
+	}
+		
+	return 0;
+}
+
