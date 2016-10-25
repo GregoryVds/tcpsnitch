@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -14,7 +16,6 @@
 #include "lib.h"
 #include "tcp_spy.h"
 #include "strings.h"
-
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
 */
@@ -68,7 +69,7 @@ int socket (int __domain, int __type, int __protocol)
    and the only address from which to accept transmissions.
    Return 0 on success, -1 for errors. */
 
-typedef int (*orig_connect_type)(int __fd, __CONST_SOCKADDR_ARG __addr,
+typedef int (*orig_connect_type)(int __fd, const struct sockaddr *__addr,
 		socklen_t __len);
 
 int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
@@ -78,6 +79,7 @@ int connect (int __fd, const struct sockaddr *__addr, socklen_t __len)
 	DEBUG(INFO, "connect() called on socket %d.", __fd);
 
 	/* Perform syscall */
+	if (is_tcp_socket(__fd)) tcp_pre_connect(__fd, __addr);
 	int ret = orig_connect(__fd, __addr, __len);
 	if (is_tcp_socket(__fd)) {
 		tcp_connect(__fd, ret, __addr, __len);
@@ -207,11 +209,11 @@ ssize_t recv (int __fd, void *__buf, size_t __n, int __flags)
    ADDR_LEN bytes long).  Returns the number sent, or -1 for errors. */
 
 typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n, 
-		int __flags, __CONST_SOCKADDR_ARG __addr, 
+		int __flags, const struct sockaddr *__addr, 
 		socklen_t __addr_len);
 
 ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags, 
-		__CONST_SOCKADDR_ARG __addr, socklen_t __addr_len)
+		const struct sockaddr *__addr, socklen_t __addr_len)
 {
 	orig_sendto_type orig_sendto;
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
@@ -240,11 +242,11 @@ ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags,
    Returns the number of bytes read or -1 for errors. */
 
 typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf, 
-		size_t __n, int __flags, __SOCKADDR_ARG __addr,
+		size_t __n, int __flags, struct sockaddr *__addr,
 		socklen_t *__restrict __addr_len);
 
 ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
-			 int __flags, __SOCKADDR_ARG __addr,
+			 int __flags, struct sockaddr *__addr,
 			 socklen_t *__restrict __addr_len) 
 {
 	orig_recvfrom_type orig_recvfrom;

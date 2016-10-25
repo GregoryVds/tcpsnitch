@@ -8,7 +8,10 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <pcap/pcap.h>
 #include "lib.h"
+
+#define ENV_NETSPY_PATH "NETSPY_PATH"
 
 const char *string_from_debug_level(DebugLevel lvl)
 {
@@ -16,7 +19,7 @@ const char *string_from_debug_level(DebugLevel lvl)
 	return strings[lvl];
 }
 
-void log(DebugLevel debug_lvl, char *formated_str)
+void lib_log(DebugLevel debug_lvl, char *formated_str)
 {
 	pid_t pid = getpid();
 
@@ -154,4 +157,21 @@ int get_kernel_version(char *buf, int buf_size)
 		
 	return 0;
 }
+
+char *build_path(const char *file_name)
+{
+	const char *base_path = getenv(ENV_NETSPY_PATH);
+	if (base_path==NULL) {
+		DEBUG(ERROR, "env variable %s not set.", ENV_NETSPY_PATH);
+	}
+
+	int full_path_length = strlen(base_path)+strlen(file_name)+1;
+	char *full_path = (char *) malloc(sizeof(char)*full_path_length+1);
+	if (snprintf(full_path, full_path_length+1, "%s/%s", base_path, 
+				file_name) >= full_path_length) {
+		DEBUG(ERROR, "build_path, snprintf() failed (truncated).");
+	}
+	return full_path;
+}
+
 

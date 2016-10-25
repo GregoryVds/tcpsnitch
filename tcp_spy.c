@@ -5,9 +5,10 @@
 #include "tcp_spy.h"
 #include "lib.h"
 #include "tcp_json_builder.h"
-
-#define ENV_NETSPY_PATH "NETSPY_PATH"
-
+#include "packet_sniffer.h"
+#include <pcap/pcap.h>
+#define NETSPY_JSON_FILE "dump.json"
+#define NETSPY_PCAP_FILE "dump.pcap"
 /* We keep a mapping from file descriptors to TCP connections structs for all
  * opened connections. This allows to easily identify to which connection a 
  * given function call belongs to. 
@@ -190,12 +191,16 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 	ev->detected = detected;
 	push(con, (TcpEvent *) ev);
 
+	/* Stop packet capture */
+	con->pcount = stop_capture(con->capture_handle, &(con->capture_thread));
+		
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
-	const char *file_path = getenv(ENV_NETSPY_PATH);
+	char *file_path = build_path(NETSPY_JSON_FILE);
 	if (append_string_to_file((const char *) json, file_path) == -1) {
 		DEBUG(ERROR, "Problems when dumping to file.");
 	}
+	free(file_path);
 
 	/* Cleanup */
 	free_connection(con);
@@ -226,6 +231,30 @@ void tcp_data_received(int fd, int return_value, size_t bytes)
 			TCP_EV_DATA_RECEIVED, return_value!=-1, return_value);
 	ev->bytes = bytes;
 	push(con, (TcpEvent *) ev);
+}
+
+#define FILTER_SIZE 200
+void tcp_pre_connect(int fd, const struct sockaddr *addr)
+{
+	/* Update con */
+	 TcpConnection *con = fd_con_map[fd];	
+
+	/* Build capture filter */
+	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *) addr;
+	char addr_buf[50];
+	addr_string_from_sockaddr(addr_sto, addr_buf, sizeof(addr_buf));
+	char port_buf[PORT_WIDTH];
+	port_string_from_sockaddr(addr_sto, port_buf, sizeof(port_buf));
+	char filter[FILTER_SIZE];
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_buf, port_buf);
+	DEBUG(INFO, "Starting capture will filter %s", filter);
+
+	/* Start packet capture */
+	char *file_path = build_path(NETSPY_PCAP_FILE);
+	con->capture_handle = start_capture(filter, file_path, 
+			&(con->capture_thread));
+
+	free(file_path);
 }
 
 void tcp_connect(int fd, int return_value, const struct sockaddr *addr, 

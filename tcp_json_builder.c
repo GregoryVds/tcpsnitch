@@ -38,7 +38,7 @@ json_t *build_tcp_connection(TcpConnection *con)
 	add(json_con, "bytesReceived", json_integer(con->bytes_received));
 	add(json_con, "kernel", json_string(con->kernel));
 	add(json_con, "events",	events);
-
+	add(json_con, "packetsCount", json_integer(con->pcount));
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
 	while (cur != NULL) {

@@ -6,7 +6,6 @@
 #include <time.h>
 #include <stdio.h>
 #include <netinet/tcp.h>
-#include <pcap/pcap.h>
 
 typedef enum TcpEventType
 {
@@ -100,7 +99,7 @@ typedef struct {
  	char kernel[30];
 	pthread_t capture_thread;
 	pcap_t *capture_handle;
-	int pcount;
+	long packets_captured_count;
 } TcpConnection;
 
 
@@ -109,7 +108,7 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 void tcp_sock_closed(int fd, int return_value, bool detected);
 void tcp_data_sent(int fd, int return_value, size_t bytes);
 void tcp_data_received(int fd, int return_value, size_t bytes);
-void tcp_pre_connect(int fd, const struct sockaddr *addr);
+void tcp_pre_connect(int fd);
 void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 		socklen_t len);
 void tcp_info_dump(int fd);

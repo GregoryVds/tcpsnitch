@@ -1,11 +1,11 @@
-CC=g++
-CFLAGS=-Wall -shared -fPIC -ldl 
-SOURCES=syscall_hooks.c lib.c tcp_spy.c strings.c tcp_json_builder.c /usr/local/lib/libjansson.a
+CC=gcc
+CFLAGS=-Wall -shared -fPIC -ldl -lpthread -lpcap 
+SOURCES=syscall_hooks.c lib.c tcp_spy.c strings.c tcp_json_builder.c packet_sniffer.c /usr/local/lib/libjansson.a
 EXECUTABLE=netspy.so
-ENV=NETSPY_PATH=~/host/dump.json LD_PRELOAD=./$(EXECUTABLE) 
+ENV=NETSPY_PATH=~/host LD_PRELOAD=./$(EXECUTABLE) 
 
 all:
-	$(CC) $(CFLAGS) $(SOURCES) -o $(EXECUTABLE)
+	$(CC) $(SOURCES) $(CFLAGS) -o $(EXECUTABLE)
 
 clean:
 	rm -f *.o
