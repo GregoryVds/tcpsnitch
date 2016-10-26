@@ -244,7 +244,7 @@ char *build_path(const char *file_name)
 	char *full_path = (char *) malloc(sizeof(char)*full_path_length);
 	if (snprintf(full_path, full_path_length, "%s/%s", base_path, 
 				file_name) >= full_path_length) {
-		DEBUG(ERROR, "build_path, snprintf() failed (truncated).");
+		DEBUG(ERROR, "snprintf() failed (truncated).");
 	}
 	return full_path;
 }
@@ -262,5 +262,32 @@ char *get_log_path()
 char *get_pcap_path()
 {
 	return build_path(NETSPY_PCAP_FILE);
+}
+
+#define PATH_LENGTH 30
+#define CMDLINE_LENGTH 1024
+char *get_cmdline()
+{
+	// Build path to /proc/pid/cmdline in path
+	char path[PATH_LENGTH];
+	pid_t pid = getpid();
+	if (snprintf(path, PATH_LENGTH, "/proc/%d/cmdline", 
+				pid) >= PATH_LENGTH) {
+		DEBUG(ERROR, "snprintf() failed (truncated).");
+	}
+	
+	// Read /proc/pid/cmdline in cmdline
+	FILE *fp = fopen(path,"r");
+	char *cmdline = (char *) malloc(sizeof(char)*CMDLINE_LENGTH);
+	size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
+	if (rc==0) DEBUG(ERROR, "fread() failed.");
+	fclose(fp);
+	
+	// Replace null bytes between args by white spaces
+	int i;
+	for (i=0; i<rc-1; i++)
+		if (cmdline[i]=='\0') cmdline[i]=' ';
+
+	return cmdline;
 }
 

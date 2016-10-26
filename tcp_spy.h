@@ -91,7 +91,7 @@ struct TcpEventNode {
 
 typedef struct {
 	int id;
-	char *application_name;
+	char *application;
 	TcpEventNode *head;
 	TcpEventNode *tail;
 	int events_count;

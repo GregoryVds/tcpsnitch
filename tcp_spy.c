@@ -101,7 +101,7 @@ TcpConnection *new_connection()
 {
 	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
-	con->application_name = program_invocation_name; 
+	con->application = get_cmdline(); 
 	connections_count++;
 
 	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {
@@ -147,6 +147,7 @@ void free_tcp_events_list(TcpEventNode *head)
 void free_connection(TcpConnection *con)
 {
 	free_tcp_events_list(con->head);
+	free(con->application);
 	free(con);
 }
 
