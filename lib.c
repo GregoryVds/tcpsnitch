@@ -227,7 +227,9 @@ int get_kernel_version(char *buf, int buf_size)
 		DEBUG(ERROR, "pclose() failed. %s", strerror(errno));
 		return -1;
 	}
-		
+
+	// Erase \n at last position.
+	buf[strlen(buf)-1] = '\0';
 	return 0;
 }
 

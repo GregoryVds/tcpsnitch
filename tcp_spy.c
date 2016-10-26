@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -99,6 +101,7 @@ TcpConnection *new_connection()
 {
 	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
+	con->application_name = program_invocation_name; 
 	connections_count++;
 
 	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {

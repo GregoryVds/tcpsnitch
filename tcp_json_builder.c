@@ -27,11 +27,13 @@ char *build_tcp_connection_json(TcpConnection *con)
 	json_decref(json_con);
 	return json_string;
 }
-
+	
 json_t *build_tcp_connection(TcpConnection *con) 
 {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
+
+	add(json_con, "application", json_string(con->application_name));
 	add(json_con, "id", json_integer(con->id));
 	add(json_con, "eventsCount", json_integer(con->events_count));
 	add(json_con, "bytesSent", json_integer(con->bytes_sent));
@@ -40,6 +42,8 @@ json_t *build_tcp_connection(TcpConnection *con)
 	add(json_con, "gotPcapHandle", json_boolean(con->got_pcap_handle));
 	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
 	add(json_con, "events",	events);
+	
+	/* Loop through all events to build JSON */
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
 	while (cur != NULL) {
