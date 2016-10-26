@@ -33,20 +33,31 @@ void die_with_system_msg(const char *msg);
 bool is_socket(int fd);
 bool is_inet_socket(int fd);
 bool is_tcp_socket(int fd);
+#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
+
+/* Struct to string helpers */
 
 #define PORT_WIDTH 6 // Include null byte
 #define ADDR_WIDTH 40 // Include null byte
 #define FULL_ADDR_WIDTH 46 // ADDR:PORT\0
 
-#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
-int addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, int buf_size);
-int port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, int buf_size);
-int string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size);
+int addr_string_from_sockaddr(const struct sockaddr_storage *addr, 
+		char *buf, int buf_size);
+int port_string_from_sockaddr(const struct sockaddr_storage *addr, 
+		char *buf, int buf_size);
+int string_from_sockaddr(const struct sockaddr *addr,
+		char *buf, int buf_size);
+int get_kernel_version(char *buf, int buf_size);
 
+/* Other */
 int append_string_to_file(const char *str, const char *path);
 
-int get_kernel_version(char *buf, int buf_size);
+/* Path helpers */
+
 char *build_path(const char *file_name);
+char *get_pcap_path();
+char *get_log_path();
+char *get_json_path();
 
 #endif
 

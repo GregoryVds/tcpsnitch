@@ -9,6 +9,8 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <pcap/pcap.h>
+#include <sys/time.h>
+#include "config.h"
 #include "lib.h"
 
 #define ENV_NETSPY_PATH "NETSPY_PATH"
@@ -29,21 +31,47 @@ void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
 {
 	pid_t pid = getpid();
 
-	const char *color;
-	switch (debug_lvl) {
-		case INFO:  color = ANSI_COLOR_WHITE; 	break;
-		case WARN:  color = ANSI_COLOR_YELLOW; 	break;
-		case ERROR: color = ANSI_COLOR_RED; 	break;
+	/* Log to stdout */
+	if (NETSPY_LOG) {
+		const char *color;
+		switch (debug_lvl) {
+			case INFO:  color = ANSI_COLOR_WHITE; 	break;
+			case WARN:  color = ANSI_COLOR_YELLOW; 	break;
+			case ERROR: color = ANSI_COLOR_RED; 	break;
+		}
+
+		fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n",
+				color,
+				string_from_debug_level(debug_lvl),
+				pid,
+				file,
+				line,
+				formated_str,
+				ANSI_COLOR_RESET);
 	}
 
-	fprintf(stderr, "%s%d-%s(%s:%d): %s%s\n",
-			color,
-			pid,
-			string_from_debug_level(debug_lvl),
-			file,
-			line,
-			formated_str,
-			ANSI_COLOR_RESET);
+	/* Log to file */
+	if (NETSPY_LOG_TO_FILE) {
+		char *path = get_log_path();
+		FILE *fp = fopen(path, "a");
+
+		struct timeval tv;
+		gettimeofday(&tv,NULL);
+		unsigned long time_micros;
+		time_micros = tv.tv_sec*(unsigned long)1000000 + tv.tv_usec;
+
+		fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
+				string_from_debug_level(debug_lvl),
+				pid,
+				time_micros,
+				file,
+				line,
+				formated_str);
+
+		fclose(fp); // TODO: This forces a write... Slow.
+		free(path);
+	}
+
 }
 
 bool is_socket(int fd)
@@ -219,4 +247,18 @@ char *build_path(const char *file_name)
 	return full_path;
 }
 
+char *get_json_path()
+{
+	return build_path(NETSPY_JSON_FILE);
+}
+
+char *get_log_path()
+{
+	return build_path(NETSPY_LOG_FILE);
+}
+
+char *get_pcap_path()
+{
+	return build_path(NETSPY_PCAP_FILE);
+}
 

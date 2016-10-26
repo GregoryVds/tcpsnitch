@@ -7,8 +7,6 @@
 #include "tcp_json_builder.h"
 #include "packet_sniffer.h"
 #include <pcap/pcap.h>
-#define NETSPY_JSON_FILE "dump.json"
-#define NETSPY_PCAP_FILE "dump.pcap"
 /* We keep a mapping from file descriptors to TCP connections structs for all
  * opened connections. This allows to easily identify to which connection a 
  * given function call belongs to. 
@@ -200,7 +198,7 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
-	char *file_path = build_path(NETSPY_JSON_FILE);
+	char *file_path = get_json_path(); 
 	if (append_string_to_file((const char *) json, file_path) == -1) {
 		DEBUG(ERROR, "Problems when dumping to file.");
 	}
@@ -243,7 +241,7 @@ void tcp_pre_connect(int fd, const struct sockaddr *addr)
 	 TcpConnection *con = fd_con_map[fd];	
 
 	/* Start packet capture */
-	char *file_path = build_path(NETSPY_PCAP_FILE);
+	char *file_path = get_pcap_path(); 
 	char *filter = build_capture_filter(addr);
 	con->capture_handle = start_capture(filter, file_path, 
 			&(con->capture_thread));
