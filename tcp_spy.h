@@ -100,7 +100,8 @@ typedef struct {
  	char kernel[30];
 	pthread_t capture_thread;
 	pcap_t *capture_handle;
-	int pcount;
+	bool got_pcap_handle;
+	bool successful_pcap;
 } TcpConnection;
 
 

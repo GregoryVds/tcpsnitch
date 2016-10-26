@@ -192,10 +192,11 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 	push(con, (TcpEvent *) ev);
 
 	/* Stop packet capture */
+	int rc = 0;
 	if (con->capture_handle != NULL) {
-		con->pcount = stop_capture(con->capture_handle,
-				&(con->capture_thread));
+		rc = stop_capture(con->capture_handle, &(con->capture_thread));
 	}
+	con->successful_pcap = (rc==-2);
 
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
@@ -236,27 +237,18 @@ void tcp_data_received(int fd, int return_value, size_t bytes)
 	push(con, (TcpEvent *) ev);
 }
 
-#define FILTER_SIZE 200
 void tcp_pre_connect(int fd, const struct sockaddr *addr)
 {
 	/* Update con */
 	 TcpConnection *con = fd_con_map[fd];	
 
-	/* Build capture filter */
-	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *) addr;
-	char addr_buf[50];
-	addr_string_from_sockaddr(addr_sto, addr_buf, sizeof(addr_buf));
-	char port_buf[PORT_WIDTH];
-	port_string_from_sockaddr(addr_sto, port_buf, sizeof(port_buf));
-	char filter[FILTER_SIZE];
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_buf, port_buf);
-	DEBUG(INFO, "Starting capture with filter: '%s'", filter);
-
 	/* Start packet capture */
 	char *file_path = build_path(NETSPY_PCAP_FILE);
+	char *filter = build_capture_filter(addr);
 	con->capture_handle = start_capture(filter, file_path, 
 			&(con->capture_thread));
-
+	con->got_pcap_handle = (con->capture_handle!=NULL);
+	free(filter);
 	free(file_path);
 }
 

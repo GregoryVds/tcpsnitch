@@ -37,8 +37,9 @@ json_t *build_tcp_connection(TcpConnection *con)
 	add(json_con, "bytesSent", json_integer(con->bytes_sent));
 	add(json_con, "bytesReceived", json_integer(con->bytes_received));
 	add(json_con, "kernel", json_string(con->kernel));
+	add(json_con, "gotPcapHandle", json_boolean(con->got_pcap_handle));
+	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
 	add(json_con, "events",	events);
-	add(json_con, "packetsCount", json_integer(con->pcount));
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
 	while (cur != NULL) {
@@ -177,7 +178,7 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	/* Extract IP address to human readable string */
-	char addr_buf[50];
+	char addr_buf[ADDR_WIDTH];
 	addr_string_from_sockaddr(&(ev->addr), addr_buf, sizeof(addr_buf));
 	char port_buf[PORT_WIDTH];
 	port_string_from_sockaddr(&(ev->addr), port_buf, sizeof(port_buf));

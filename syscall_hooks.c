@@ -228,7 +228,7 @@ ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags,
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
 	
 	/* Extract IP address to human readable string */
-	char addr_buf[50];
+	char addr_buf[FULL_ADDR_WIDTH];
 	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
 
 	DEBUG(INFO, "sendto() on socket %d (%zu bytes to %s)", __fd, __n,
@@ -272,7 +272,7 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 	}
 
 	/* Extract IP address to human readable string */
-	char addr_buf[50];
+	char addr_buf[FULL_ADDR_WIDTH];
 	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
 
 	DEBUG(INFO, "recvfrom() on socket %d (%zu bytes from %s)", __fd, __n,

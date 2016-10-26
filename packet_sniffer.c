@@ -68,6 +68,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread)
 				PCAP_NETMASK_UNKNOWN) < 0) {
 		DEBUG(ERROR, "No capture. pcap_compile() failed. %s", 
 				pcap_geterr(handle));
+		pcap_close(handle);
 		return NULL;
 	}
 
@@ -75,6 +76,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread)
 	if (pcap_setfilter(handle, &comp_filter) < 0) {
 		DEBUG(ERROR, "No capture. pcap_setfilter() failed. %s", 
 				pcap_geterr(handle));
+		pcap_close(handle);
 		return NULL;
 	}
 
@@ -84,6 +86,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread)
 	if (dump==NULL) {
 		DEBUG(ERROR, "No capture. pcap_dump_open() failed. %s",
 				pcap_geterr(handle)); 
+		pcap_close(handle);
 		return NULL;
 	}
 
@@ -97,6 +100,8 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread)
 	if (rc) {
 		DEBUG(WARN, "No capture. pthread_create_failed(). %s", 
 				strerror(rc));
+		pcap_close(handle);
+		return NULL;
 	}
 
 	return handle;
@@ -109,34 +114,37 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread)
 void *capture_thread(void *params) 
 {
 	DEBUG(INFO, "Capture thread started.");
-
 	CaptureThreadArgs *args = (CaptureThreadArgs *) params;
 	
 	// Start capture. -1 means infinity, packets are processed until 
 	// pcap_breakloop() is called when we are done capturing.
 	int *pcount = (int *) malloc(sizeof(int)); 
 	*pcount = pcap_loop(args->handle, -1, &pcap_dump, (u_char *)args->dump);
+	
+	DEBUG(INFO, "Capture ended.");
 
 	if (*pcount == -1) {
 		DEBUG(ERROR, "pcap_loop() failed. %s", 
 				pcap_geterr(args->handle));
 	}
-	if (*pcount == -2) {
-		DEBUG(ERROR, "pcap_loop() terminated due to a call to" 
-		" pcap_breakloop() before any packets were processed.");
+	
+	/* The documentation states that pcap_loop() returns -2 if the loop 
+	 * terminated due to a call to pcap_breakloop() BEFORE ANY PACKET WERE
+	 * PROCESSED. The uppercase part is NOT true. It always returns -2 when
+	 * pcap_breakloop() is called, even if some packets were captured. */
+	if (*pcount != -2) {
+		DEBUG(WARN, "pcap_loop() terminated before pcap_breakloop().");
 	}
-
+	
+	pcap_close(args->handle);
 	pcap_dump_close(args->dump);
 	free(args);
 
-	DEBUG(INFO, "Capture thread ended. %d packets captured.", *pcount);
 	return pcount;
 }
 
 /* Stop the ongoing capture on *pcap. 
- * Retrieve return value from capture thread (return value from pcap_loop()).
- * Return -3 on pthread_join() error.
- * Else return the return value from pcap_loop().*/
+ * Retrieve return value from pcap_loop() or -3 on pthread_join() error. */
 
 int stop_capture(pcap_t *pcap, pthread_t *thread)
 {
@@ -155,5 +163,18 @@ int stop_capture(pcap_t *pcap, pthread_t *thread)
 	pcount = *pcount_ptr;
 	free(pcount_ptr);
 	return pcount;
+}
+
+char *build_capture_filter(const struct sockaddr *addr) 
+{
+	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *) addr;
+	char addr_buf[ADDR_WIDTH];
+	addr_string_from_sockaddr(addr_sto, addr_buf, sizeof(addr_buf));
+	char port_buf[PORT_WIDTH];
+	port_string_from_sockaddr(addr_sto, port_buf, sizeof(port_buf));
+	char *filter = (char *) malloc(sizeof(char)*FILTER_SIZE);
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_buf, port_buf);
+	DEBUG(INFO, "Starting capture with filter: '%s'", filter);
+	return filter;
 }
 
