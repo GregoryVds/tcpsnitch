@@ -19,13 +19,31 @@ const char *string_from_debug_level(DebugLevel lvl)
 	return strings[lvl];
 }
 
-void lib_log(DebugLevel debug_lvl, char *formated_str)
+#define ANSI_COLOR_WHITE 	"\x1b[37m"
+#define ANSI_COLOR_RED 		"\x1b[31m"
+#define ANSI_COLOR_YELLOW 	"\x1b[33m"
+#define ANSI_COLOR_RESET 	"\x1b[0m"
+
+void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
+		int line)
 {
 	pid_t pid = getpid();
 
-	fprintf(stderr, "%d-%s(%s:%d): %s\n", pid, 
-		 string_from_debug_level(debug_lvl), __FILE__, __LINE__,
-			formated_str);
+	const char *color;
+	switch (debug_lvl) {
+		case INFO:  color = ANSI_COLOR_WHITE; 	break;
+		case WARN:  color = ANSI_COLOR_YELLOW; 	break;
+		case ERROR: color = ANSI_COLOR_RED; 	break;
+	}
+
+	fprintf(stderr, "%s%d-%s(%s:%d): %s%s\n",
+			color,
+			pid,
+			string_from_debug_level(debug_lvl),
+			file,
+			line,
+			formated_str,
+			ANSI_COLOR_RESET);
 }
 
 bool is_socket(int fd)
@@ -67,7 +85,7 @@ void die_with_system_msg(const char *msg)
 
 /* Extract IP address to human readable string */
 
-void addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+int addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf,
 		int buf_size)
 {
 	const char *r;
@@ -81,10 +99,21 @@ void addr_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf,
 		ipv6 = (const struct sockaddr_in6 *) addr;
 		r = inet_ntop(AF_INET6, &(ipv6->sin6_addr), buf, buf_size);
 	}
-	if (r == NULL) DEBUG(ERROR, "inet_ntop() failed. %s", strerror(errno));	
+	else {
+		DEBUG(ERROR, "addr_string_from_sockaddr() failed due to "
+				"unsupported ss_family.");
+		return -1;
+	}
+
+	if (r == NULL) {
+		DEBUG(ERROR, "inet_ntop() failed. %s", strerror(errno));
+		return -2;
+	}
+
+	return 0;
 }
 
-void port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
+int port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf, 
 		int buf_size)
 {
 	int n;
@@ -98,19 +127,35 @@ void port_string_from_sockaddr(const struct sockaddr_storage *addr, char *buf,
 		ipv6 = (const struct sockaddr_in6 *) addr;
 		n = snprintf(buf, buf_size, "%d", ntohs(ipv6->sin6_port));
 	}
-	if (n < 0) DEBUG(ERROR, "snprintf() failed. %s", strerror(errno));
-	if (n >= buf_size) DEBUG(ERROR, "snprintf() failed (truncated).");
+	else {
+		DEBUG(ERROR, "port_string_from_sockaddr() failed due to "
+				"unsupported ss_family.");
+		return -1;
+	}
+
+	if (n < 0) {
+		DEBUG(ERROR, "snprintf() failed. %s", strerror(errno));
+		return -2;
+	}
+
+	if (n >= buf_size) DEBUG(ERROR, "snprintf() failed (truncated).") {
+		return -3;
+	}
+
+	return 0;
 }
 
-void string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
+int string_from_sockaddr(const struct sockaddr *addr, char *buf, int buf_size)
 {
 	const struct sockaddr_storage *addr_sto;
 	addr_sto = (const struct sockaddr_storage *) addr;
-	addr_string_from_sockaddr(addr_sto, buf, buf_size-(PORT_WIDTH+1));
+	int n = buf_size-(PORT_WIDTH+1);
+	if (addr_string_from_sockaddr(addr_sto, buf, n)	< 0) return -1;
 	strncat(buf, ":", 1);
 	char port[PORT_WIDTH];
-	port_string_from_sockaddr(addr_sto, port, PORT_WIDTH);
+	if (port_string_from_sockaddr(addr_sto, port, PORT_WIDTH) < 0) return -1;
 	strncat(buf, port, PORT_WIDTH);
+	return 0;
 }
 
 int append_string_to_file(const char *str, const char *path) 
@@ -165,9 +210,9 @@ char *build_path(const char *file_name)
 		DEBUG(ERROR, "env variable %s not set.", ENV_NETSPY_PATH);
 	}
 
-	int full_path_length = strlen(base_path)+strlen(file_name)+1;
-	char *full_path = (char *) malloc(sizeof(char)*full_path_length+1);
-	if (snprintf(full_path, full_path_length+1, "%s/%s", base_path, 
+	int full_path_length = strlen(base_path)+strlen(file_name)+2;
+	char *full_path = (char *) malloc(sizeof(char)*full_path_length);
+	if (snprintf(full_path, full_path_length, "%s/%s", base_path, 
 				file_name) >= full_path_length) {
 		DEBUG(ERROR, "build_path, snprintf() failed (truncated).");
 	}

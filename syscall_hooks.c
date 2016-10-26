@@ -47,7 +47,15 @@ int socket (int __domain, int __type, int __protocol)
 {
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type) dlsym(RTLD_NEXT, "socket");
-	DEBUG(INFO, "socket() called");
+
+	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
+	char domain_buf[domain_buf_size];
+	if (!string_from_cons(__domain, domain_buf, domain_buf_size,
+		SOCKET_DOMAINS, sizeof(SOCKET_DOMAINS)/sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown translation socket domain: %d", __domain);
+		snprintf(domain_buf, domain_buf_size, "%d", __domain);
+	}
+	DEBUG(INFO, "socket() called (domain %s)", domain_buf);
 
 	/* Inspect flag parameters */
 	bool sock_cloexec  = __type & SOCK_CLOEXEC;
@@ -56,6 +64,7 @@ int socket (int __domain, int __type, int __protocol)
 	/* Perform syscall */
 	int fd = orig_socket(__domain, __type, __protocol);
 	if (is_tcp_socket(fd)) {	
+		DEBUG(INFO, "socket %d is TCP", fd);
 		tcp_sock_opened(fd, __domain, __protocol, sock_cloexec, 
 				sock_nonblock);
 		tcp_info_dump(fd);
@@ -321,7 +330,8 @@ int close (int __fd)
 {
 	orig_close_type orig_close;
 	orig_close = (orig_close_type) dlsym(RTLD_NEXT, "close");
-	if (is_inet_socket(__fd)) DEBUG(INFO, "close() on socket %d", __fd);
+	
+	DEBUG(INFO, "close() on socket %d", __fd);
 
 	bool is_tcp = is_tcp_socket(__fd);
 

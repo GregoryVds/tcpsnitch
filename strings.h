@@ -16,9 +16,13 @@ int string_from_cons(int cons, char *buffer, int buffer_size,
 
 /* Socket domains */
 static const IntStrPair SOCKET_DOMAINS[] = {
+	
+	{ AF_UNIX, 	"AF_UNIX" }, 
 	{ AF_INET, 	"AF_INET" },
 	{ AF_INET6, 	"AF_INET6" },
-	{ AF_UNIX, 	"AF_UNIX" }
+	{ AF_IPX, 	"AF_IPX" },
+	{ AF_NETLINK,	"AF_NETLINK" },
+	{ AF_PACKET, 	"AF_PACKET" }
 };
 
 /* Socket types */

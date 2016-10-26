@@ -192,8 +192,11 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 	push(con, (TcpEvent *) ev);
 
 	/* Stop packet capture */
-	con->pcount = stop_capture(con->capture_handle, &(con->capture_thread));
-		
+	if (con->capture_handle != NULL) {
+		con->pcount = stop_capture(con->capture_handle,
+				&(con->capture_thread));
+	}
+
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
 	char *file_path = build_path(NETSPY_JSON_FILE);
@@ -247,7 +250,7 @@ void tcp_pre_connect(int fd, const struct sockaddr *addr)
 	port_string_from_sockaddr(addr_sto, port_buf, sizeof(port_buf));
 	char filter[FILTER_SIZE];
 	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_buf, port_buf);
-	DEBUG(INFO, "Starting capture will filter %s", filter);
+	DEBUG(INFO, "Starting capture with filter: '%s'", filter);
 
 	/* Start packet capture */
 	char *file_path = build_path(NETSPY_PCAP_FILE);
@@ -272,8 +275,6 @@ void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 
 void tcp_info_dump(int fd)
 {
-	DEBUG(INFO, "tcp_info_dump() called.");
-	
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
 			
