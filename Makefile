@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -shared -fPIC -ljansson -ldl -lpthread -lpcap 
-SOURCES=syscall_hooks.c lib.c tcp_spy.c strings.c tcp_json_builder.c packet_sniffer.c 
+SOURCES=glibc_overrides.c lib.c tcp_spy.c strings.c tcp_json_builder.c packet_sniffer.c 
 EXECUTABLE=netspy.so
 ENV=NETSPY_PATH=~/host LD_PRELOAD=./$(EXECUTABLE) 
 
