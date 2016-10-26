@@ -334,7 +334,7 @@ int close (int __fd)
 	DEBUG(INFO, "close() on socket %d", __fd);
 
 	bool is_tcp = is_tcp_socket(__fd);
-
+	if (is_tcp) tcp_info_dump(__fd);	
 	/* Perform syscall */
 	int ret = orig_close(__fd);
 	if (is_tcp) tcp_sock_closed(__fd, ret, true);

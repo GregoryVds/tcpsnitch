@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <pcap/pcap.h>
 #include <sys/time.h>
+#include <limits.h>
 #include "config.h"
 #include "lib.h"
 #include "config.h"
@@ -54,10 +55,7 @@ void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
 		char *path = get_log_path();
 		FILE *fp = fopen(path, "a");
 
-		struct timeval tv;
-		gettimeofday(&tv,NULL);
-		unsigned long time_micros;
-		time_micros = tv.tv_sec*(unsigned long)1000000 + tv.tv_usec;
+		unsigned long time_micros = get_time_micros(); 
 
 		fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
 				string_from_debug_level(debug_lvl),
@@ -289,4 +287,34 @@ char *get_cmdline()
 
 	return cmdline;
 }
+
+/* Retrieve current time in microseconds granularity */
+unsigned long get_time_micros()
+{
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+	unsigned long time_micros;
+	time_micros = tv.tv_sec*(unsigned long)1000000 + tv.tv_usec;
+	return time_micros;
+}
+
+/* Retrieve env variable containing a LONG 
+ * Return long value or < 0 in case of error:
+ * 	-1 if env var not set.
+ * 	-2 if env var in incorrect format.
+ * 	-3 if env var overflows. */
+long get_long_env(const char *env_var)
+{
+	char *var_str = getenv(env_var);
+	if (var_str == NULL) return -1; // Not set
+	
+	/* Convert from string to long */
+	char *var_str_end;
+ 	long val = strtol(var_str, &var_str_end, 10);
+	
+	if (*var_str_end != '\0') return -2; // Incorrect format
+	if (val == LONG_MIN || val == LONG_MAX) return -3; // Overflow
+	return val;
+}
+
 

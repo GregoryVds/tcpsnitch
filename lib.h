@@ -60,5 +60,9 @@ char *build_path(const char *file_name);
 char *get_pcap_path();
 char *get_log_path();
 char *get_json_path();
+
+unsigned long get_time_micros();
+long get_long_env(const char *env_var);
+
 #endif
 

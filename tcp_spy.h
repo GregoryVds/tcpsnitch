@@ -90,19 +90,20 @@ struct TcpEventNode {
 };
 
 typedef struct {
-	int id;
-	char *application;
-	TcpEventNode *head;
-	TcpEventNode *tail;
-	int events_count;
-	bool connected;
-	unsigned long bytes_sent;
-	unsigned long bytes_received;
- 	char kernel[30];
-	pthread_t capture_thread;
-	pcap_t *capture_handle;
-	bool got_pcap_handle;
-	bool successful_pcap;
+	int id; // Connection id, starting at 0.
+	char *application; // Application name with args. Should be freed.
+	TcpEventNode *head; // Head for list of events.
+	TcpEventNode *tail; // Tail for list of events.
+	int events_count; // List of events size.
+	unsigned long bytes_sent; // Total bytes sent.
+	unsigned long bytes_received; // Total bytes received.
+ 	char kernel[30]; // Kernel version.
+	pthread_t capture_thread; // pthread used for capturing packets.
+	pcap_t *capture_handle; // Pcap capture handle.
+	bool got_pcap_handle; // Succesfully acquired a pcap handle.
+	bool successful_pcap; // Successfully captured packets on handle. 
+	long last_info_dump_micros; // Time of last info dump in microseconds.
+	long last_info_dump_bytes; // Total bytes (sent+recv) at last dump.
 } TcpConnection;
 
 

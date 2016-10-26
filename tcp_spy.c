@@ -4,11 +4,13 @@
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <pcap/pcap.h>
 #include "tcp_spy.h"
 #include "lib.h"
 #include "tcp_json_builder.h"
 #include "packet_sniffer.h"
-#include <pcap/pcap.h>
+#include "config.h"
+
 /* We keep a mapping from file descriptors to TCP connections structs for all
  * opened connections. This allows to easily identify to which connection a 
  * given function call belongs to. 
@@ -22,9 +24,12 @@
  * access time. We will see later if we need something else like a hashtable 
  * or binary tree. */
 
+// TODO: Add mutexes to protect accesses to this array.
 #define MAX_FD 1024
 TcpConnection *fd_con_map[MAX_FD];
 int connections_count = 0;
+long tcp_info_bytes_ival = -1; // Set to -1 when not parsed. 0 if ommited.
+long tcp_info_time_ival = -1; // Set to -1 when not parsed. 0 if ommited.
 
 const char *string_from_tcp_event_type(TcpEventType type)
 {
@@ -267,11 +272,63 @@ void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
 	push(con, (TcpEvent *) ev);
 }
 
+/* Retrieve interval for tcpinfo (could be byte ou time interval).
+ * If not set or in incorrect format, we assume 0 and thus no lower bound. */
+long get_tcpinfo_ival(const char *env_var)
+{
+	long t = get_long_env(env_var);
+	if (t == -1) DEBUG(WARN, "No interval set with %s.", env_var);
+	if (t == -2) DEBUG(ERROR, "Invalid interval set with %s.", env_var);
+	if (t == -3) DEBUG(ERROR, "Interval set with %s overflows.", env_var);
+	if (t < 0) {
+		DEBUG(WARN, "Interval %s assumed to be 0. No lower bound "
+			"set on tcp_info capture frequency.", env_var);
+	}
+	return (t < 0) ? 0 : t;
+}
+
+void extract_tcpinfo_ivals()
+{
+	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
+	DEBUG(WARN, "tcp_info min bytes interval set to %lu", tcp_info_bytes_ival);
+	tcp_info_time_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_MICROS_IVAL);
+	DEBUG(WARN, "tcp_info min micros interval set to %lu", tcp_info_time_ival);
+}
+
+
+bool should_dump_tcp_info(TcpConnection *con)
+{
+	/* Extract env variables if not done yet (set to -1) */
+	if (tcp_info_bytes_ival == -1 || tcp_info_time_ival == -1)
+		extract_tcpinfo_ivals();
+
+	/* Check if time lower bound is set, otherwise assume no lower bound */
+	if (tcp_info_time_ival > 0) {
+		long cur_time = get_time_micros();
+		long time_elasped = cur_time - con->last_info_dump_micros;
+		if (time_elasped < tcp_info_time_ival) return false;
+	}
+	
+	/* Check if bytes lower bound set, otherwise assume no lower bound */
+	if (tcp_info_bytes_ival > 0) {
+		long cur_bytes = con->bytes_sent+con->bytes_received;
+		long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
+		if (bytes_elapsed < tcp_info_bytes_ival) return false;
+	}
+	
+	/* If we reach this point, no lower bound prevents from dumping */
+	return true;
+}
+
 void tcp_info_dump(int fd)
 {
 	/* Update con */
 	TcpConnection *con = fd_con_map[fd];	
-			
+	
+	/* Check if should dump */
+	if (!should_dump_tcp_info(con)) return;	
+	DEBUG(WARN, "Dumping tcp_info");
+
 	/* Create event */
 	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(TCP_EV_INFO_DUMP, true,
 			0);
@@ -280,6 +337,11 @@ void tcp_info_dump(int fd)
 				&tcp_info_len) == -1) {
 		die_with_system_msg("getsockopt() failed");		
 	}
+	
+	/* Register time/bytes of last dump */
+	con->last_info_dump_bytes = con->bytes_sent+con->bytes_received;
+	con->last_info_dump_micros = get_time_micros();
+
 	push(con, (TcpEvent *) ev);
 }
 
