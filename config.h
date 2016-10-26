@@ -8,5 +8,9 @@
 #define NETSPY_PCAP_FILE "dump.pcap"
 #define NETSPY_LOG_FILE "log.txt"
 
+/* Env variables */
+#define ENV_NETSPY_PATH "NETSPY_PATH"
+#define ENV_NETSPY_DEV "NETSPY_DEV"
+
 #endif
 

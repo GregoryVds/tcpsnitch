@@ -12,8 +12,7 @@
 #include <sys/time.h>
 #include "config.h"
 #include "lib.h"
-
-#define ENV_NETSPY_PATH "NETSPY_PATH"
+#include "config.h"
 
 const char *string_from_debug_level(DebugLevel lvl)
 {

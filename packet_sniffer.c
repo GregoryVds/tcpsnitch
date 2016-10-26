@@ -4,8 +4,7 @@
 #include <pcap.h>
 #include "packet_sniffer.h"
 #include "lib.h"
-
-#define ENV_NETSPY_DEV "NETSPY_DEV"
+#include "config.h"
 
 void *capture_thread(void *params);
 
