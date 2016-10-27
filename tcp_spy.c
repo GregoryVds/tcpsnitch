@@ -101,12 +101,24 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 
 	return ev;
 }
+/*
+char *get_dirname(TcpConnection *)
+{
+	char *dirname = (char *) malloc(sizeof(char)*1);
+	return NULL;
+}
 
+bool connection_mkdir(TcpConnection *)
+{
+}
+*/
 TcpConnection *new_connection() 
 {
 	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
-	con->application = get_cmdline(); 
+	con->cmdline= get_cmdline(&(con->app_name)); 
+	con->timestamp = get_time_sec();
+//	con->dirname = get_dirname(con);
 	connections_count++;
 
 	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {
@@ -152,7 +164,8 @@ void free_tcp_events_list(TcpEventNode *head)
 void free_connection(TcpConnection *con)
 {
 	free_tcp_events_list(con->head);
-	free(con->application);
+	free(con->app_name);
+	free(con->cmdline);
 	free(con);
 }
 

@@ -91,7 +91,8 @@ struct TcpEventNode {
 
 typedef struct {
 	int id; // Connection id, starting at 0.
-	char *application; // Application name with args. Should be freed.
+	char *app_name; // Application name with args. Should be freed.
+	char *cmdline; // Cmdline (app name + args). Should be freed.
 	TcpEventNode *head; // Head for list of events.
 	TcpEventNode *tail; // Tail for list of events.
 	int events_count; // List of events size.
@@ -104,6 +105,8 @@ typedef struct {
 	bool successful_pcap; // Successfully captured packets on handle. 
 	long last_info_dump_micros; // Time of last info dump in microseconds.
 	long last_info_dump_bytes; // Total bytes (sent+recv) at last dump.
+	time_t timestamp; // When tcp_spy started tracking the connection.
+	char *dirname; // Directory name for log files. Should be freed
 } TcpConnection;
 
 

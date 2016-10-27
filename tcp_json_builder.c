@@ -33,7 +33,8 @@ json_t *build_tcp_connection(TcpConnection *con)
 	json_t *json_con = json_object();
 	json_t *events = json_array();
 
-	add(json_con, "application", json_string(con->application));
+	add(json_con, "application", json_string(con->app_name));
+	add(json_con, "cmdline", json_string(con->cmdline));
 	add(json_con, "id", json_integer(con->id));
 	add(json_con, "eventsCount", json_integer(con->events_count));
 	add(json_con, "bytesSent", json_integer(con->bytes_sent));

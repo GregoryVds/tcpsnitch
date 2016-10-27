@@ -263,7 +263,7 @@ char *get_pcap_path()
 
 #define PATH_LENGTH 30
 #define CMDLINE_LENGTH 1024
-char *get_cmdline()
+char *get_cmdline(char **app_name)
 {
 	// Build path to /proc/pid/cmdline in path
 	char path[PATH_LENGTH];
@@ -275,17 +275,30 @@ char *get_cmdline()
 	
 	// Read /proc/pid/cmdline in cmdline
 	FILE *fp = fopen(path,"r");
+	if (fp==NULL) DEBUG(ERROR, "fopen() failed. %s", strerror(errno)); 
 	char *cmdline = (char *) malloc(sizeof(char)*CMDLINE_LENGTH);
 	size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
 	if (rc==0) DEBUG(ERROR, "fread() failed.");
 	fclose(fp);
 	
-	// Replace null bytes between args by white spaces
+	// Replace null bytes between args by white spaces & 
+	// make char *app_name point to the app_name.
 	int i;
-	for (i=0; i<rc-1; i++)
+	int app_name_length = strlen(cmdline);
+	*app_name = (char *) calloc(sizeof(char), app_name_length+1);
+	for (i=0; i<rc-1; i++) {
+		if (i < app_name_length) (*app_name)[i] = cmdline[i];  
 		if (cmdline[i]=='\0') cmdline[i]=' ';
+	}
 
 	return cmdline;
+}
+
+time_t get_time_sec()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec;
 }
 
 /* Retrieve current time in microseconds granularity */

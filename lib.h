@@ -49,7 +49,7 @@ int string_from_sockaddr(const struct sockaddr *addr,
 		char *buf, int buf_size);
 int get_kernel_version(char *buf, int buf_size);
 
-char *get_cmdline();
+char *get_cmdline(char **app_name);
 
 /* Other */
 int append_string_to_file(const char *str, const char *path);
@@ -61,6 +61,7 @@ char *get_pcap_path();
 char *get_log_path();
 char *get_json_path();
 
+time_t get_time_sec();
 unsigned long get_time_micros();
 long get_long_env(const char *env_var);
 
