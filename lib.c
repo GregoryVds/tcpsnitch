@@ -84,9 +84,10 @@ bool is_inet_socket(int fd)
 
 	int optval;
 	socklen_t optlen = sizeof(optval);
-	if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen) == -1)
-		die_with_system_msg("getsockopt() failed");
-
+	if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen) == -1) {
+		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
+		return false;
+	}
 	return (optval == AF_INET || optval == AF_INET6);
 }
 
@@ -96,16 +97,11 @@ bool is_tcp_socket(int fd)
 	
 	int optval;
 	socklen_t optlen = sizeof(optval);
-	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == -1)
-		die_with_system_msg("getsockopt() failed");
-
+	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == -1) {
+		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
+		return false;
+	}
 	return optval == SOCK_STREAM;
-}
-
-void die_with_system_msg(const char *msg)
-{
-	DEBUG(ERROR, "%s. %s.", msg, strerror(errno));
-	exit(EXIT_FAILURE);
 }
 
 /* Extract IP address to human readable string */

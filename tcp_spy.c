@@ -348,7 +348,7 @@ void tcp_info_dump(int fd)
 	socklen_t tcp_info_len = sizeof(struct tcp_info);
 	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info), 
 				&tcp_info_len) == -1) {
-		die_with_system_msg("getsockopt() failed");		
+		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
 	}
 	
 	/* Register time/bytes of last dump */
