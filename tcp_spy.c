@@ -103,12 +103,12 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 }
 
 #define TIMESTAMP_WIDTH 10
-char *build_dirname(TcpConnection *con)
+char *build_dirname(char *app_name)
 {
-	int app_name_length = strlen(con->app_name);
+	int app_name_length = strlen(app_name);
 	int n = app_name_length+TIMESTAMP_WIDTH+2; // APP_TIMESTAMP\0
 	char *dirname = (char *) calloc(sizeof(char), n);
-	strncat(dirname, con->app_name, app_name_length);
+	strncat(dirname, app_name, app_name_length);
 	strncat(dirname, "_", 1);
 	snprintf(dirname+strlen(dirname), TIMESTAMP_WIDTH,
 			"%lu", get_time_sec());
@@ -121,13 +121,9 @@ TcpConnection *new_connection()
 	con->id = connections_count;
 	con->cmdline= build_cmdline(&(con->app_name)); 
 	con->timestamp = get_time_sec();
-	con->dirname = build_dirname(con);
+	con->dirname = build_dirname(con->app_name);
+	con->kernel = build_kernel();
 	connections_count++;
-
-	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {
-		strcpy(con->kernel, "Could not get kernel version.");
-	}
-	
 	return con;	
 }
 
@@ -169,6 +165,7 @@ void free_connection(TcpConnection *con)
 	free(con->app_name);
 	free(con->cmdline);
 	free(con->dirname);
+	free(con->kernel);
 	free(con);
 }
 

@@ -36,12 +36,12 @@ json_t *build_tcp_connection(TcpConnection *con)
 	add(json_con, "app_name", json_string(con->app_name));
 	add(json_con, "cmdline", json_string(con->cmdline));
 	add(json_con, "dirname", json_string(con->dirname));
+	add(json_con, "kernel", json_string(con->kernel));
 	add(json_con, "timestamp", json_integer(con->timestamp));
 	add(json_con, "id", json_integer(con->id));
 	add(json_con, "eventsCount", json_integer(con->events_count));
 	add(json_con, "bytesSent", json_integer(con->bytes_sent));
 	add(json_con, "bytesReceived", json_integer(con->bytes_received));
-	add(json_con, "kernel", json_string(con->kernel));
 	add(json_con, "gotPcapHandle", json_boolean(con->got_pcap_handle));
 	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
 	add(json_con, "events",	events);

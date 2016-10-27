@@ -205,29 +205,29 @@ int append_string_to_file(const char *str, const char *path)
 	return 0;
 }
 
-int get_kernel_version(char *buf, int buf_size)
+#define KERNEL_WIDTH 30
+char *build_kernel()
 {
 	FILE *fp;
-
 	if ((fp = popen("uname -r", "r")) == NULL) {
 		DEBUG(ERROR, "open() failed. %s", strerror(errno));
-		return -1;
+		return NULL;
 	}
 
-	if (fgets(buf, buf_size, fp) == NULL) {
+	char *kernel = (char *) calloc(sizeof(char), KERNEL_WIDTH);
+	if (fgets(kernel, KERNEL_WIDTH, fp) == NULL) {
 		DEBUG(ERROR, "fgets() failed. Error or end of file occured "
 				"while not characters have been read");
-		return -1;
+		return NULL;
 	}
 
 	if (pclose(fp) == -1) {
 		DEBUG(ERROR, "pclose() failed. %s", strerror(errno));
-		return -1;
 	}
 
 	// Erase \n at last position.
-	buf[strlen(buf)-1] = '\0';
-	return 0;
+	kernel[strlen(kernel)-1] = '\0';
+	return kernel;
 }
 
 char *build_path(const char *file_name)

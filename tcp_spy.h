@@ -91,9 +91,10 @@ struct TcpEventNode {
 
 typedef struct {
 	// To be freed
-	char *dirname; // Directory name for log files.
 	char *app_name; // Application name with args.
 	char *cmdline; // Cmdline (app name + args).
+	char *dirname; // Directory name for log files.
+	char *kernel; // Kernel version.
 	TcpEventNode *head; // Head for list of events.
 	TcpEventNode *tail; // Tail for list of events.
 	// Others
@@ -101,7 +102,6 @@ typedef struct {
 	int events_count; // List of events size.
 	unsigned long bytes_sent; // Total bytes sent.
 	unsigned long bytes_received; // Total bytes received.
- 	char kernel[30]; // Kernel version.
 	pthread_t capture_thread; // pthread used for capturing packets.
 	pcap_t *capture_handle; // Pcap capture handle.
 	bool got_pcap_handle; // Succesfully acquired a pcap handle.
