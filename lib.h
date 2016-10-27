@@ -49,7 +49,6 @@ int string_from_sockaddr(const struct sockaddr *addr,
 		char *buf, int buf_size);
 int get_kernel_version(char *buf, int buf_size);
 
-char *get_cmdline(char **app_name);
 
 /* Other */
 int append_string_to_file(const char *str, const char *path);
@@ -57,9 +56,10 @@ int append_string_to_file(const char *str, const char *path);
 /* Path helpers */
 
 char *build_path(const char *file_name);
-char *get_pcap_path();
-char *get_log_path();
-char *get_json_path();
+char *build_pcap_path();
+char *build_log_path();
+char *build_json_path();
+char *build_cmdline(char **app_name);
 
 time_t get_time_sec();
 unsigned long get_time_micros();

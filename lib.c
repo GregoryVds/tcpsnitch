@@ -52,7 +52,7 @@ void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
 
 	/* Log to file */
 	if (NETSPY_LOG_TO_FILE) {
-		char *path = get_log_path();
+		char *path = build_log_path();
 		FILE *fp = fopen(path, "a");
 
 		unsigned long time_micros = get_time_micros(); 
@@ -246,24 +246,24 @@ char *build_path(const char *file_name)
 	return full_path;
 }
 
-char *get_json_path()
+char *build_json_path()
 {
 	return build_path(NETSPY_JSON_FILE);
 }
 
-char *get_log_path()
+char *build_log_path()
 {
 	return build_path(NETSPY_LOG_FILE);
 }
 
-char *get_pcap_path()
+char *build_pcap_path()
 {
 	return build_path(NETSPY_PCAP_FILE);
 }
 
 #define PATH_LENGTH 30
 #define CMDLINE_LENGTH 1024
-char *get_cmdline(char **app_name)
+char *build_cmdline(char **app_name)
 {
 	// Build path to /proc/pid/cmdline in path
 	char path[PATH_LENGTH];

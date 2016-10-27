@@ -101,24 +101,27 @@ TcpEvent *new_event(TcpEventType type, bool success, int return_value)
 
 	return ev;
 }
-/*
-char *get_dirname(TcpConnection *)
+
+#define TIMESTAMP_WIDTH 10
+char *build_dirname(TcpConnection *con)
 {
-	char *dirname = (char *) malloc(sizeof(char)*1);
-	return NULL;
+	int app_name_length = strlen(con->app_name);
+	int n = app_name_length+TIMESTAMP_WIDTH+2; // APP_TIMESTAMP\0
+	char *dirname = (char *) calloc(sizeof(char), n);
+	strncat(dirname, con->app_name, app_name_length);
+	strncat(dirname, "_", 1);
+	snprintf(dirname+strlen(dirname), TIMESTAMP_WIDTH,
+			"%lu", get_time_sec());
+	return dirname;
 }
 
-bool connection_mkdir(TcpConnection *)
-{
-}
-*/
 TcpConnection *new_connection() 
 {
 	TcpConnection *con = (TcpConnection *) calloc(sizeof(TcpConnection), 1);
 	con->id = connections_count;
-	con->cmdline= get_cmdline(&(con->app_name)); 
+	con->cmdline= build_cmdline(&(con->app_name)); 
 	con->timestamp = get_time_sec();
-//	con->dirname = get_dirname(con);
+	con->dirname = build_dirname(con);
 	connections_count++;
 
 	if (get_kernel_version(con->kernel, sizeof(con->kernel)) == -1) {
@@ -133,7 +136,6 @@ void push(TcpConnection *con, TcpEvent *ev)
 	TcpEventNode *node = (TcpEventNode *) malloc(sizeof(TcpEventNode));
 	node->data = ev;
 	node->next = NULL;
-
 	if (!con->head) 
 		con->head = node;
 	else 
@@ -166,6 +168,7 @@ void free_connection(TcpConnection *con)
 	free_tcp_events_list(con->head);
 	free(con->app_name);
 	free(con->cmdline);
+	free(con->dirname);
 	free(con);
 }
 
@@ -220,7 +223,7 @@ void tcp_sock_closed(int fd, int return_value, bool detected)
 
 	/* Save data */
 	char *json = build_tcp_connection_json(con);
-	char *file_path = get_json_path(); 
+	char *file_path = build_json_path(); 
 	if (append_string_to_file((const char *) json, file_path) == -1) {
 		DEBUG(ERROR, "Problems when dumping to file.");
 	}
@@ -263,7 +266,7 @@ void tcp_pre_connect(int fd, const struct sockaddr *addr)
 	 TcpConnection *con = fd_con_map[fd];	
 
 	/* Start packet capture */
-	char *file_path = get_pcap_path(); 
+	char *file_path = build_pcap_path(); 
 	char *filter = build_capture_filter(addr);
 	con->capture_handle = start_capture(filter, file_path, 
 			&(con->capture_thread));
@@ -340,7 +343,7 @@ void tcp_info_dump(int fd)
 	
 	/* Check if should dump */
 	if (!should_dump_tcp_info(con)) return;	
-	DEBUG(WARN, "Dumping tcp_info");
+	DEBUG(INFO, "Dumping tcp_info");
 
 	/* Create event */
 	TcpEvInfoDump *ev = (TcpEvInfoDump *) new_event(TCP_EV_INFO_DUMP, true,
