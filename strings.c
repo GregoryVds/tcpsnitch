@@ -17,13 +17,12 @@
  * 	- 0 otherwise
  */
 
-int string_from_cons(int cons, char *buffer, int buffer_size, 
-		const IntStrPair *map, int map_size)
-{
+int string_from_cons(int cons, char *buffer, int buffer_size,
+		     const IntStrPair *map, int map_size) {
 	int i;
-	for (i=0; i<map_size; i++) {
-		if ((map+i)->cons==cons) {
-			strncpy(buffer, (map+i)->str, buffer_size);
+	for (i = 0; i < map_size; i++) {
+		if ((map + i)->cons == cons) {
+			strncpy(buffer, (map + i)->str, buffer_size);
 			return 1;
 		}
 	}
@@ -31,5 +30,3 @@ int string_from_cons(int cons, char *buffer, int buffer_size,
 	snprintf(buffer, buffer_size, "%d", cons);
 	return 0;
 }
-
-

@@ -20,16 +20,14 @@ json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 json_t *build_shutdown_ev(TcpEvShutdown *ev);
 json_t *build_listen_ev(TcpEvListen *ev);
 
-char *build_tcp_connection_json(TcpConnection *con) 
-{
+char *build_tcp_connection_json(TcpConnection *con) {
 	json_t *json_con = build_tcp_connection(con);
 	char *json_string = json_dumps(json_con, 0);
 	json_decref(json_con);
 	return json_string;
 }
-	
-json_t *build_tcp_connection(TcpConnection *con) 
-{
+
+json_t *build_tcp_connection(TcpConnection *con) {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
 
@@ -44,13 +42,13 @@ json_t *build_tcp_connection(TcpConnection *con)
 	add(json_con, "bytesReceived", json_integer(con->bytes_received));
 	add(json_con, "gotPcapHandle", json_boolean(con->got_pcap_handle));
 	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
-	add(json_con, "events",	events);
-	
+	add(json_con, "events", events);
+
 	/* Loop through all events to build JSON */
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
 	while (cur != NULL) {
-		json_event = build_event(cur->data);	
+		json_event = build_event(cur->data);
 		json_array_append_new(events, json_event);
 		cur = cur->next;
 	}
@@ -58,78 +56,77 @@ json_t *build_tcp_connection(TcpConnection *con)
 	return json_con;
 }
 
-json_t *build_event(TcpEvent *ev)
-{	
+json_t *build_event(TcpEvent *ev) {
 	json_t *r;
-	switch(ev->type) {
-		case TCP_EV_SOCK_OPENED:   
-			r = build_sock_opened_ev((TcpEvSockOpened *) ev);
+	switch (ev->type) {
+		case TCP_EV_SOCK_OPENED:
+			r = build_sock_opened_ev((TcpEvSockOpened *)ev);
 			break;
-		case TCP_EV_SOCK_CLOSED:   
-			r = build_sock_closed_ev((TcpEvSockClosed *) ev);
+		case TCP_EV_SOCK_CLOSED:
+			r = build_sock_closed_ev((TcpEvSockClosed *)ev);
 			break;
-		case TCP_EV_DATA_SENT:     
-			r = build_data_sent_ev((TcpEvDataSent *) ev);
+		case TCP_EV_DATA_SENT:
+			r = build_data_sent_ev((TcpEvDataSent *)ev);
 			break;
-		case TCP_EV_DATA_RECEIVED: 
+		case TCP_EV_DATA_RECEIVED:
 			r = build_data_received_ev((TcpEvDataReceived *)ev);
 			break;
-		case TCP_EV_CONNECT:	    
-			r = build_connect_ev((TcpEvConnect *) ev);
+		case TCP_EV_CONNECT:
+			r = build_connect_ev((TcpEvConnect *)ev);
 			break;
-		case TCP_EV_INFO_DUMP:     
-			r = build_info_dump_ev((TcpEvInfoDump *) ev);
+		case TCP_EV_INFO_DUMP:
+			r = build_info_dump_ev((TcpEvInfoDump *)ev);
 			break;
 		case TCP_EV_SETSOCKOPT:
-			r = build_setsockopt_ev((TcpEvSetsockopt *) ev);
+			r = build_setsockopt_ev((TcpEvSetsockopt *)ev);
 			break;
 		case TCP_EV_SHUTDOWN:
-			r = build_shutdown_ev((TcpEvShutdown *) ev);
+			r = build_shutdown_ev((TcpEvShutdown *)ev);
 			break;
 		case TCP_EV_LISTEN:
-			r = build_listen_ev((TcpEvListen *) ev);
+			r = build_listen_ev((TcpEvListen *)ev);
 			break;
 	}
 	return r;
 }
 
-void build_shared_fields(json_t *json_ev, TcpEvent *ev)
-{
+void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	const char *type_str = string_from_tcp_event_type(ev->type);
 	add(json_ev, "eventType", json_string(type_str));
 
-	/* Time stamp */	
+	/* Time stamp */
 	json_t *timestamp_json = json_object();
 	add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
 	add(timestamp_json, "usec", json_integer(ev->timestamp.tv_usec));
 	add(json_ev, "timestamp", timestamp_json);
-	
-	/* Return value & err string */ 
+
+	/* Return value & err string */
 	add(json_ev, "returnValue", json_integer(ev->return_value));
 	add(json_ev, "success", json_boolean(ev->success));
 	add(json_ev, "errorStr", json_string(ev->error_str));
 }
 
-json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
-{
+json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	/* Translate socket domain */
-	int domain_buf_size=MEMBER_SIZE(IntStrPair, str);
+	int domain_buf_size = MEMBER_SIZE(IntStrPair, str);
 	char domain_buf[domain_buf_size];
 	if (!string_from_cons(ev->domain, domain_buf, domain_buf_size,
-		SOCKET_DOMAINS, sizeof(SOCKET_DOMAINS)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown translation socket domain: %d", ev->domain);
+			      SOCKET_DOMAINS,
+			      sizeof(SOCKET_DOMAINS) / sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown translation socket domain: %d",
+		      ev->domain);
 		snprintf(domain_buf, domain_buf_size, "%d", ev->domain);
-	} 
+	}
 
 	/* Translates socket type */
-	int type_buf_size=MEMBER_SIZE(IntStrPair, str);
+	int type_buf_size = MEMBER_SIZE(IntStrPair, str);
 	char type_buf[type_buf_size];
-	if (!string_from_cons(ev->type, type_buf, type_buf_size,
-		SOCKET_TYPES, sizeof(SOCKET_TYPES)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown translation socket type: %d", ev->type);	
+	if (!string_from_cons(ev->type, type_buf, type_buf_size, SOCKET_TYPES,
+			      sizeof(SOCKET_TYPES) / sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown translation socket type: %d", ev->type);
 		snprintf(type_buf, type_buf_size, "%d", ev->type);
 	}
 
@@ -140,14 +137,13 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev)
 	add(json_details, "sockCloexec", json_boolean(ev->sock_cloexec));
 	add(json_details, "sockNonblock", json_boolean(ev->sock_nonblock));
 	add(json_ev, "details", json_details);
-	
+
 	return json_ev;
 }
 
-json_t *build_sock_closed_ev(TcpEvSockClosed *ev)
-{
+json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	json_t *json_details = json_object();
 	add(json_details, "detected", json_boolean(ev->detected));
@@ -155,10 +151,9 @@ json_t *build_sock_closed_ev(TcpEvSockClosed *ev)
 	return json_ev;
 }
 
-json_t *build_data_sent_ev(TcpEvDataSent *ev)
-{
+json_t *build_data_sent_ev(TcpEvDataSent *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	json_t *json_details = json_object();
 	add(json_details, "bytes", json_integer(ev->bytes));
@@ -167,10 +162,9 @@ json_t *build_data_sent_ev(TcpEvDataSent *ev)
 	return json_ev;
 }
 
-json_t *build_data_received_ev(TcpEvDataReceived *ev)
-{
+json_t *build_data_received_ev(TcpEvDataReceived *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	json_t *json_details = json_object();
 	add(json_details, "bytes", json_integer(ev->bytes));
@@ -179,15 +173,14 @@ json_t *build_data_received_ev(TcpEvDataReceived *ev)
 	return json_ev;
 }
 
-json_t *build_connect_ev(TcpEvConnect *ev)
-{
+json_t *build_connect_ev(TcpEvConnect *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	/* Extract IP address to human readable string */
 	char *addr_str = build_addr_str_from_sockaddr(&(ev->addr));
 	char *port_str = build_port_str_from_sockaddr(&(ev->addr));
-	
+
 	json_t *json_details = json_object();
 	add(json_details, "addr", json_string(addr_str));
 	add(json_details, "port", json_string(port_str));
@@ -197,10 +190,9 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	return json_ev;
 }
 
-json_t *build_info_dump_ev(TcpEvInfoDump *ev)
-{
+json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	struct tcp_info i = ev->info;
 	json_t *json_details = json_object();
@@ -226,11 +218,13 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 	add(json_details, "fackets", json_integer(i.tcpi_fackets));
 
 	/* Times */
-	add(json_details, "last_data_sent", json_integer(i.tcpi_last_data_sent));
+	add(json_details, "last_data_sent",
+	    json_integer(i.tcpi_last_data_sent));
 	add(json_details, "last_ack_sent", json_integer(i.tcpi_last_ack_sent));
-	add(json_details, "last_data_recv", json_integer(i.tcpi_last_data_recv));
+	add(json_details, "last_data_recv",
+	    json_integer(i.tcpi_last_data_recv));
 	add(json_details, "last_ack_recv", json_integer(i.tcpi_last_ack_recv));
-	
+
 	/* Metrics */
 	add(json_details, "pmtu", json_integer(i.tcpi_pmtu));
 	add(json_details, "rcv_ssthresh", json_integer(i.tcpi_rcv_ssthresh));
@@ -245,26 +239,26 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev)
 	add(json_details, "rcv_space", json_integer(i.tcpi_rcv_space));
 
 	add(json_details, "total_retrans", json_integer(i.tcpi_total_retrans));
-	
+
 	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
 
-json_t *build_setsockopt_ev(TcpEvSetsockopt *ev)
-{
+json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	/* Translate level to protocol name */
 	struct protoent *protocol = getprotobynumber(ev->level);
 
 	/* Translate optname */
-	int optname_buf_size=MEMBER_SIZE(IntStrPair, str);
+	int optname_buf_size = MEMBER_SIZE(IntStrPair, str);
 	char optname_buf[optname_buf_size];
 	if (!string_from_cons(ev->optname, optname_buf, optname_buf_size,
-		SOCKET_OPTIONS, sizeof(SOCKET_OPTIONS)/sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown setsockopt optname: %d", ev->optname);	
+			      SOCKET_OPTIONS,
+			      sizeof(SOCKET_OPTIONS) / sizeof(IntStrPair))) {
+		DEBUG(WARN, "Unknown setsockopt optname: %d", ev->optname);
 		snprintf(optname_buf, optname_buf_size, "%d", ev->optname);
 	}
 
@@ -276,10 +270,9 @@ json_t *build_setsockopt_ev(TcpEvSetsockopt *ev)
 	return json_ev;
 }
 
-json_t *build_shutdown_ev(TcpEvShutdown *ev)
-{
+json_t *build_shutdown_ev(TcpEvShutdown *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	json_t *json_details = json_object();
 	add(json_details, "shut_rd", json_boolean(ev->shut_rd));
@@ -288,10 +281,9 @@ json_t *build_shutdown_ev(TcpEvShutdown *ev)
 	return json_ev;
 }
 
-json_t *build_listen_ev(TcpEvListen *ev)
-{
+json_t *build_listen_ev(TcpEvListen *ev) {
 	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *) ev);
+	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	json_t *json_details = json_object();
 	add(json_details, "backlog", json_integer(ev->backlog));
