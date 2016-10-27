@@ -185,14 +185,14 @@ json_t *build_connect_ev(TcpEvConnect *ev)
 	build_shared_fields(json_ev, (TcpEvent *) ev);
 
 	/* Extract IP address to human readable string */
-	char addr_buf[ADDR_WIDTH];
-	addr_string_from_sockaddr(&(ev->addr), addr_buf, sizeof(addr_buf));
-	char port_buf[PORT_WIDTH];
-	port_string_from_sockaddr(&(ev->addr), port_buf, sizeof(port_buf));
-
+	char *addr_str = build_addr_str_from_sockaddr(&(ev->addr));
+	char *port_str = build_port_str_from_sockaddr(&(ev->addr));
+	
 	json_t *json_details = json_object();
-	add(json_details, "addr", json_string(addr_buf));
-	add(json_details, "port", json_string(port_buf));
+	add(json_details, "addr", json_string(addr_str));
+	add(json_details, "port", json_string(port_str));
+	free(addr_str);
+	free(port_str);
 	add(json_ev, "details", json_details);
 	return json_ev;
 }

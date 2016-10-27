@@ -228,11 +228,10 @@ ssize_t sendto (int __fd, const void *__buf, size_t __n, int __flags,
 	orig_sendto = (orig_sendto_type) dlsym(RTLD_NEXT, "sendto");
 	
 	/* Extract IP address to human readable string */
-	char addr_buf[FULL_ADDR_WIDTH];
-	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
-
+	char *addr_str = build_full_str_from_sockaddr(__addr);
 	DEBUG(INFO, "sendto() on socket %d (%zu bytes to %s)", __fd, __n,
-			addr_buf);
+			addr_str);
+	free(addr_str);
 
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
@@ -272,11 +271,10 @@ ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
 	}
 
 	/* Extract IP address to human readable string */
-	char addr_buf[FULL_ADDR_WIDTH];
-	string_from_sockaddr(__addr, addr_buf, sizeof(addr_buf));
-
+	char *addr_str = build_full_str_from_sockaddr(__addr); 
 	DEBUG(INFO, "recvfrom() on socket %d (%zu bytes from %s)", __fd, __n,
-			addr_buf);
+			addr_str);
+	free(addr_str);
 
 	return ret;
 }

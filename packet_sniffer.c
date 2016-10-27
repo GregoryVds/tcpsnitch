@@ -167,12 +167,12 @@ int stop_capture(pcap_t *pcap, pthread_t *thread)
 char *build_capture_filter(const struct sockaddr *addr) 
 {
 	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *) addr;
-	char addr_buf[ADDR_WIDTH];
-	addr_string_from_sockaddr(addr_sto, addr_buf, sizeof(addr_buf));
-	char port_buf[PORT_WIDTH];
-	port_string_from_sockaddr(addr_sto, port_buf, sizeof(port_buf));
+	char *addr_str = build_addr_str_from_sockaddr(addr_sto);
+	char *port_str = build_port_str_from_sockaddr(addr_sto);
 	char *filter = (char *) malloc(sizeof(char)*FILTER_SIZE);
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_buf, port_buf);
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_str, port_str);
+	free(addr_str);
+	free(port_str);
 	DEBUG(INFO, "Starting capture with filter: '%s'", filter);
 	return filter;
 }

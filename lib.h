@@ -35,25 +35,12 @@ bool is_inet_socket(int fd);
 bool is_tcp_socket(int fd);
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
-/* Struct to string helpers */
-
-#define PORT_WIDTH 6 // Include null byte
-#define ADDR_WIDTH 40 // Include null byte
-#define FULL_ADDR_WIDTH 46 // ADDR:PORT\0
-
-int addr_string_from_sockaddr(const struct sockaddr_storage *addr, 
-		char *buf, int buf_size);
-int port_string_from_sockaddr(const struct sockaddr_storage *addr, 
-		char *buf, int buf_size);
-int string_from_sockaddr(const struct sockaddr *addr,
-		char *buf, int buf_size);
-
-
-
 /* Other */
 int append_string_to_file(const char *str, const char *path);
 
-
+char *build_addr_str_from_sockaddr(const struct sockaddr_storage *addr); 
+char *build_port_str_from_sockaddr(const struct sockaddr_storage *addr);
+char *build_full_str_from_sockaddr(const struct sockaddr *addr);
 char *build_path(const char *file_name);
 char *build_pcap_path();
 char *build_log_path();
