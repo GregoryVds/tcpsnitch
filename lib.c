@@ -15,6 +15,12 @@
 #include "lib.h"
 #include "config.h"
 
+// We do not want to open/close a new stream each time we log a single line to 
+// file. Not closing would leak stream pointers, and closeing would always 
+// flush the buffer. Instead we open it once, and let the system automatically
+// close when the process ends. Not sure this is the best way?
+FILE *log_file = NULL;
+
 const char *string_from_debug_level(DebugLevel lvl) {
 	static const char *strings[] = {"INFO", "WARN", "ERROR"};
 	return strings[lvl];
@@ -41,7 +47,8 @@ void log_to_stream(DebugLevel debug_lvl, const char *formated_str,
 			color = ANSI_COLOR_RED;
 			break;
 	}
-
+	
+	// Stderr is unbuffered.
 	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color,
 		string_from_debug_level(debug_lvl), pid, file, line,
 		formated_str, ANSI_COLOR_RESET);
@@ -49,27 +56,28 @@ void log_to_stream(DebugLevel debug_lvl, const char *formated_str,
 
 void log_to_file(DebugLevel debug_lvl, const char *formated_str, 
 		 const char *file, int line) {
-	pid_t pid = getpid();
-	char *path = build_log_path();
 
-	FILE *fp = fopen(path, "a");
-	if (fp == NULL) {
-		char str[1024];
-		snprintf(str, sizeof(str), "fopen() failed. %s.",
-			 strerror(errno));
-		log_to_stream(ERROR, str, file, line, stderr);
+	if (log_file == NULL) {
+		char *path = build_log_path();
+		log_file = fopen(path, "a");
+		// If cannot open log file, just log to stdout and do not log.
+		if (log_file == NULL) {
+			char str[1024];
+			snprintf(str, sizeof(str), "fopen() failed on %s. %s.",
+				 path, strerror(errno));
+			log_to_stream(ERROR, str, file, line, stderr);
+			free(path);
+			return;
+		}
 		free(path);
-		return;
 	}
 
+	pid_t pid = getpid();
 	unsigned long time_micros = get_time_micros();
-	
-	fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
+	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
 		string_from_debug_level(debug_lvl), pid, time_micros,
 		file, line, formated_str);
-
-	fclose(fp);  // TODO: This forces a write... Slow.
-	free(path);
+	// We do not close the log file to avoid triggering a flush. See above.
 }
 
 void netspy_log(DebugLevel debug_lvl, const char *formated_str,
