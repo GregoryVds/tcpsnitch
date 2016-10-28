@@ -18,13 +18,13 @@ typedef enum DebugLevel
 
 const char *string_from_debug_level(DebugLevel lvl);
 
-void lib_log(DebugLevel debug_lvl, const char *formated_str, 
+void netspy_log(DebugLevel debug_lvl, const char *formated_str, 
 		const char *file, int line); 
 
 #define DEBUG(debug_level, format, args...) {\
 	char formated_string[1024];\
 	snprintf(formated_string, sizeof(formated_string), format, ##args);\
-	lib_log(debug_level, formated_string, __FILE__, __LINE__);\
+	netspy_log(debug_level, formated_string, __FILE__, __LINE__);\
 }
 
 /* Helper functions */

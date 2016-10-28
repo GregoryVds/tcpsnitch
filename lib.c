@@ -25,42 +25,59 @@ const char *string_from_debug_level(DebugLevel lvl) {
 #define ANSI_COLOR_YELLOW "\x1b[33m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
-	     int line) {
+void log_to_stream(DebugLevel debug_lvl, const char *formated_str,
+		   const char *file, int line, FILE *stream) {
 	pid_t pid = getpid();
 
-	/* Log to stdout */
-	if (NETSPY_LOG) {
-		const char *color;
-		switch (debug_lvl) {
-			case INFO:
-				color = ANSI_COLOR_WHITE;
-				break;
-			case WARN:
-				color = ANSI_COLOR_YELLOW;
-				break;
-			case ERROR:
-				color = ANSI_COLOR_RED;
-				break;
-		}
-
-		fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color,
-			string_from_debug_level(debug_lvl), pid, file, line,
-			formated_str, ANSI_COLOR_RESET);
+	const char *color;
+	switch (debug_lvl) {
+		case INFO:
+			color = ANSI_COLOR_WHITE;
+			break;
+		case WARN:
+			color = ANSI_COLOR_YELLOW;
+			break;
+		case ERROR:
+			color = ANSI_COLOR_RED;
+			break;
 	}
-	/* Log to file */
-	if (NETSPY_LOG_TO_FILE) {
-		char *path = build_log_path();
-		FILE *fp = fopen(path, "a");
-		unsigned long time_micros = get_time_micros();
 
-		fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
-			string_from_debug_level(debug_lvl), pid, time_micros,
-			file, line, formated_str);
+	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color,
+		string_from_debug_level(debug_lvl), pid, file, line,
+		formated_str, ANSI_COLOR_RESET);
+}
 
-		fclose(fp);  // TODO: This forces a write... Slow.
+void log_to_file(DebugLevel debug_lvl, const char *formated_str, 
+		 const char *file, int line) {
+	pid_t pid = getpid();
+	char *path = build_log_path();
+
+	FILE *fp = fopen(path, "a");
+	if (fp == NULL) {
+		char str[1024];
+		snprintf(str, sizeof(str), "fopen() failed. %s.",
+			 strerror(errno));
+		log_to_stream(ERROR, str, file, line, stderr);
 		free(path);
+		return;
 	}
+
+	unsigned long time_micros = get_time_micros();
+	
+	fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
+		string_from_debug_level(debug_lvl), pid, time_micros,
+		file, line, formated_str);
+
+	fclose(fp);  // TODO: This forces a write... Slow.
+	free(path);
+}
+
+void netspy_log(DebugLevel debug_lvl, const char *formated_str,
+		const char *file, int line) {
+	if (NETSPY_LOG_TO_FILE)
+		log_to_file(debug_lvl, formated_str, file, line);
+	if (NETSPY_LOG_TO_STDERR)
+		log_to_stream(debug_lvl, formated_str, file, line, stderr);
 }
 
 bool is_socket(int fd) {
