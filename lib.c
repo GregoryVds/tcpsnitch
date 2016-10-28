@@ -48,12 +48,10 @@ void lib_log(DebugLevel debug_lvl, const char *formated_str, const char *file,
 			string_from_debug_level(debug_lvl), pid, file, line,
 			formated_str, ANSI_COLOR_RESET);
 	}
-
 	/* Log to file */
 	if (NETSPY_LOG_TO_FILE) {
 		char *path = build_log_path();
 		FILE *fp = fopen(path, "a");
-
 		unsigned long time_micros = get_time_micros();
 
 		fprintf(fp, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
@@ -220,18 +218,15 @@ char *build_kernel() {
 	return kernel;
 }
 
+// This function is called in DEBUG() thus it cannot itself call DEBUG() 
+// otherwise it starts an infinite loop.
 char *build_path(const char *file_name) {
 	const char *base_path = getenv(ENV_NETSPY_PATH);
-	if (base_path == NULL) {
-		DEBUG(ERROR, "env variable %s not set.", ENV_NETSPY_PATH);
-	}
-
+	if (base_path == NULL) base_path = NETSPY_DEFAULT_PATH; 
 	int full_path_length = strlen(base_path) + strlen(file_name) + 2;
 	char *full_path = (char *)malloc(sizeof(char) * full_path_length);
-	if (snprintf(full_path, full_path_length, "%s/%s", base_path,
-		     file_name) >= full_path_length) {
-		DEBUG(ERROR, "snprintf() failed (truncated).");
-	}
+	// We cannot use DEBUG on snprintf error.
+	snprintf(full_path, full_path_length, "%s/%s", base_path, file_name);
 	return full_path;
 }
 
