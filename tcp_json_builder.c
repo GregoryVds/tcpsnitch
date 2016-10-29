@@ -110,33 +110,19 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *)ev);
 
-	/* Translate socket domain */
-	int domain_buf_size = MEMBER_SIZE(IntStrPair, str);
-	char domain_buf[domain_buf_size];
-	if (!string_from_cons(ev->domain, domain_buf, domain_buf_size,
-			      SOCKET_DOMAINS,
-			      sizeof(SOCKET_DOMAINS) / sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown translation socket domain: %d",
-		      ev->domain);
-		snprintf(domain_buf, domain_buf_size, "%d", ev->domain);
-	}
-
-	/* Translates socket type */
-	int type_buf_size = MEMBER_SIZE(IntStrPair, str);
-	char type_buf[type_buf_size];
-	if (!string_from_cons(ev->type, type_buf, type_buf_size, SOCKET_TYPES,
-			      sizeof(SOCKET_TYPES) / sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown translation socket type: %d", ev->type);
-		snprintf(type_buf, type_buf_size, "%d", ev->type);
-	}
+	char *dom_str = build_str_from_sock_domain(ev->domain);
+	char *type_str = build_str_from_sock_type(ev->type);
 
 	json_t *json_details = json_object();
-	add(json_details, "domain", json_string(domain_buf));
-	add(json_details, "type", json_string(type_buf));
+	add(json_details, "domain", json_string(dom_str));
+	add(json_details, "type", json_string(type_str));
 	add(json_details, "protocol", json_integer(ev->protocol));
 	add(json_details, "sockCloexec", json_boolean(ev->sock_cloexec));
 	add(json_details, "sockNonblock", json_boolean(ev->sock_nonblock));
 	add(json_ev, "details", json_details);
+
+	free(dom_str);
+	free(type_str);
 
 	return json_ev;
 }
@@ -249,24 +235,15 @@ json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *)ev);
 
-	/* Translate level to protocol name */
 	struct protoent *protocol = getprotobynumber(ev->level);
-
-	/* Translate optname */
-	int optname_buf_size = MEMBER_SIZE(IntStrPair, str);
-	char optname_buf[optname_buf_size];
-	if (!string_from_cons(ev->optname, optname_buf, optname_buf_size,
-			      SOCKET_OPTIONS,
-			      sizeof(SOCKET_OPTIONS) / sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown setsockopt optname: %d", ev->optname);
-		snprintf(optname_buf, optname_buf_size, "%d", ev->optname);
-	}
+	char *optname_str = build_str_from_sock_optname(ev->optname);
 
 	json_t *json_details = json_object();
 	add(json_details, "level", json_string(protocol->p_name));
-	add(json_details, "optname", json_string(optname_buf));
+	add(json_details, "optname", json_string(optname_str));
 	add(json_ev, "details", json_details);
-
+	
+	free(optname_str);
 	return json_ev;
 }
 

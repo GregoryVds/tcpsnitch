@@ -46,15 +46,10 @@ int socket(int __domain, int __type, int __protocol) {
 	orig_socket_type orig_socket;
 	orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
 
-	int domain_buf_size = MEMBER_SIZE(IntStrPair, str);
-	char domain_buf[domain_buf_size];
-	if (!string_from_cons(__domain, domain_buf, domain_buf_size,
-			      SOCKET_DOMAINS,
-			      sizeof(SOCKET_DOMAINS) / sizeof(IntStrPair))) {
-		DEBUG(WARN, "Unknown translation socket domain: %d", __domain);
-		snprintf(domain_buf, domain_buf_size, "%d", __domain);
-	}
-	DEBUG(INFO, "socket() called (domain %s)", domain_buf);
+	/* Translate domain to str */
+	char *domain = build_str_from_sock_domain(__domain);
+	DEBUG(INFO, "socket() called (domain %s)", domain);
+	free(domain);
 
 	/* Inspect flag parameters */
 	bool sock_cloexec = __type & SOCK_CLOEXEC;

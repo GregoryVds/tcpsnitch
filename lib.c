@@ -14,11 +14,12 @@
 #include "config.h"
 #include "lib.h"
 #include "config.h"
+#include "strings.h"
 
 // We do not want to open/close a new stream each time we log a single line to 
-// file. Not closing would leak stream pointers, and closeing would always 
-// flush the buffer. Instead we open it once, and let the system automatically
-// close when the process ends. Not sure this is the best way?
+// file. Closing the stream would always trigger a write to kernel space. 
+// Instead we open it once, and let the system automatically close the stream
+// when the process ends. Not sure this is the best way?
 FILE *log_file = NULL;
 
 const char *string_from_debug_level(DebugLevel lvl) {
@@ -77,7 +78,8 @@ void log_to_file(DebugLevel debug_lvl, const char *formated_str,
 	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
 		string_from_debug_level(debug_lvl), pid, time_micros,
 		file, line, formated_str);
-	// We do not close the log file to avoid triggering a flush. See above.
+	// We do not close the log file to avoid triggering a write to kernel
+	// space. See above.
 }
 
 void netspy_log(DebugLevel debug_lvl, const char *formated_str,
@@ -293,6 +295,24 @@ char *build_cmdline(char **app_name) {
 	return cmdline;
 }
 
+char *build_str_from_sock_domain(int domain) {
+	int map_size = sizeof(SOCKET_DOMAINS)/sizeof(IntStrPair);	
+	char *str = build_string_from_cons(domain, SOCKET_DOMAINS, map_size);
+	return str;
+}
+
+char *build_str_from_sock_type(int type) {
+	int map_size = sizeof(SOCKET_TYPES)/sizeof(IntStrPair);	
+	char *str = build_string_from_cons(type, SOCKET_TYPES, map_size);
+	return str;
+}
+
+char *build_str_from_sock_optname(int optname) {
+	int map_size = sizeof(SOCKET_OPTIONS)/sizeof(IntStrPair);	
+	char *str = build_string_from_cons(optname, SOCKET_OPTIONS, map_size);
+	return str;
+}
+
 time_t get_time_sec() {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -325,3 +345,4 @@ long get_long_env(const char *env_var) {
 	if (val == LONG_MIN || val == LONG_MAX) return -3;  // Overflow
 	return val;
 }
+

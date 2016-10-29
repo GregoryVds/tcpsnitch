@@ -44,6 +44,9 @@ char *build_log_path();
 char *build_json_path();
 char *build_cmdline(char **app_name);
 char *build_kernel();
+char *build_str_from_sock_domain(int domain);
+char *build_str_from_sock_type(int type);
+char *build_str_from_sock_optname(int optname);
 
 /* Others */
 int append_string_to_file(const char *str, const char *path);

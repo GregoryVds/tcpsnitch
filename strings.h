@@ -11,12 +11,10 @@ typedef struct {
 } IntStrPair;
 
 /* Helper for building log messages */
-int string_from_cons(int cons, char *buffer, int buffer_size, 
-		const IntStrPair *map, int map_size);
+char *build_string_from_cons(int cons, const IntStrPair *map, int map_size);
 
 /* Socket domains */
 static const IntStrPair SOCKET_DOMAINS[] = {
-	
 	{ AF_UNIX, 	"AF_UNIX" }, 
 	{ AF_INET, 	"AF_INET" },
 	{ AF_INET6, 	"AF_INET6" },
