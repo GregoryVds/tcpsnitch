@@ -1,3 +1,33 @@
+/* 
+ * Author: Gregory Vander Schueren
+ * Email: gregory.vanderschueren@gmail.com
+ * Date: October, 2016
+ */
+
+/* 
+ * This file contains all (and the only) symbols that should be exposed by 
+ * the NETSPY library. Those symbols are most of the networking related 
+ * functions from the C standard librairies.
+ *
+ * NETSPY works by intercepting all calls to theses functions and by performing
+ * custom processing before and/or after calling the real implementation. This
+ * will prove valuable when trying the model the network behaviour of 
+ * applications.
+ *
+ * On Linux, NETSPY works using LD_PRELOAD. This environnement variable tells 
+ * the linker to automatically link librairies in LD_PRELOAD BEFORE any other
+ * dynamic librairy. When multiple librairies which define the same symbol are
+ * linked, the first one to be linked gets the precedence. This way, we can
+ * effectively override any function from the C standard library. We then use 
+ * the dynamic linking library <dlfcn.h> to get a reference to the original
+ * implementation and call it.
+ *
+ * NETPSY has currently only been tested on Linux with the glibc implementation
+ * of the C standard librairies. We mainly override Posix functions, but also
+ * some Linux specific functions such sendfile().
+ *
+ */
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -16,6 +46,7 @@
 #include "lib.h"
 #include "tcp_spy.h"
 #include "strings.h"
+
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
 */
