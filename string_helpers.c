@@ -109,6 +109,7 @@ char *alloc_json_path_str() { return alloc_abs_path_str(NETSPY_JSON_FILE); }
 
 #define PATH_LENGTH 30
 #define CMDLINE_LENGTH 1024
+
 char *alloc_cmdline_str(char **app_name) {
 	// Build path to /proc/pid/cmdline in path
 	char path[PATH_LENGTH];

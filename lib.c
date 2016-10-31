@@ -143,7 +143,9 @@ int append_string_to_file(const char *str, const char *path) {
 
 time_t get_time_sec() {
 	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	if (gettimeofday(&tv, NULL) == -1) {
+		DEBUG(ERROR, "gettimeofday() failed. %s", strerror(errno));
+	}
 	return tv.tv_sec;
 }
 
