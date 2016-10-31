@@ -278,9 +278,13 @@ static char *alloc_string_from_cons(int cons, const IntStrPair *map,
 	static const int str_size = MEMBER_SIZE(IntStrPair, str);
 	int i;
 	char *str = (char *)malloc(str_size);
- 	const IntStrPair *cur;
+	if (str == NULL) {
+		DEBUG(ERROR, "malloc() failed. Cannot build string.");
+		return str;
+	}
 
 	// Search for const in map.
+ 	const IntStrPair *cur;
 	for (i = 0; i < map_size; i++) {
 		cur = (map+i);
 		if (cur->cons == cons) {

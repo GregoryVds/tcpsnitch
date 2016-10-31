@@ -8,5 +8,6 @@
 
 pcap_t *start_capture(char *filters, char *path, pthread_t *thread);
 int stop_capture(pcap_t *pcap, pthread_t *thread);
+char *build_capture_filter(const struct sockaddr *addr);
 
 #endif

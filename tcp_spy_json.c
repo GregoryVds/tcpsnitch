@@ -1,41 +1,65 @@
 #include <jansson.h>
 #include <netdb.h>
-#include "tcp_json_builder.h"
+#include "tcp_spy_json.h"
 #include "string_helpers.h"
 #include "lib.h"
 
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
+ |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
+  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
+  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
+ |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
+
+*/
+
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
-add_type add = &json_object_set_new;
+static add_type add = &json_object_set_new;
 
-json_t *build_tcp_connection(TcpConnection *con);
-json_t *build_event(TcpEvent *ev);
-json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
-json_t *build_sock_closed_ev(TcpEvSockClosed *ev);
-json_t *build_data_sent_ev(TcpEvDataSent *ev);
-json_t *build_data_received_ev(TcpEvDataReceived *ev);
-json_t *build_connect_ev(TcpEvConnect *ev);
-json_t *build_info_dump_ev(TcpEvInfoDump *ev);
-json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
-json_t *build_shutdown_ev(TcpEvShutdown *ev);
-json_t *build_listen_ev(TcpEvListen *ev);
+static json_t *build_tcp_connection(TcpConnection *con);
+static json_t *build_event(TcpEvent *ev);
+static void build_shared_fields(json_t *json_ev, TcpEvent *ev);
+static json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
+static json_t *build_sock_closed_ev(TcpEvSockClosed *ev);
+static json_t *build_data_sent_ev(TcpEvDataSent *ev);
+static json_t *build_data_received_ev(TcpEvDataReceived *ev);
+static json_t *build_connect_ev(TcpEvConnect *ev);
+static json_t *build_info_dump_ev(TcpEvInfoDump *ev);
+static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
+static json_t *build_shutdown_ev(TcpEvShutdown *ev);
+static json_t *build_listen_ev(TcpEvListen *ev);
 
-char *build_tcp_connection_json(TcpConnection *con) {
-	json_t *json_con = build_tcp_connection(con);
-	char *json_string = json_dumps(json_con, 0);
-	json_decref(json_con);
-	return json_string;
-}
+#define EV_FAILURE "json_object() failed. Cannot build TCP event."
+#define DETAILS_FAILURE "json_object() failed. Cannot build event details."
+#define CON_FAILURE "json_object() failed. Cannot build TCP connection."
+#define SHARED_FAILURE "json_object() failed. Cannot build shared fields."
 
-json_t *build_tcp_connection(TcpConnection *con) {
+#define BUILD_EV_PRELUDE()                            \
+	json_t *json_ev = json_object();              \
+	if (json_ev == NULL) {                        \
+		DEBUG(ERROR, EV_FAILURE);             \
+		return NULL;                          \
+	}                                             \
+	build_shared_fields(json_ev, (TcpEvent *)ev); \
+	json_t *json_details = json_object();         \
+	if (json_details == NULL) {                   \
+		DEBUG(ERROR, DETAILS_FAILURE);        \
+		return json_ev;                       \
+	}                                             \
+	add(json_ev, "details", json_details);
+
+///////////////////////////////////////////////////////////////////////////////
+
+static json_t *build_tcp_connection(TcpConnection *con) {
 	json_t *json_con = json_object();
-	if (json_con == NULL) {
-		DEBUG(ERROR, "json_object() failed. Cannot build JSON for TCP"
-				" connection.");
+	json_t *events = json_array();
+	if (json_con == NULL || events == NULL) {
+		DEBUG(ERROR, CON_FAILURE);
 		return NULL;
 	}
-
-	json_t *events = json_array();
 
 	add(json_con, "app_name", json_string(con->app_name));
 	add(json_con, "cmdline", json_string(con->cmdline));
@@ -48,9 +72,9 @@ json_t *build_tcp_connection(TcpConnection *con) {
 	add(json_con, "bytesReceived", json_integer(con->bytes_received));
 	add(json_con, "gotPcapHandle", json_boolean(con->got_pcap_handle));
 	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
-	add(json_con, "events", events);
 
 	/* Loop through all events to build JSON */
+	add(json_con, "events", events);
 	json_t *json_event;
 	TcpEventNode *cur = con->head;
 	while (cur != NULL) {
@@ -62,7 +86,7 @@ json_t *build_tcp_connection(TcpConnection *con) {
 	return json_con;
 }
 
-json_t *build_event(TcpEvent *ev) {
+static json_t *build_event(TcpEvent *ev) {
 	json_t *r;
 	switch (ev->type) {
 		case TCP_EV_SOCK_OPENED:
@@ -96,14 +120,19 @@ json_t *build_event(TcpEvent *ev) {
 	return r;
 }
 
-void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
+static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	const char *type_str = string_from_tcp_event_type(ev->type);
 	add(json_ev, "eventType", json_string(type_str));
 
 	/* Time stamp */
 	json_t *timestamp_json = json_object();
-	add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
-	add(timestamp_json, "usec", json_integer(ev->timestamp.tv_usec));
+	if (timestamp_json == NULL) {
+		DEBUG(ERROR, SHARED_FAILURE);
+	} else {
+		add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
+		add(timestamp_json, "usec",
+		    json_integer(ev->timestamp.tv_usec));
+	}
 	add(json_ev, "timestamp", timestamp_json);
 
 	/* Return value & err string */
@@ -112,20 +141,19 @@ void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	add(json_ev, "errorStr", json_string(ev->error_str));
 }
 
-json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+///////////////////////////////////////////////////////////////////////////////
+
+static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	char *dom_str = alloc_sock_domain_str(ev->domain);
 	char *type_str = alloc_sock_type_str(ev->type);
 
-	json_t *json_details = json_object();
 	add(json_details, "domain", json_string(dom_str));
 	add(json_details, "type", json_string(type_str));
 	add(json_details, "protocol", json_integer(ev->protocol));
 	add(json_details, "sockCloexec", json_boolean(ev->sock_cloexec));
 	add(json_details, "sockNonblock", json_boolean(ev->sock_nonblock));
-	add(json_ev, "details", json_details);
 
 	free(dom_str);
 	free(type_str);
@@ -133,61 +161,50 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	return json_ev;
 }
 
-json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	json_t *json_details = json_object();
 	add(json_details, "detected", json_boolean(ev->detected));
-	add(json_ev, "details", json_details);
+
 	return json_ev;
 }
 
-json_t *build_data_sent_ev(TcpEvDataSent *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_data_sent_ev(TcpEvDataSent *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	json_t *json_details = json_object();
 	add(json_details, "bytes", json_integer(ev->bytes));
-	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
 
-json_t *build_data_received_ev(TcpEvDataReceived *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_data_received_ev(TcpEvDataReceived *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	json_t *json_details = json_object();
 	add(json_details, "bytes", json_integer(ev->bytes));
-	add(json_ev, "details", json_details);
 
 	return json_ev;
 }
 
-json_t *build_connect_ev(TcpEvConnect *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_connect_ev(TcpEvConnect *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	/* Extract IP address to human readable string */
 	char *addr_str = alloc_host_str(&(ev->addr));
 	char *port_str = alloc_port_str(&(ev->addr));
 
-	json_t *json_details = json_object();
 	add(json_details, "addr", json_string(addr_str));
 	add(json_details, "port", json_string(port_str));
+
 	free(addr_str);
 	free(port_str);
-	add(json_ev, "details", json_details);
+
 	return json_ev;
 }
 
-json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	struct tcp_info i = ev->info;
-	json_t *json_details = json_object();
 
 	add(json_details, "state", json_integer(i.tcpi_state));
 	add(json_details, "ca_state", json_integer(i.tcpi_ca_state));
@@ -232,44 +249,63 @@ json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
 
 	add(json_details, "total_retrans", json_integer(i.tcpi_total_retrans));
 
-	add(json_ev, "details", json_details);
-
 	return json_ev;
 }
 
-json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	struct protoent *protocol = getprotobynumber(ev->level);
 	char *optname_str = alloc_sock_optname_str(ev->optname);
 
-	json_t *json_details = json_object();
 	add(json_details, "level", json_string(protocol->p_name));
 	add(json_details, "optname", json_string(optname_str));
-	add(json_ev, "details", json_details);
-	
+
 	free(optname_str);
+
 	return json_ev;
 }
 
-json_t *build_shutdown_ev(TcpEvShutdown *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_shutdown_ev(TcpEvShutdown *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	json_t *json_details = json_object();
 	add(json_details, "shut_rd", json_boolean(ev->shut_rd));
 	add(json_details, "shut_wr", json_boolean(ev->shut_wr));
-	add(json_ev, "details", json_details);
+
 	return json_ev;
 }
 
-json_t *build_listen_ev(TcpEvListen *ev) {
-	json_t *json_ev = json_object();
-	build_shared_fields(json_ev, (TcpEvent *)ev);
+static json_t *build_listen_ev(TcpEvListen *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	json_t *json_details = json_object();
 	add(json_details, "backlog", json_integer(ev->backlog));
-	add(json_ev, "details", json_details);
+
 	return json_ev;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+  ____  _   _ ____  _     ___ ____      _    ____ ___
+ |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
+ | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
+ |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
+ |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
+*/
+
+char *build_tcp_connection_json(TcpConnection *con) {
+	json_t *json_con = build_tcp_connection(con);
+	if (json_con == NULL) {
+		DEBUG(ERROR,
+		      "build_tcp_connection() failed. Could not generate JSON "
+		      "representation for TCP connection");
+		return NULL;
+	}
+
+	char *json_string = json_dumps(json_con, 0);
+	json_decref(json_con);
+	return json_string;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+

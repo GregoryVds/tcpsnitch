@@ -7,7 +7,7 @@
 #include <pcap/pcap.h>
 #include "tcp_spy.h"
 #include "lib.h"
-#include "tcp_json_builder.h"
+#include "tcp_spy_json.h"
 #include "packet_sniffer.h"
 #include "config.h"
 #include "string_helpers.h"
