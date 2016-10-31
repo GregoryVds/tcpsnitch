@@ -16,8 +16,8 @@
 #include "config.h"
 #include "string_helpers.h"
 
-// We do not want to open/close a new stream each time we log a single line to 
-// file. Closing the stream would always trigger a write to kernel space. 
+// We do not want to open/close a new stream each time we log a single line to
+// file. Closing the stream would always trigger a write to kernel space.
 // Instead we open it once, and let the system automatically close the stream
 // when the process ends. Not sure this is the best way?
 FILE *log_file = NULL;
@@ -48,16 +48,15 @@ void log_to_stream(DebugLevel debug_lvl, const char *formated_str,
 			color = ANSI_COLOR_RED;
 			break;
 	}
-	
+
 	// Stderr is unbuffered.
 	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color,
 		string_from_debug_level(debug_lvl), pid, file, line,
 		formated_str, ANSI_COLOR_RESET);
 }
 
-void log_to_file(DebugLevel debug_lvl, const char *formated_str, 
+void log_to_file(DebugLevel debug_lvl, const char *formated_str,
 		 const char *file, int line) {
-
 	if (log_file == NULL) {
 		char *path = alloc_log_path_str();
 		log_file = fopen(path, "a");
@@ -76,8 +75,8 @@ void log_to_file(DebugLevel debug_lvl, const char *formated_str,
 	pid_t pid = getpid();
 	unsigned long time_micros = get_time_micros();
 	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
-		string_from_debug_level(debug_lvl), pid, time_micros,
-		file, line, formated_str);
+		string_from_debug_level(debug_lvl), pid, time_micros, file,
+		line, formated_str);
 	// We do not close the log file to avoid triggering a write to kernel
 	// space. See above.
 }
@@ -143,19 +142,25 @@ int append_string_to_file(const char *str, const char *path) {
 
 time_t get_time_sec() {
 	struct timeval tv;
-	if (gettimeofday(&tv, NULL) == -1) {
-		DEBUG(ERROR, "gettimeofday() failed. %s", strerror(errno));
-	}
+	fill_timeval(&tv);
 	return tv.tv_sec;
 }
 
 /* Retrieve current time in microseconds granularity */
 unsigned long get_time_micros() {
 	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	fill_timeval(&tv);
 	unsigned long time_micros;
 	time_micros = tv.tv_sec * (unsigned long)1000000 + tv.tv_usec;
 	return time_micros;
+}
+
+int fill_timeval(struct timeval *timeval) {
+	int ret = gettimeofday(timeval, NULL);
+	if (ret == -1) {
+		DEBUG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
+	}
+	return ret;
 }
 
 /* Retrieve env variable containing a LONG
@@ -175,4 +180,3 @@ long get_long_env(const char *env_var) {
 	if (val == LONG_MIN || val == LONG_MAX) return -3;  // Overflow
 	return val;
 }
-

@@ -1,24 +1,24 @@
-/* 
+/*
  * Author: Gregory Vander Schueren
  * Email: gregory.vanderschueren@gmail.com
  * Date: October, 2016
  */
 
-/* 
- * This file contains all (and the only) symbols that should be exposed by 
- * the NETSPY library. Those symbols are most of the networking related 
+/*
+ * This file contains all (and the only) symbols that should be exposed by
+ * the NETSPY library. Those symbols are most of the networking related
  * functions from the C standard librairies.
  *
  * NETSPY works by intercepting all calls to theses functions and by performing
  * custom processing before and/or after calling the real implementation. This
- * will prove valuable when trying the model the network behaviour of 
+ * will prove valuable when trying the model the network behaviour of
  * applications.
  *
- * On Linux, NETSPY works using LD_PRELOAD. This environnement variable tells 
+ * On Linux, NETSPY works using LD_PRELOAD. This environnement variable tells
  * the linker to automatically link librairies in LD_PRELOAD BEFORE any other
  * dynamic librairy. When multiple librairies which define the same symbol are
  * linked, the first one to be linked gets the precedence. This way, we can
- * effectively override any function from the C standard library. We then use 
+ * effectively override any function from the C standard library. We then use
  * the dynamic linking library <dlfcn.h> to get a reference to the original
  * implementation and call it.
  *
@@ -298,7 +298,7 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 	ssize_t ret =
 	    orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
 	int err = errno;
-	
+
 	if (is_tcp_socket(__fd)) {
 		tcp_data_received(__fd, ret, err, __n);
 		tcp_info_dump(__fd);

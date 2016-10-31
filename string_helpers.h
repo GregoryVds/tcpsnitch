@@ -13,6 +13,7 @@ char *alloc_abs_path_str(const char *file_name);
 char *alloc_pcap_path_str();
 char *alloc_log_path_str();
 char *alloc_json_path_str();
+char *alloc_dirname_str(char *app_name);
 
 char *alloc_cmdline_str(char **app_name);
 char *alloc_kernel_str();

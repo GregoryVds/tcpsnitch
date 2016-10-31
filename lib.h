@@ -35,6 +35,7 @@ bool is_tcp_socket(int fd);
 
 /* Others */
 int append_string_to_file(const char *str, const char *path);
+int fill_timeval(struct timeval *timeval);
 time_t get_time_sec();
 unsigned long get_time_micros();
 long get_long_env(const char *env_var);

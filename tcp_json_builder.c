@@ -29,6 +29,12 @@ char *build_tcp_connection_json(TcpConnection *con) {
 
 json_t *build_tcp_connection(TcpConnection *con) {
 	json_t *json_con = json_object();
+	if (json_con == NULL) {
+		DEBUG(ERROR, "json_object() failed. Cannot build JSON for TCP"
+				" connection.");
+		return NULL;
+	}
+
 	json_t *events = json_array();
 
 	add(json_con, "app_name", json_string(con->app_name));

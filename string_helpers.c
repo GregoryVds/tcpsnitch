@@ -96,6 +96,10 @@ char *alloc_abs_path_str(const char *file_name) {
 	if (base_path == NULL) base_path = NETSPY_DEFAULT_PATH; 
 	int full_path_length = strlen(base_path) + strlen(file_name) + 2;
 	char *full_path = (char *)malloc(sizeof(char) * full_path_length);
+	if (full_path == NULL) {
+		DEBUG(ERROR, "malloc() failed. Could not allocate path str.");
+		return NULL;
+	}
 	// We cannot use DEBUG on snprintf error.
 	snprintf(full_path, full_path_length, "%s/%s", base_path, file_name);
 	return full_path;
@@ -104,6 +108,18 @@ char *alloc_abs_path_str(const char *file_name) {
 char *alloc_pcap_path_str() { return alloc_abs_path_str(NETSPY_PCAP_FILE); }
 char *alloc_log_path_str() { return alloc_abs_path_str(NETSPY_LOG_FILE); }
 char *alloc_json_path_str() { return alloc_abs_path_str(NETSPY_JSON_FILE); }
+
+#define TIMESTAMP_WIDTH 10
+char *alloc_dirname_str(char *app_name) {
+	int app_name_length = strlen(app_name);
+	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
+	char *dirname = (char *)calloc(sizeof(char), n);
+	strncat(dirname, app_name, app_name_length);
+	strncat(dirname, "_", 1);
+	snprintf(dirname + strlen(dirname), TIMESTAMP_WIDTH, "%lu",
+		 get_time_sec());
+	return dirname;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
