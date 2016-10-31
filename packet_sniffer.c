@@ -5,6 +5,7 @@
 #include "packet_sniffer.h"
 #include "lib.h"
 #include "config.h"
+#include "string_helpers.h"
 
 void *capture_thread(void *params);
 
@@ -164,8 +165,8 @@ int stop_capture(pcap_t *pcap, pthread_t *thread) {
 
 char *build_capture_filter(const struct sockaddr *addr) {
 	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *)addr;
-	char *addr_str = build_addr_str_from_sockaddr(addr_sto);
-	char *port_str = build_port_str_from_sockaddr(addr_sto);
+	char *addr_str = alloc_host_str(addr_sto);
+	char *port_str = alloc_port_str(addr_sto);
 	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
 	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_str,
 		 port_str);

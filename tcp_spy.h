@@ -1,3 +1,7 @@
+/* tcp_spy.h exposes a set of functions to record all "events" that happened 
+ * for a given TCP connection.
+ */
+
 #ifndef TCP_SPY_H
 #define TCP_SPY_H
 
@@ -20,8 +24,6 @@ typedef enum TcpEventType
 	TCP_EV_SHUTDOWN,
 	TCP_EV_LISTEN
 } TcpEventType;
-
-const char *string_from_tcp_event_type(TcpEventType type);
 
 typedef struct {
 	TcpEventType type;
@@ -83,7 +85,6 @@ typedef struct {
 } TcpEvListen;
 
 typedef struct TcpEventNode TcpEventNode;
-
 struct TcpEventNode {
 	TcpEvent *data;
 	TcpEventNode *next;
@@ -111,7 +112,9 @@ typedef struct {
 	time_t timestamp; // When tcp_spy started tracking the connection.
 } TcpConnection;
 
+const char *string_from_tcp_event_type(TcpEventType type);
 
+/* TCP events */
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec, 
 		bool sock_nonblock);
 void tcp_sock_closed(int fd, int return_value, bool detected);

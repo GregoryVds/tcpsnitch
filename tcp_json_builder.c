@@ -1,7 +1,7 @@
 #include <jansson.h>
 #include <netdb.h>
 #include "tcp_json_builder.h"
-#include "strings.h"
+#include "string_helpers.h"
 #include "lib.h"
 
 /* Save reference to pointer with shorter name */
@@ -110,8 +110,8 @@ json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	json_t *json_ev = json_object();
 	build_shared_fields(json_ev, (TcpEvent *)ev);
 
-	char *dom_str = build_str_from_sock_domain(ev->domain);
-	char *type_str = build_str_from_sock_type(ev->type);
+	char *dom_str = alloc_sock_domain_str(ev->domain);
+	char *type_str = alloc_sock_type_str(ev->type);
 
 	json_t *json_details = json_object();
 	add(json_details, "domain", json_string(dom_str));
@@ -164,8 +164,8 @@ json_t *build_connect_ev(TcpEvConnect *ev) {
 	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	/* Extract IP address to human readable string */
-	char *addr_str = build_addr_str_from_sockaddr(&(ev->addr));
-	char *port_str = build_port_str_from_sockaddr(&(ev->addr));
+	char *addr_str = alloc_host_str(&(ev->addr));
+	char *port_str = alloc_port_str(&(ev->addr));
 
 	json_t *json_details = json_object();
 	add(json_details, "addr", json_string(addr_str));
@@ -236,7 +236,7 @@ json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
 	build_shared_fields(json_ev, (TcpEvent *)ev);
 
 	struct protoent *protocol = getprotobynumber(ev->level);
-	char *optname_str = build_str_from_sock_optname(ev->optname);
+	char *optname_str = alloc_sock_optname_str(ev->optname);
 
 	json_t *json_details = json_object();
 	add(json_details, "level", json_string(protocol->p_name));

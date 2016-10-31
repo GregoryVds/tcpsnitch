@@ -45,7 +45,7 @@
 #include <errno.h>
 #include "lib.h"
 #include "tcp_spy.h"
-#include "strings.h"
+#include "string_helpers.h"
 
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
@@ -78,7 +78,7 @@ int socket(int __domain, int __type, int __protocol) {
 	orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
 
 	/* Translate domain to str */
-	char *domain = build_str_from_sock_domain(__domain);
+	char *domain = alloc_sock_domain_str(__domain);
 	DEBUG(INFO, "socket() called (domain %s)", domain);
 	free(domain);
 
@@ -246,7 +246,7 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 	orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
 
 	/* Extract IP address to human readable string */
-	char *addr_str = build_full_str_from_sockaddr(__addr);
+	char *addr_str = alloc_addr_str(__addr);
 	DEBUG(INFO, "sendto() on socket %d (%zu bytes to %s)", __fd, __n,
 	      addr_str);
 	free(addr_str);
@@ -289,7 +289,7 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 	}
 
 	/* Extract IP address to human readable string */
-	char *addr_str = build_full_str_from_sockaddr(__addr);
+	char *addr_str = alloc_addr_str(__addr);
 	DEBUG(INFO, "recvfrom() on socket %d (%zu bytes from %s)", __fd, __n,
 	      addr_str);
 	free(addr_str);

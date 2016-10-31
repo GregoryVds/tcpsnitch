@@ -1,7 +1,7 @@
 CC=gcc
 DEPS=-ljansson -ldl -lpthread -lpcap 
-HEADERS=lib.h tcp_spy.h strings.h tcp_json_builder.h packet_sniffer.h
-SOURCES=glibc_overrides.c lib.c tcp_spy.c strings.c tcp_json_builder.c \
+HEADERS=lib.h tcp_spy.h string_helpers.h tcp_json_builder.h packet_sniffer.h
+SOURCES=glibc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_json_builder.c \
 	packet_sniffer.c 
 
 MAJOR_VERSION=1
