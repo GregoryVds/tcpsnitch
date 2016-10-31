@@ -298,3 +298,16 @@ char *alloc_sock_optname_str(int optname) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+char *alloc_error_str(int err) {
+	char *ori_str = strerror(err);
+	size_t str_len = strlen(ori_str) + 1;
+	char *alloc_str = (char *)malloc(str_len);
+	if (alloc_str == NULL) {
+		DEBUG(ERROR, "malloc() failed.");
+		return NULL;
+	}
+	strncpy(alloc_str, ori_str, str_len);
+	return alloc_str;
+}
+
+///////////////////////////////////////////////////////////////////////////////

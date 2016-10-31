@@ -117,15 +117,15 @@ const char *string_from_tcp_event_type(TcpEventType type);
 /* TCP events */
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec, 
 		bool sock_nonblock);
-void tcp_sock_closed(int fd, int return_value, bool detected);
-void tcp_data_sent(int fd, int return_value, size_t bytes);
-void tcp_data_received(int fd, int return_value, size_t bytes);
+void tcp_sock_closed(int fd, int return_value, int err, bool detected);
+void tcp_data_sent(int fd, int return_value, int err, size_t bytes);
+void tcp_data_received(int fd, int return_value, int err, size_t bytes);
 void tcp_pre_connect(int fd, const struct sockaddr *addr);
-void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
+void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
 		socklen_t len);
 void tcp_info_dump(int fd);
-void tcp_setsockopt(int fd, int return_value, int level, int optname);
-void tcp_shutdown(int fd, int return_value, int how);
-void tcp_listen(int fd, int return_value, int backlog);
+void tcp_setsockopt(int fd, int return_value, int err, int level, int optname);
+void tcp_shutdown(int fd, int return_value, int err, int how);
+void tcp_listen(int fd, int return_value, int err, int backlog);
 
 #endif

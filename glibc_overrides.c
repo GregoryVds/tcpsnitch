@@ -114,8 +114,10 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	/* Perform syscall */
 	if (is_tcp_socket(__fd)) tcp_pre_connect(__fd, __addr);
 	int ret = orig_connect(__fd, __addr, __len);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_connect(__fd, ret, __addr, __len);
+		tcp_connect(__fd, ret, err, __addr, __len);
 		tcp_info_dump(__fd);
 	}
 
@@ -139,8 +141,10 @@ int shutdown(int __fd, int __how) {
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_shutdown(__fd, __how);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_shutdown(__fd, ret, __how);
+		tcp_shutdown(__fd, ret, err, __how);
 		tcp_info_dump(__fd);
 	}
 
@@ -160,8 +164,10 @@ int listen(int __fd, int __n) {
 
 	/* Perform syscall */
 	int ret = orig_listen(__fd, __n);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_listen(__fd, ret, __n);
+		tcp_listen(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -182,8 +188,10 @@ int setsockopt(int __fd, int __level, int __optname, const void *__optval,
 
 	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_setsockopt(__fd, ret, __level, __optname);
+		tcp_setsockopt(__fd, ret, err, __level, __optname);
 		tcp_info_dump(__fd);
 	}
 
@@ -203,8 +211,10 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	ssize_t ret = orig_send(__fd, __buf, __n, __flags);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, __n);
+		tcp_data_sent(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -225,8 +235,10 @@ ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, __n);
+		tcp_data_received(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -255,8 +267,10 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 	/* Perform syscall */
 	ssize_t ret =
 	    orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, __n);
+		tcp_data_sent(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -283,8 +297,10 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 	/* Perform syscall */
 	ssize_t ret =
 	    orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
+	int err = errno;
+	
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, __n);
+		tcp_data_received(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -350,7 +366,9 @@ int close(int __fd) {
 	if (is_tcp) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_close(__fd);
-	if (is_tcp) tcp_sock_closed(__fd, ret, true);
+	int err = errno;
+
+	if (is_tcp) tcp_sock_closed(__fd, ret, err, true);
 
 	return ret;
 }
@@ -367,8 +385,10 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_write(__fd, __buf, __n);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, __n);
+		tcp_data_sent(__fd, ret, err, __n);
 		tcp_info_dump(__fd);
 	}
 
@@ -388,8 +408,10 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
 	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
 	/* Perform syscall */
 	int ret = orig_read(__fd, __buf, __nbytes);
+	int err = errno;
+
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, __nbytes);
+		tcp_data_received(__fd, ret, err, __nbytes);
 		tcp_info_dump(__fd);
 	}
 

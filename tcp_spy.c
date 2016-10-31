@@ -46,7 +46,7 @@ static long tcp_info_time_ival = -1;   // Set to -1 when not parsed. 0 if ommite
 /* CREATING & FREEING OBJECTS */
 
 static TcpConnection *alloc_connection();
-static TcpEvent *alloc_event(TcpEventType type, bool success, int return_value);
+static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_connection(TcpConnection *con);
 static void free_events_list(TcpEventNode *head);
 static void free_event(TcpEvent *ev);
@@ -81,34 +81,44 @@ static TcpConnection *alloc_connection() {
 	return con;
 }
 
-static TcpEvent *alloc_event(TcpEventType type, bool success, int return_value) {
+static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
+	bool success;
 	TcpEvent *ev;
 	switch (type) {
 		case TCP_EV_SOCK_OPENED:
 			ev = (TcpEvent *)malloc(sizeof(TcpEvSockOpened));
+			success = (return_value != 0);
 			break;
 		case TCP_EV_SOCK_CLOSED:
+			success = (return_value == 0);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvSockClosed));
 			break;
 		case TCP_EV_DATA_SENT:
+			success = (return_value != -1);	
 			ev = (TcpEvent *)malloc(sizeof(TcpEvDataSent));
 			break;
 		case TCP_EV_DATA_RECEIVED:
+			success = (return_value != -1);	
 			ev = (TcpEvent *)malloc(sizeof(TcpEvDataReceived));
 			break;
 		case TCP_EV_CONNECT:
+			success = (return_value != -1);	
 			ev = (TcpEvent *)malloc(sizeof(TcpEvConnect));
 			break;
 		case TCP_EV_INFO_DUMP:
+			success = (return_value != -1);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvInfoDump));
 			break;
 		case TCP_EV_SETSOCKOPT:
+			success = (return_value != -1);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvSetsockopt));
 			break;
 		case TCP_EV_SHUTDOWN:
+			success = (return_value != -1);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvShutdown));
 			break;
 		case TCP_EV_LISTEN:
+			success = (return_value != -1); 
 			ev = (TcpEvent *)malloc(sizeof(TcpEvListen));
 			break;
 	}
@@ -123,15 +133,7 @@ static TcpEvent *alloc_event(TcpEventType type, bool success, int return_value) 
 	ev->type = type;
 	ev->return_value = return_value;
 	ev->success = success;
-	if (success)
-		ev->error_str = NULL;
-	else {  // Fill error string form errno.
-		char *err_str = strerror(errno);
-		size_t str_len = strlen(err_str) + 1;
-		ev->error_str = (char *)malloc(str_len);
-		strncpy(ev->error_str, err_str, str_len);
-	}
-
+	ev->error_str = success ? NULL : alloc_error_str(err);
 	return ev;
 }
 
@@ -190,8 +192,8 @@ static TcpConnection *get_tcp_connection(int fd) {
 	return con;
 }
 
-static void fill_timestamp(TcpEvent *event) {
-	gettimeofday(&(event->timestamp), NULL);
+static void fill_timestamp(TcpEvent *ev) {
+	gettimeofday(&(ev->timestamp), NULL);
 }
 
 #define TIMESTAMP_WIDTH 10
@@ -277,7 +279,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 		     bool sock_nonblock) {
 	/* Check if connection was not properly closed. */
-	if (fd_con_map[fd]) tcp_sock_closed(fd, 0, false);
+	if (fd_con_map[fd]) tcp_sock_closed(fd, 0, 0, false);
 
 	/* Create new connection */
 	TcpConnection *con = alloc_connection();
@@ -286,7 +288,7 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 
 	/* Create event */
 	TcpEvSockOpened *ev =
-	    (TcpEvSockOpened *)alloc_event(TCP_EV_SOCK_OPENED, true, fd);
+	    (TcpEvSockOpened *)alloc_event(TCP_EV_SOCK_OPENED, fd, 0);
 	if (ev == NULL) return; // Cannot track event.
 
 	ev->domain = domain;
@@ -297,14 +299,14 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_sock_closed(int fd, int return_value, bool detected) {
+void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
 	TcpEvSockClosed *ev = (TcpEvSockClosed *)alloc_event(
-	    TCP_EV_SOCK_CLOSED, return_value != -1, return_value);
+			TCP_EV_SOCK_CLOSED, return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 
 	ev->detected = detected;
@@ -330,14 +332,14 @@ void tcp_sock_closed(int fd, int return_value, bool detected) {
 	fd_con_map[fd] = NULL;
 }
 
-void tcp_data_sent(int fd, int return_value, size_t bytes) {
+void tcp_data_sent(int fd, int return_value, int err, size_t bytes) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
-	TcpEvDataSent *ev = (TcpEvDataSent *)alloc_event(
-	    TCP_EV_DATA_SENT, return_value != -1, return_value);
+	TcpEvDataSent *ev = (TcpEvDataSent *)alloc_event(TCP_EV_DATA_SENT,
+			return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 
 	con->bytes_sent += bytes;
@@ -345,14 +347,14 @@ void tcp_data_sent(int fd, int return_value, size_t bytes) {
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_data_received(int fd, int return_value, size_t bytes) {
+void tcp_data_received(int fd, int return_value, int err, size_t bytes) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
 	TcpEvDataReceived *ev = (TcpEvDataReceived *)alloc_event(
-	    TCP_EV_DATA_RECEIVED, return_value != -1, return_value);
+			TCP_EV_DATA_RECEIVED, return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 
 	con->bytes_received += bytes;
@@ -375,15 +377,15 @@ void tcp_pre_connect(int fd, const struct sockaddr *addr) {
 	free(file_path);
 }
 
-void tcp_connect(int fd, int return_value, const struct sockaddr *addr,
+void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
 		 socklen_t len) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
-	TcpEvConnect *ev = (TcpEvConnect *)alloc_event(
-	    TCP_EV_CONNECT, return_value != -1, return_value);
+	TcpEvConnect *ev = (TcpEvConnect *)alloc_event(TCP_EV_CONNECT,
+			return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 
 	memcpy(&(ev->addr), addr, len);
@@ -399,32 +401,36 @@ void tcp_info_dump(int fd) {
 	if (!should_dump_tcp_info(con)) return;
 	DEBUG(INFO, "Dumping tcp_info");
 
-	/* Create event */
-	TcpEvInfoDump *ev =
-	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, true, 0);
-	if (ev == NULL) return; // Cannot track event.
-
+	/* Get TCP_INFO */
 	socklen_t tcp_info_len = sizeof(struct tcp_info);
-	if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&(ev->info),
-		       &tcp_info_len) == -1) {
+	struct tcp_info info;
+	int ret = getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info,
+			&tcp_info_len);
+	if (ret == -1) {
 		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
 	}
 
+	/* Create event */
+	TcpEvInfoDump *ev =
+	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, errno);
+	if (ev == NULL) return; // Cannot track event.
+	
 	/* Register time/bytes of last dump */
+	memcpy(&(ev->info), &info, tcp_info_len);
 	con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
 	con->last_info_dump_micros = get_time_micros();
 
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_setsockopt(int fd, int return_value, int level, int optname) {
+void tcp_setsockopt(int fd, int return_value, int err, int level, int optname) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
-	TcpEvSetsockopt *ev = (TcpEvSetsockopt *)alloc_event(
-	    TCP_EV_SETSOCKOPT, return_value != 1, return_value);
+	TcpEvSetsockopt *ev = (TcpEvSetsockopt *)alloc_event(TCP_EV_SETSOCKOPT,
+			return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 	
 	ev->level = level;
@@ -432,14 +438,14 @@ void tcp_setsockopt(int fd, int return_value, int level, int optname) {
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_shutdown(int fd, int return_value, int how) {
+void tcp_shutdown(int fd, int return_value, int err, int how) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
-	TcpEvShutdown *ev = (TcpEvShutdown *)alloc_event(
-	    TCP_EV_SHUTDOWN, return_value != -1, return_value);
+	TcpEvShutdown *ev = (TcpEvShutdown *)alloc_event(TCP_EV_SHUTDOWN,
+			return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 	
 	ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
@@ -447,14 +453,14 @@ void tcp_shutdown(int fd, int return_value, int how) {
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_listen(int fd, int return_value, int backlog) {
+void tcp_listen(int fd, int return_value, int err, int backlog) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) return; // Cannot get related connection.
 
 	/* Create event */
-	TcpEvListen *ev = (TcpEvListen *)alloc_event(
-	    TCP_EV_LISTEN, return_value != -1, return_value);
+	TcpEvListen *ev = (TcpEvListen *)alloc_event(TCP_EV_LISTEN, 
+			return_value, err);
 	if (ev == NULL) return; // Cannot track event.
 	
 	ev->backlog = backlog;
