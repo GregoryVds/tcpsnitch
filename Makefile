@@ -22,8 +22,8 @@ ANGULAR=https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js
 default: netspy
 
 netspy: $(HEADERS) $(SOURCES)
-	$(CC) -g -Wall -fPIC -shared -Wl,-soname,$(SONAME) -o $(REAL_NAME) \
-		$(SOURCES) $(DEPS) 
+	$(CC) -g -Wall -fPIC -shared -Wl,-Bsymbolic -Wl,-soname,$(SONAME) \
+		-o $(REAL_NAME) $(SOURCES) $(DEPS) 
 	ln -sf $(REAL_NAME) $(SONAME)
 	ln -sf $(REAL_NAME) $(LINKER_NAME)
 
