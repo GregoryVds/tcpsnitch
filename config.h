@@ -1,10 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-/* Configure program behavior */
-#define NETSPY_LOG_TO_STDERR true // Log to stderr if set to true.
-#define NETSPY_LOG_TO_FILE true // Log to file it set to true.
-
 #define NETSPY_DEFAULT_PATH "/tmp/netspy" // Default path for log filee
 #define NETSPY_JSON_FILE "dump.json" // Name of tcp_spy capture file
 #define NETSPY_PCAP_FILE "dump.pcap" // Name of PCAP capture file

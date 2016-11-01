@@ -3,6 +3,7 @@
 #include "tcp_spy_json.h"
 #include "string_helpers.h"
 #include "lib.h"
+#include "logger.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -40,13 +41,13 @@ static json_t *build_listen_ev(TcpEvListen *ev);
 #define BUILD_EV_PRELUDE()                            \
 	json_t *json_ev = json_object();              \
 	if (json_ev == NULL) {                        \
-		DEBUG(ERROR, EV_FAILURE);             \
+		LOG(ERROR, EV_FAILURE);             \
 		return NULL;                          \
 	}                                             \
 	build_shared_fields(json_ev, (TcpEvent *)ev); \
 	json_t *json_details = json_object();         \
 	if (json_details == NULL) {                   \
-		DEBUG(ERROR, DETAILS_FAILURE);        \
+		LOG(ERROR, DETAILS_FAILURE);        \
 		return json_ev;                       \
 	}                                             \
 	add(json_ev, "details", json_details);
@@ -57,7 +58,7 @@ static json_t *build_tcp_connection(TcpConnection *con) {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
 	if (json_con == NULL || events == NULL) {
-		DEBUG(ERROR, CON_FAILURE);
+		LOG(ERROR, CON_FAILURE);
 		return NULL;
 	}
 
@@ -128,7 +129,7 @@ static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	/* Time stamp */
 	json_t *timestamp_json = json_object();
 	if (timestamp_json == NULL) {
-		DEBUG(ERROR, SHARED_FAILURE);
+		LOG(ERROR, SHARED_FAILURE);
 	} else {
 		add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
 		add(timestamp_json, "usec",
@@ -297,7 +298,7 @@ static json_t *build_listen_ev(TcpEvListen *ev) {
 char *build_tcp_connection_json(TcpConnection *con) {
 	json_t *json_con = build_tcp_connection(con);
 	if (json_con == NULL) {
-		DEBUG(ERROR,
+		LOG(ERROR,
 		      "build_tcp_connection() failed. Could not generate JSON "
 		      "representation for TCP connection");
 		return NULL;

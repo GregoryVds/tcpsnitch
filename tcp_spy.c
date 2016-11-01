@@ -11,6 +11,7 @@
 #include "packet_sniffer.h"
 #include "config.h"
 #include "string_helpers.h"
+#include "logger.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -66,7 +67,7 @@ static bool should_dump_tcp_info(TcpConnection *con);
 static TcpConnection *alloc_connection() {
 	TcpConnection *con = (TcpConnection *)calloc(sizeof(TcpConnection), 1);
 	if (con == NULL) {
-		DEBUG(ERROR, "calloc() failed. Cannot alloc TcpConnection.");
+		LOG(ERROR, "calloc() failed. Cannot alloc TcpConnection.");
 		return NULL;
 	}
 
@@ -123,7 +124,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 	}
 
 	if (ev == NULL) {
-		DEBUG(ERROR, "malloc() failed. Cannot allocate TcpEvent.");
+		LOG(ERROR, "malloc() failed. Cannot allocate TcpEvent.");
 		return NULL;
 	}
 
@@ -162,7 +163,7 @@ static void free_event(TcpEvent *ev) {
 static void push_event(TcpConnection *con, TcpEvent *ev) {
 	TcpEventNode *node = (TcpEventNode *)malloc(sizeof(TcpEventNode));
 	if (node == NULL) {
-		DEBUG(ERROR, "malloc() failed. Cannot allocate TcpEventNode.");
+		LOG(ERROR, "malloc() failed. Cannot allocate TcpEventNode.");
 		return;
 	}
 
@@ -182,7 +183,8 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 static TcpConnection *get_tcp_connection(int fd) {
 	TcpConnection *con = fd_con_map[fd];
 	if (con == NULL) {
-		DEBUG(ERROR, "Cannot find matching TcpConnection for fd %d.", fd);
+		LOG(ERROR, "Cannot find matching TcpConnection for fd %d.",
+		      fd);
 	}
 	return con;
 }
@@ -191,12 +193,12 @@ static TcpConnection *get_tcp_connection(int fd) {
  * If not set or in incorrect format, we assume 0 and thus no lower bound. */
 static long get_tcpinfo_ival(const char *env_var) {
 	long t = get_long_env(env_var);
-	if (t == -1) DEBUG(WARN, "No interval set with %s.", env_var);
-	if (t == -2) DEBUG(ERROR, "Invalid interval set with %s.", env_var);
-	if (t == -3) DEBUG(ERROR, "Interval set with %s overflows.", env_var);
+	if (t == -1) LOG(WARN, "No interval set with %s.", env_var);
+	if (t == -2) LOG(ERROR, "Invalid interval set with %s.", env_var);
+	if (t == -3) LOG(ERROR, "Interval set with %s overflows.", env_var);
 	// On error, we use a default value of 0.
 	if (t < 0) {
-		DEBUG(WARN,
+		LOG(WARN,
 		      "Interval %s assumed to be 0. No lower bound "
 		      "set on tcp_info capture frequency.",
 		      env_var);
@@ -206,10 +208,10 @@ static long get_tcpinfo_ival(const char *env_var) {
 
 static void extract_tcpinfo_ivals() {
 	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
-	DEBUG(WARN, "tcp_info min bytes interval set to %lu.",
+	LOG(WARN, "tcp_info min bytes interval set to %lu.",
 	      tcp_info_bytes_ival);
 	tcp_info_time_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_MICROS_IVAL);
-	DEBUG(WARN, "tcp_info min microseconds interval set to %lu.",
+	LOG(WARN, "tcp_info min microseconds interval set to %lu.",
 	      tcp_info_time_ival);
 }
 
@@ -253,7 +255,7 @@ void tcp_start_capture(int fd, const struct sockaddr *addr) {
 	char *filter = build_capture_filter(addr);
 
 	if (con == NULL || file_path == NULL || filter == NULL) {
-		DEBUG(ERROR, "Abort packet capture. NULL variable.");
+		LOG(ERROR, "Abort packet capture. NULL variable.");
 		return;
 	}
 
@@ -271,13 +273,13 @@ void tcp_stop_capture(TcpConnection *con) {
 	char *json = build_tcp_connection_json(con);
 	char *file_path = alloc_json_path_str();
 	if (json == NULL || file_path == NULL) {
-		DEBUG(ERROR, "Cannot save capture to file.");
+		LOG(ERROR, "Cannot save capture to file.");
 		return;
 	}
 
 	int ret = append_string_to_file((const char *)json, file_path);
 	if (ret != 0) {
-		DEBUG(ERROR, "Error when dumping TcpConnection JSON to file.");
+		LOG(ERROR, "Error when dumping TcpConnection JSON to file.");
 	}
 
 	free(file_path);
@@ -285,33 +287,30 @@ void tcp_stop_capture(TcpConnection *con) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void report_failure(TcpEventType ev_type_cons, int fd) {
-	const char *str = string_from_tcp_event_type(ev_type_cons);\
-	DEBUG(ERROR, "Event %s dropped for fd %d.", str, fd);\
-}
-
-#define FAIL_IF_NULL(var, ev_type_cons)\
-	if (var == NULL) {\
-		report_failure(ev_type_cons, fd);\
-		DEBUG(ERROR, "Variable was equal to NULL.");\
-		return;\
+#define FAIL_IF_NULL(var, ev_type_cons)                                       \
+	if (var == NULL) {                                                    \
+		const char *str = string_from_tcp_event_type(ev_type_cons);   \
+		LOG(ERROR, "Event %s dropped for fd %d. Variable was NULL", \
+		      str, fd);                                               \
+		return;                                                       \
 	}
 
-#define TCP_EV_PRELUDE(ev_type_cons, ev_type)\
-	TcpConnection *con = get_tcp_connection(fd);\
-	FAIL_IF_NULL(con, ev_type_cons);\
-	ev_type *ev = (ev_type *)alloc_event(ev_type_cons,\
-			return_value, err);\
-	FAIL_IF_NULL(ev, ev_type_cons);\
+#define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
+	TcpConnection *con = get_tcp_connection(fd);                           \
+	FAIL_IF_NULL(con, ev_type_cons);                                       \
+	ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
+	FAIL_IF_NULL(ev, ev_type_cons);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
 	static const char *strings[] = {
 	    "TCP_EV_SOCK_OPENED",   "TCP_EV_SOCK_CLOSED", "TCP_EV_DATA_SENT",
 	    "TCP_EV_DATA_RECEIVED", "TCP_EV_CONNECT",     "TCP_EV_INFO_DUMP",
-	    "TCP_EV_SETSOCKOPT",    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN", 
+	    "TCP_EV_SETSOCKOPT",    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN",
 	    "TCP_EV_PRECONNECT"};
 	return strings[type];
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 		     bool sock_nonblock) {
@@ -341,26 +340,22 @@ void tcp_info_dump(int fd) {
 	TcpConnection *con = get_tcp_connection(fd);
 	FAIL_IF_NULL(con, TCP_EV_INFO_DUMP);
 
-	/* Check if should dump */
+	/* Check if should dump based on byte/time lower bounds */
 	if (!should_dump_tcp_info(con)) return;
-	DEBUG(INFO, "Dumping tcp_info");
+	LOG(INFO, "Dumping tcp_info.");
 
 	/* Get TCP_INFO */
-	socklen_t tcp_info_len = sizeof(struct tcp_info);
 	struct tcp_info info;
-	int ret =
-	    getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info, &tcp_info_len);
-	if (ret == -1) {
-		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
-	}
+	int ret = fill_tcpinfo(fd, &info);
+	int err = errno;
 
 	/* Create event */
 	TcpEvInfoDump *ev =
-	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, errno);
+	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, err);
 	FAIL_IF_NULL(ev, TCP_EV_INFO_DUMP);
 
 	/* Register time/bytes of last dump */
-	memcpy(&(ev->info), &info, tcp_info_len);
+	memcpy(&(ev->info), &info, sizeof(info));
 	con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
 	con->last_info_dump_micros = get_time_micros();
 
@@ -438,4 +433,3 @@ void tcp_listen(int fd, int return_value, int err, int backlog) {
 
 	push_event(con, (TcpEvent *)ev);
 }
-

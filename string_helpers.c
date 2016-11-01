@@ -5,6 +5,7 @@
 #include "string_helpers.h"
 #include "lib.h"
 #include "config.h"
+#include "logger.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -24,14 +25,14 @@ char *alloc_host_str(const struct sockaddr_storage *addr) {
 		r = inet_ntop(AF_INET6, &(ipv6->sin6_addr), addr_str,
 			      ADDR_WIDTH);
 	} else {
-		DEBUG(ERROR,
+		LOG(ERROR,
 		      "alloc_host_str() failed due to "
 		      "unsupported ss_family.");
 		return NULL;
 	}
 
 	if (r == NULL) {
-		DEBUG(ERROR, "inet_ntop() failed. %s", strerror(errno));
+		LOG(ERROR, "inet_ntop() failed. %s", strerror(errno));
 		return NULL;
 	}
 
@@ -53,18 +54,18 @@ char *alloc_port_str(const struct sockaddr_storage *addr) {
 		n = snprintf(port_str, PORT_WIDTH, "%d",
 			     ntohs(ipv6->sin6_port));
 	} else {
-		DEBUG(ERROR,
+		LOG(ERROR,
 		      "alloc_port_str() failed due to "
 		      "unsupported ss_family.");
 		return NULL;
 	}
 
 	if (n < 0) {
-		DEBUG(ERROR, "snprintf() failed. %s", strerror(errno));
+		LOG(ERROR, "snprintf() failed. %s", strerror(errno));
 		return NULL;
 	}
 	if (n >= PORT_WIDTH) {
-		DEBUG(ERROR, "snprintf() failed (truncated).");
+		LOG(ERROR, "snprintf() failed (truncated).");
 		return NULL;
 	}
 
@@ -89,7 +90,7 @@ char *alloc_addr_str(const struct sockaddr *addr) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// This function is called in DEBUG() thus it cannot itself call DEBUG() 
+// This function is called in LOG() thus it cannot itself call DEBUG() 
 // otherwise it starts an infinite loop.
 char *alloc_abs_path_str(const char *file_name) {
 	const char *base_path = getenv(ENV_NETSPY_PATH);
@@ -97,7 +98,7 @@ char *alloc_abs_path_str(const char *file_name) {
 	int full_path_length = strlen(base_path) + strlen(file_name) + 2;
 	char *full_path = (char *)malloc(sizeof(char) * full_path_length);
 	if (full_path == NULL) {
-		DEBUG(ERROR, "malloc() failed. Could not allocate path str.");
+		LOG(ERROR, "malloc() failed. Could not allocate path str.");
 		return NULL;
 	}
 	// We cannot use DEBUG on snprintf error.
@@ -132,15 +133,15 @@ char *alloc_cmdline_str(char **app_name) {
 	pid_t pid = getpid();
 	if (snprintf(path, PATH_LENGTH, "/proc/%d/cmdline", pid) >=
 	    PATH_LENGTH) {
-		DEBUG(ERROR, "snprintf() failed (truncated).");
+		LOG(ERROR, "snprintf() failed (truncated).");
 	}
 
 	// Read /proc/pid/cmdline in cmdline
 	FILE *fp = fopen(path, "r");
-	if (fp == NULL) DEBUG(ERROR, "fopen() failed. %s", strerror(errno));
+	if (fp == NULL) LOG(ERROR, "fopen() failed. %s", strerror(errno));
 	char *cmdline = (char *)malloc(sizeof(char) * CMDLINE_LENGTH);
 	size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
-	if (rc == 0) DEBUG(ERROR, "fread() failed.");
+	if (rc == 0) LOG(ERROR, "fread() failed.");
 	fclose(fp);
 
 	// Replace null bytes between args by white spaces &
@@ -160,20 +161,20 @@ char *alloc_cmdline_str(char **app_name) {
 char *alloc_kernel_str() {
 	FILE *fp;
 	if ((fp = popen("uname -r", "r")) == NULL) {
-		DEBUG(ERROR, "open() failed. %s", strerror(errno));
+		LOG(ERROR, "open() failed. %s", strerror(errno));
 		return NULL;
 	}
 
 	char *kernel = (char *)calloc(sizeof(char), KERNEL_WIDTH);
 	if (fgets(kernel, KERNEL_WIDTH, fp) == NULL) {
-		DEBUG(ERROR,
+		LOG(ERROR,
 		      "fgets() failed. Error or end of file occured "
 		      "while not characters have been read");
 		return NULL;
 	}
 
 	if (pclose(fp) == -1) {
-		DEBUG(ERROR, "pclose() failed. %s", strerror(errno));
+		LOG(ERROR, "pclose() failed. %s", strerror(errno));
 	}
 
 	// Erase \n at last position.
@@ -279,7 +280,7 @@ static char *alloc_string_from_cons(int cons, const IntStrPair *map,
 	int i;
 	char *str = (char *)malloc(str_size);
 	if (str == NULL) {
-		DEBUG(ERROR, "malloc() failed. Cannot build string.");
+		LOG(ERROR, "malloc() failed. Cannot build string.");
 		return str;
 	}
 
@@ -323,7 +324,7 @@ char *alloc_error_str(int err) {
 	size_t str_len = strlen(ori_str) + 1;
 	char *alloc_str = (char *)malloc(str_len);
 	if (alloc_str == NULL) {
-		DEBUG(ERROR, "malloc() failed.");
+		LOG(ERROR, "malloc() failed.");
 		return NULL;
 	}
 	strncpy(alloc_str, ori_str, str_len);

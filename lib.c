@@ -15,79 +15,7 @@
 #include "lib.h"
 #include "config.h"
 #include "string_helpers.h"
-
-// We do not want to open/close a new stream each time we log a single line to
-// file. Closing the stream would always trigger a write to kernel space.
-// Instead we open it once, and let the system automatically close the stream
-// when the process ends. Not sure this is the best way?
-FILE *log_file = NULL;
-
-const char *string_from_debug_level(DebugLevel lvl) {
-	static const char *strings[] = {"INFO", "WARN", "ERROR"};
-	return strings[lvl];
-}
-
-#define ANSI_COLOR_WHITE "\x1b[37m"
-#define ANSI_COLOR_RED "\x1b[31m"
-#define ANSI_COLOR_YELLOW "\x1b[33m"
-#define ANSI_COLOR_RESET "\x1b[0m"
-
-void log_to_stream(DebugLevel debug_lvl, const char *formated_str,
-		   const char *file, int line, FILE *stream) {
-	pid_t pid = getpid();
-
-	const char *color;
-	switch (debug_lvl) {
-		case INFO:
-			color = ANSI_COLOR_WHITE;
-			break;
-		case WARN:
-			color = ANSI_COLOR_YELLOW;
-			break;
-		case ERROR:
-			color = ANSI_COLOR_RED;
-			break;
-	}
-
-	// Stderr is unbuffered.
-	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color,
-		string_from_debug_level(debug_lvl), pid, file, line,
-		formated_str, ANSI_COLOR_RESET);
-}
-
-void log_to_file(DebugLevel debug_lvl, const char *formated_str,
-		 const char *file, int line) {
-	if (log_file == NULL) {
-		char *path = alloc_log_path_str();
-		log_file = fopen(path, "a");
-		// If cannot open log file, just log to stdout and do not log.
-		if (log_file == NULL) {
-			char str[1024];
-			snprintf(str, sizeof(str), "fopen() failed on %s. %s.",
-				 path, strerror(errno));
-			log_to_stream(ERROR, str, file, line, stderr);
-			free(path);
-			return;
-		}
-		free(path);
-	}
-
-	pid_t pid = getpid();
-	unsigned long time_micros = get_time_micros();
-	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
-		string_from_debug_level(debug_lvl), pid, time_micros, file,
-		line, formated_str);
-	// We do not close the log file to avoid triggering a write to kernel
-	// space. See above.
-}
-
-void netspy_log(DebugLevel debug_lvl, const char *formated_str,
-		const char *file, int line) {
-	if (NETSPY_LOG_TO_FILE)
-		log_to_file(debug_lvl, formated_str, file, line);
-	if (NETSPY_LOG_TO_STDERR)
-		log_to_stream(debug_lvl, formated_str, file, line, stderr);
-}
+#include "logger.h"
 
 bool is_socket(int fd) {
 	struct stat statbuf;
@@ -101,7 +29,7 @@ bool is_inet_socket(int fd) {
 	int optval;
 	socklen_t optlen = sizeof(optval);
 	if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen) == -1) {
-		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
+		LOG(ERROR, "getsockopt() failed. %s", strerror(errno));
 		return false;
 	}
 	return (optval == AF_INET || optval == AF_INET6);
@@ -113,7 +41,7 @@ bool is_tcp_socket(int fd) {
 	int optval;
 	socklen_t optlen = sizeof(optval);
 	if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == -1) {
-		DEBUG(ERROR, "getsockopt() failed. %s", strerror(errno));
+		LOG(ERROR, "getsockopt() failed. %s", strerror(errno));
 		return false;
 	}
 	return optval == SOCK_STREAM;
@@ -122,18 +50,18 @@ bool is_tcp_socket(int fd) {
 int append_string_to_file(const char *str, const char *path) {
 	FILE *fp = fopen(path, "a");
 	if (fp == NULL) {
-		DEBUG(ERROR, "fopen() failed. %s", strerror(errno));
+		LOG(ERROR, "fopen() failed. %s", strerror(errno));
 		return -1;
 	}
 
 	if (fputs(str, fp) == EOF) {
-		DEBUG(ERROR, "fputs() failed.");
+		LOG(ERROR, "fputs() failed.");
 		fclose(fp);
 		return -2;
 	}
 
 	if (fclose(fp) == EOF) {
-		DEBUG(ERROR, "fclose() failed. %s", strerror(errno));
+		LOG(ERROR, "fclose() failed. %s", strerror(errno));
 		return -3;
 	}
 
@@ -158,7 +86,7 @@ unsigned long get_time_micros() {
 int fill_timeval(struct timeval *timeval) {
 	int ret = gettimeofday(timeval, NULL);
 	if (ret == -1) {
-		DEBUG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
+		LOG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
 	}
 	return ret;
 }
@@ -179,4 +107,13 @@ long get_long_env(const char *env_var) {
 	if (*var_str_end != '\0') return -2;		    // Incorrect format
 	if (val == LONG_MIN || val == LONG_MAX) return -3;  // Overflow
 	return val;
+}
+
+int fill_tcpinfo(int fd, struct tcp_info *info) {
+	socklen_t n = sizeof(struct tcp_info);
+	int ret = getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info, &n);
+	if (ret == -1) {
+		LOG(ERROR, "getsockopt() failed. %s", strerror(errno));
+	}
+	return ret;
 }
