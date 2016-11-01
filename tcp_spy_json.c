@@ -41,13 +41,13 @@ static json_t *build_listen_ev(TcpEvListen *ev);
 #define BUILD_EV_PRELUDE()                            \
 	json_t *json_ev = json_object();              \
 	if (json_ev == NULL) {                        \
-		LOG(ERROR, EV_FAILURE);             \
+		LOG(ERROR, EV_FAILURE);               \
 		return NULL;                          \
 	}                                             \
 	build_shared_fields(json_ev, (TcpEvent *)ev); \
 	json_t *json_details = json_object();         \
 	if (json_details == NULL) {                   \
-		LOG(ERROR, DETAILS_FAILURE);        \
+		LOG(ERROR, DETAILS_FAILURE);          \
 		return json_ev;                       \
 	}                                             \
 	add(json_ev, "details", json_details);
@@ -299,8 +299,8 @@ char *build_tcp_connection_json(TcpConnection *con) {
 	json_t *json_con = build_tcp_connection(con);
 	if (json_con == NULL) {
 		LOG(ERROR,
-		      "build_tcp_connection() failed. Could not generate JSON "
-		      "representation for TCP connection");
+		    "build_tcp_connection() failed. Could not generate JSON "
+		    "representation for TCP connection");
 		return NULL;
 	}
 

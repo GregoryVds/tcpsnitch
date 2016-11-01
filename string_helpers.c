@@ -32,7 +32,7 @@ char *alloc_host_str(const struct sockaddr_storage *addr) {
 	}
 
 	if (r == NULL) {
-		LOG(ERROR, "inet_ntop() failed. %s", strerror(errno));
+		LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
 		return NULL;
 	}
 
@@ -61,7 +61,7 @@ char *alloc_port_str(const struct sockaddr_storage *addr) {
 	}
 
 	if (n < 0) {
-		LOG(ERROR, "snprintf() failed. %s", strerror(errno));
+		LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
 		return NULL;
 	}
 	if (n >= PORT_WIDTH) {
@@ -102,7 +102,7 @@ char *alloc_abs_path_str(const char *file_name) {
 		return NULL;
 	}
 	// We cannot use DEBUG on snprintf error.
-	snprintf(full_path, full_path_length, "%s/%s", base_path, file_name);
+	snprintf(full_path, full_path_length, "%s/%s.", base_path, file_name);
 	return full_path;
 }
 
@@ -138,7 +138,7 @@ char *alloc_cmdline_str(char **app_name) {
 
 	// Read /proc/pid/cmdline in cmdline
 	FILE *fp = fopen(path, "r");
-	if (fp == NULL) LOG(ERROR, "fopen() failed. %s", strerror(errno));
+	if (fp == NULL) LOG(ERROR, "fopen() failed. %s.", strerror(errno));
 	char *cmdline = (char *)malloc(sizeof(char) * CMDLINE_LENGTH);
 	size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
 	if (rc == 0) LOG(ERROR, "fread() failed.");
@@ -161,7 +161,7 @@ char *alloc_cmdline_str(char **app_name) {
 char *alloc_kernel_str() {
 	FILE *fp;
 	if ((fp = popen("uname -r", "r")) == NULL) {
-		LOG(ERROR, "open() failed. %s", strerror(errno));
+		LOG(ERROR, "open() failed. %s.", strerror(errno));
 		return NULL;
 	}
 
@@ -174,7 +174,7 @@ char *alloc_kernel_str() {
 	}
 
 	if (pclose(fp) == -1) {
-		LOG(ERROR, "pclose() failed. %s", strerror(errno));
+		LOG(ERROR, "pclose() failed. %s.", strerror(errno));
 	}
 
 	// Erase \n at last position.

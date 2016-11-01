@@ -20,6 +20,6 @@ int fill_timeval(struct timeval *timeval);
 time_t get_time_sec();
 unsigned long get_time_micros();
 
-long get_long_env(const char *env_var);
+long get_env_as_long(const char *env_var);
 
 #endif

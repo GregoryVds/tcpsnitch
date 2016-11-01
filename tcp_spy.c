@@ -192,7 +192,7 @@ static TcpConnection *get_tcp_connection(int fd) {
 /* Retrieve interval for tcpinfo (could be byte ou time interval).
  * If not set or in incorrect format, we assume 0 and thus no lower bound. */
 static long get_tcpinfo_ival(const char *env_var) {
-	long t = get_long_env(env_var);
+	long t = get_env_as_long(env_var);
 	if (t == -1) LOG(WARN, "No interval set with %s.", env_var);
 	if (t == -2) LOG(ERROR, "Invalid interval set with %s.", env_var);
 	if (t == -3) LOG(ERROR, "Interval set with %s overflows.", env_var);

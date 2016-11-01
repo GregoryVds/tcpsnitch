@@ -9,7 +9,7 @@
 #include <sys/time.h>
 #include "logger.h"
 
-#define LOG_TO_STDERR true 
+#define LOG_TO_STDERR true
 #define LOG_TO_FILE true
 #define LOG_PATH "/home/greg/host/log.txt"
 
@@ -23,6 +23,8 @@
 // Instead we open it once, and let the system automatically close the stream
 // when the process ends. Not sure this is the best way?
 FILE *log_file = NULL;
+
+const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_YELLOW, ANSI_COLOR_RED};
 
 static const char *log_level_str(LogLevel lvl);
 static unsigned long get_timestamp();
@@ -49,32 +51,15 @@ static unsigned long get_timestamp() {
 
 static void log_to_stream(LogLevel log_lvl, const char *formated_str,
 			  const char *file, int line, FILE *stream) {
-	pid_t pid = getpid();
-
-	const char *color;
-	switch (log_lvl) {
-		case INFO:
-			color = ANSI_COLOR_WHITE;
-			break;
-		case WARN:
-			color = ANSI_COLOR_YELLOW;
-			break;
-		case ERROR:
-			color = ANSI_COLOR_RED;
-			break;
-	}
-
-	// Stderr is unbuffered.
-	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", color, log_level_str(log_lvl),
-		pid, file, line, formated_str, ANSI_COLOR_RESET);
+	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", colors[log_lvl],
+		log_level_str(log_lvl), getpid(), file, line, formated_str,
+		ANSI_COLOR_RESET);
 }
 
 static void log_to_file(LogLevel log_lvl, const char *formated_str,
 			const char *file, int line) {
 	if (log_file == NULL) {
 		log_file = fopen(LOG_PATH, "a");
-		// If cannot open log file, just log to
-		// stdout and do not log.
 		if (log_file == NULL) {
 			char str[1024];
 			snprintf(str, sizeof(str), "fopen() failed on %s. %s.",
@@ -84,14 +69,10 @@ static void log_to_file(LogLevel log_lvl, const char *formated_str,
 		}
 	}
 
-	pid_t pid = getpid();
 	unsigned long time_micros = get_timestamp();
 	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
-		log_level_str(log_lvl), pid, time_micros, file, line,
+		log_level_str(log_lvl), getpid(), time_micros, file, line,
 		formated_str);
-	// We do not close the log file to avoid
-	// triggering a write to kernel
-	// space. See above.
 }
 
 ///////////////////////////////////////////////////////////////////////////////

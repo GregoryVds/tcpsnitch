@@ -624,7 +624,7 @@ struct hostent *gethostbyname(const char *__name) {
 	orig_gethostbyname_type orig_gethostbyname;
 	orig_gethostbyname =
 	    (orig_gethostbyname_type)dlsym(RTLD_NEXT, "gethostbyname");
-	LOG(INFO, "gethostbyname() on %s", __name);
+	LOG(INFO, "gethostbyname() on %s.", __name);
 	return orig_gethostbyname(__name);
 }
 
@@ -640,7 +640,7 @@ int getaddrinfo(const char *__name, const char *__service,
 	orig_getaddrinfo_type orig_getaddrinfo;
 	orig_getaddrinfo =
 	    (orig_getaddrinfo_type)dlsym(RTLD_NEXT, "getaddrinfo");
-	LOG(INFO, "getaddrinfo() for %s:%s", __name, __service);
+	LOG(INFO, "getaddrinfo() for %s:%s.", __name, __service);
 	return orig_getaddrinfo(__name, __service, __req, __pai);
 }
 

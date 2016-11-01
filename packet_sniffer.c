@@ -27,7 +27,7 @@ pcap_t *get_capture_handle() {
 		      ENV_NETSPY_DEV);
 		dev = pcap_lookupdev(err_buf);
 		if (dev == NULL) {
-			LOG(ERROR, "pcap_lookupdev() failed. %s", err_buf);
+			LOG(ERROR, "pcap_lookupdev() failed. %s.", err_buf);
 			LOG(WARN, "Capture on all interfaces.");
 		}
 	}
@@ -36,11 +36,11 @@ pcap_t *get_capture_handle() {
 	err_buf[0] = 0;
 	pcap_t *handle = pcap_open_live(dev, BUFSIZ, 0, 0, err_buf);
 	if (err_buf[0] != 0) {
-		LOG(WARN, "pcap_open_live() warning. %s", err_buf);
+		LOG(WARN, "pcap_open_live() warning. %s.", err_buf);
 	}
 
 	if (handle == NULL) {
-		LOG(ERROR, "pcap_open_live() failed. %s", err_buf);
+		LOG(ERROR, "pcap_open_live() failed. %s.", err_buf);
 	}
 
 	return handle;
@@ -67,7 +67,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	struct bpf_program comp_filter;
 	if (pcap_compile(handle, &comp_filter, filter_str, 1,
 			 PCAP_NETMASK_UNKNOWN) < 0) {
-		LOG(ERROR, "No capture. pcap_compile() failed. %s",
+		LOG(ERROR, "No capture. pcap_compile() failed. %s.",
 		      pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
@@ -75,7 +75,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 
 	// Apply filter
 	if (pcap_setfilter(handle, &comp_filter) < 0) {
-		LOG(ERROR, "No capture. pcap_setfilter() failed. %s",
+		LOG(ERROR, "No capture. pcap_setfilter() failed. %s.",
 		      pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
@@ -85,7 +85,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	// passed to pcap_dump.
 	pcap_dumper_t *dump = pcap_dump_open(handle, path);
 	if (dump == NULL) {
-		LOG(ERROR, "No capture. pcap_dump_open() failed. %s",
+		LOG(ERROR, "No capture. pcap_dump_open() failed. %s.",
 		      pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
@@ -99,7 +99,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 
 	int rc = pthread_create(thread, NULL, capture_thread, args);
 	if (rc) {
-		LOG(WARN, "No capture. pthread_create_failed(). %s",
+		LOG(WARN, "No capture. pthread_create_failed(). %s.",
 		      strerror(rc));
 		pcap_close(handle);
 		return NULL;
@@ -124,7 +124,7 @@ void *capture_thread(void *params) {
 	LOG(INFO, "Capture ended.");
 
 	if (*pcount == -1) {
-		LOG(ERROR, "pcap_loop() failed. %s",
+		LOG(ERROR, "pcap_loop() failed. %s.",
 		      pcap_geterr(args->handle));
 	}
 
@@ -155,7 +155,7 @@ int stop_capture(pcap_t *pcap, pthread_t *thread) {
 
 	rc = pthread_join(*thread, (void **)&(pcount_ptr));
 	if (rc != 0) {
-		LOG(ERROR, "pthread_join() failed. %s", strerror(rc));
+		LOG(ERROR, "pthread_join() failed. %s.", strerror(rc));
 		return -3;
 	}
 
@@ -169,7 +169,7 @@ char *build_capture_filter(const struct sockaddr *addr) {
 	char *addr_str = alloc_host_str(addr_sto);
 	char *port_str = alloc_port_str(addr_sto);
 	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_str,
+	snprintf(filter, FILTER_SIZE, "host %s and port %s.", addr_str,
 		 port_str);
 	free(addr_str);
 	free(port_str);
