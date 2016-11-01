@@ -83,6 +83,11 @@ typedef struct {
 	int backlog;
 } TcpEvListen;
 
+typedef struct {
+	TcpEvent super;
+	char *filter;
+} TcpEvCaptureStart;
+
 typedef struct TcpEventNode TcpEventNode;
 struct TcpEventNode {
 	TcpEvent *data;
@@ -104,7 +109,6 @@ typedef struct {
 	unsigned long bytes_received;  // Total bytes received.
 	pthread_t capture_thread;      // pthread used for capturing packets.
 	pcap_t *capture_handle;	// Pcap capture handle.
-	bool got_pcap_handle;	  // Succesfully acquired a pcap handle.
 	bool successful_pcap;	// Successfully captured packets on handle.
 	long last_info_dump_micros;  // Time of last info dump in microseconds.
 	long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
@@ -113,12 +117,19 @@ typedef struct {
 
 const char *string_from_tcp_event_type(TcpEventType type);
 
+// Packet capture
+
+void tcp_start_capture(int fd, const struct sockaddr *addr);
+void tcp_stop_capture(TcpConnection *con);
+
+// Events
+
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 		     bool sock_nonblock);
 void tcp_sock_closed(int fd, int return_value, int err, bool detected);
 void tcp_data_sent(int fd, int return_value, int err, size_t bytes);
 void tcp_data_received(int fd, int return_value, int err, size_t bytes);
-void tcp_pre_connect(int fd, const struct sockaddr *addr);
+
 void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
 		 socklen_t len);
 void tcp_info_dump(int fd);

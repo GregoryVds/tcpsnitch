@@ -112,7 +112,7 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	DEBUG(INFO, "connect() called on socket %d.", __fd);
 
 	/* Perform syscall */
-	if (is_tcp_socket(__fd)) tcp_pre_connect(__fd, __addr);
+	if (is_tcp_socket(__fd)) tcp_start_capture(__fd, __addr);
 	int ret = orig_connect(__fd, __addr, __len);
 	int err = errno;
 

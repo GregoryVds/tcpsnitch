@@ -245,14 +245,71 @@ static bool should_dump_tcp_info(TcpConnection *con) {
  |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 
- Functions for registering new events on a given connection.
 */
+
+void tcp_start_capture(int fd, const struct sockaddr *addr) {
+	TcpConnection *con = get_tcp_connection(fd);
+	char *file_path = alloc_pcap_path_str();
+	char *filter = build_capture_filter(addr);
+
+	if (con == NULL || file_path == NULL || filter == NULL) {
+		DEBUG(ERROR, "Abort packet capture. NULL variable.");
+		return;
+	}
+
+	con->capture_handle =
+	    start_capture(filter, file_path, &(con->capture_thread));
+
+	free(filter);
+	free(file_path);
+}
+
+void tcp_stop_capture(TcpConnection *con) {
+	int rc = stop_capture(con->capture_handle, &(con->capture_thread));
+	con->successful_pcap = (rc == -2);
+
+	char *json = build_tcp_connection_json(con);
+	char *file_path = alloc_json_path_str();
+	if (json == NULL || file_path == NULL) {
+		DEBUG(ERROR, "Cannot save capture to file.");
+		return;
+	}
+
+	int ret = append_string_to_file((const char *)json, file_path);
+	if (ret != 0) {
+		DEBUG(ERROR, "Error when dumping TcpConnection JSON to file.");
+	}
+
+	free(file_path);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void report_failure(TcpEventType ev_type_cons, int fd) {
+	const char *str = string_from_tcp_event_type(ev_type_cons);\
+	DEBUG(ERROR, "Event %s dropped for fd %d.", str, fd);\
+}
+
+#define FAIL_IF_NULL(var, ev_type_cons)\
+	if (var == NULL) {\
+		report_failure(ev_type_cons, fd);\
+		DEBUG(ERROR, "Variable was equal to NULL.");\
+		return;\
+	}
+
+#define TCP_EV_PRELUDE(ev_type_cons, ev_type)\
+	TcpConnection *con = get_tcp_connection(fd);\
+	FAIL_IF_NULL(con, ev_type_cons);\
+	ev_type *ev = (ev_type *)alloc_event(ev_type_cons,\
+			return_value, err);\
+	FAIL_IF_NULL(ev, ev_type_cons);\
 
 const char *string_from_tcp_event_type(TcpEventType type) {
 	static const char *strings[] = {
 	    "TCP_EV_SOCK_OPENED",   "TCP_EV_SOCK_CLOSED", "TCP_EV_DATA_SENT",
 	    "TCP_EV_DATA_RECEIVED", "TCP_EV_CONNECT",     "TCP_EV_INFO_DUMP",
-	    "TCP_EV_SETSOCKOPT",    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN"};
+	    "TCP_EV_SETSOCKOPT",    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN", 
+	    "TCP_EV_PRECONNECT"};
 	return strings[type];
 }
 
@@ -263,13 +320,13 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 
 	/* Create new connection */
 	TcpConnection *con = alloc_connection();
-	if (con == NULL) return;  // Cannot track TcpConnection.
+	FAIL_IF_NULL(con, TCP_EV_SOCK_OPENED);
 	fd_con_map[fd] = con;
 
 	/* Create event */
 	TcpEvSockOpened *ev =
 	    (TcpEvSockOpened *)alloc_event(TCP_EV_SOCK_OPENED, fd, 0);
-	if (ev == NULL) return;  // Cannot track event.
+	FAIL_IF_NULL(ev, TCP_EV_SOCK_OPENED);
 
 	ev->domain = domain;
 	ev->type = SOCK_STREAM;
@@ -279,30 +336,10 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_pre_connect(int fd, const struct sockaddr *addr) {
-	/* Get TcpConnection */
-	TcpConnection *con = get_tcp_connection(fd);
-	if (con == NULL) return;  // Cannot get related connection.
-
-	/* Start packet capture */
-	char *file_path = alloc_pcap_path_str();
-	if (file_path == NULL) return;
-
-	char *filter = build_capture_filter(addr);
-	if (filter == NULL) return;
-
-	con->capture_handle =
-	    start_capture(filter, file_path, &(con->capture_thread));
-	con->got_pcap_handle = (con->capture_handle != NULL);
-
-	free(filter);
-	free(file_path);
-}
-
 void tcp_info_dump(int fd) {
 	/* Get TcpConnection */
 	TcpConnection *con = get_tcp_connection(fd);
-	if (con == NULL) return;  // Cannot get related connection.
+	FAIL_IF_NULL(con, TCP_EV_INFO_DUMP);
 
 	/* Check if should dump */
 	if (!should_dump_tcp_info(con)) return;
@@ -320,7 +357,7 @@ void tcp_info_dump(int fd) {
 	/* Create event */
 	TcpEvInfoDump *ev =
 	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, errno);
-	if (ev == NULL) return;  // Cannot track event.
+	FAIL_IF_NULL(ev, TCP_EV_INFO_DUMP);
 
 	/* Register time/bytes of last dump */
 	memcpy(&(ev->info), &info, tcp_info_len);
@@ -330,17 +367,6 @@ void tcp_info_dump(int fd) {
 	push_event(con, (TcpEvent *)ev);
 }
 
-#define EV_FAIL "Event %s dropped for fd %d."
-#define TCP_EV_PRELUDE(ev_type_cons, ev_type)\
-	TcpConnection *con = get_tcp_connection(fd);\
-	ev_type *ev = (ev_type *)alloc_event(ev_type_cons,\
-			return_value, err);\
-	if (con == NULL || ev == NULL) {\
-		const char *str = string_from_tcp_event_type(ev_type_cons);\
-		DEBUG(ERROR, EV_FAIL, str, fd);\
-		return;\
-	}\
-
 void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	// Instantiate local vars TcpConnection *con & TcpEvSockClosed *ev
 	TCP_EV_PRELUDE(TCP_EV_SOCK_CLOSED, TcpEvSockClosed);
@@ -348,22 +374,7 @@ void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	ev->detected = detected;
 	push_event(con, (TcpEvent *)ev);
 
-	/* Stop packet capture */
-	int rc = 0;
-	if (con->capture_handle != NULL)
-		rc = stop_capture(con->capture_handle, &(con->capture_thread));
-	con->successful_pcap = (rc == -2);
-
-	/* Save data */
-	char *json = build_tcp_connection_json(con);
-	if (json == NULL) return;  // Cannot build JSON.
-
-	char *file_path = alloc_json_path_str();
-	if (file_path == NULL) return;
-
-	if (append_string_to_file((const char *)json, file_path) == -1)
-		DEBUG(ERROR, "Error when dumping TcpConnection JSON to file.");
-	free(file_path);
+	if (con->capture_handle != NULL) tcp_stop_capture(con);
 
 	/* Cleanup */
 	free_connection(con);
