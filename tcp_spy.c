@@ -251,23 +251,23 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
-	if (flags || MSG_CONFIRM) s->msg_confirm = true;
-	if (flags || MSG_DONTROUTE) s->msg_dontroute = true;
-	if (flags || MSG_DONTWAIT) s->msg_dontwait = true;
-	if (flags || MSG_EOR) s->msg_eor = true;
-	if (flags || MSG_MORE) s->msg_more = true;
-	if (flags || MSG_NOSIGNAL) s->msg_nosignal = true;
-	if (flags || MSG_OOB) s->msg_oob = true;
+	if (flags & MSG_CONFIRM) s->msg_confirm = true;
+	if (flags & MSG_DONTROUTE) s->msg_dontroute = true;
+	if (flags & MSG_DONTWAIT) s->msg_dontwait = true;
+	if (flags & MSG_EOR) s->msg_eor = true;
+	if (flags & MSG_MORE) s->msg_more = true;
+	if (flags & MSG_NOSIGNAL) s->msg_nosignal = true;
+	if (flags & MSG_OOB) s->msg_oob = true;
 }
 
 static void fill_recv_flags(TcpRecvFlags *s, int flags) {
-	if (flags || MSG_CMSG_CLOEXEC) s->msg_cmsg_cloexec = true;
-	if (flags || MSG_DONTWAIT) s->msg_dontwait = true;
-	if (flags || MSG_ERRQUEUE) s->msg_errqueue = true;
-	if (flags || MSG_OOB) s->msg_oob = true;
-	if (flags || MSG_PEEK) s->msg_peek = true;
-	if (flags || MSG_TRUNC) s->msg_trunc = true;
-	if (flags || MSG_WAITALL) s->msg_waitall = true;
+	if (flags & MSG_CMSG_CLOEXEC) s->msg_cmsg_cloexec = true;
+	if (flags & MSG_DONTWAIT) s->msg_dontwait = true;
+	if (flags & MSG_ERRQUEUE) s->msg_errqueue = true;
+	if (flags & MSG_OOB) s->msg_oob = true;
+	if (flags & MSG_PEEK) s->msg_peek = true;
+	if (flags & MSG_TRUNC) s->msg_trunc = true;
+	if (flags & MSG_WAITALL) s->msg_waitall = true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

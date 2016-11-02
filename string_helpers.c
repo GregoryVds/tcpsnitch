@@ -13,6 +13,11 @@
 #define ADDR_WIDTH 40  // Include null byte
 char *alloc_host_str(const struct sockaddr_storage *addr) {
 	char *addr_str = (char *)calloc(sizeof(char), ADDR_WIDTH);
+	if (addr_str == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		return NULL;
+	}
+
 	const char *r;
 
 	if (addr->ss_family == AF_INET) {
@@ -28,11 +33,13 @@ char *alloc_host_str(const struct sockaddr_storage *addr) {
 		LOG(ERROR,
 		      "alloc_host_str() failed due to "
 		      "unsupported ss_family.");
+		free(addr_str);
 		return NULL;
 	}
 
 	if (r == NULL) {
 		LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
+		free(addr_str);
 		return NULL;
 	}
 
@@ -42,8 +49,13 @@ char *alloc_host_str(const struct sockaddr_storage *addr) {
 #define PORT_WIDTH 6  // Include null byte
 char *alloc_port_str(const struct sockaddr_storage *addr) {
 	char *port_str = (char *)calloc(sizeof(char), PORT_WIDTH);
-	int n;
+	if (port_str == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		return NULL;
+	}
 
+	int n;
+	
 	if (addr->ss_family == AF_INET) {
 		const struct sockaddr_in *ipv4;
 		ipv4 = (const struct sockaddr_in *)addr;
@@ -57,15 +69,18 @@ char *alloc_port_str(const struct sockaddr_storage *addr) {
 		LOG(ERROR,
 		      "alloc_port_str() failed due to "
 		      "unsupported ss_family.");
+		free(port_str);
 		return NULL;
 	}
 
 	if (n < 0) {
 		LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
+		free(port_str);
 		return NULL;
 	}
 	if (n >= PORT_WIDTH) {
 		LOG(ERROR, "snprintf() failed (truncated).");
+		free(port_str);
 		return NULL;
 	}
 
@@ -78,8 +93,15 @@ char *alloc_addr_str(const struct sockaddr *addr) {
 	addr_sto = (const struct sockaddr_storage *)addr;
 
 	char *full_str = (char *)calloc(sizeof(char), FULL_ADDR_WIDTH);
+	if (full_str == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		return NULL;
+	}
+
 	char *addr_str = alloc_host_str(addr_sto);
 	char *port_str = alloc_port_str(addr_sto);
+	if (addr_str == NULL || port_str == NULL) return NULL;
+
 	strncat(full_str, addr_str, FULL_ADDR_WIDTH - 1);
 	strncat(full_str, ":", (FULL_ADDR_WIDTH - 1) - strlen(full_str));
 	strncat(full_str, port_str, (FULL_ADDR_WIDTH - 1) - strlen(full_str));
@@ -115,6 +137,11 @@ char *alloc_dirname_str(char *app_name) {
 	int app_name_length = strlen(app_name);
 	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
 	char *dirname = (char *)calloc(sizeof(char), n);
+	if (dirname == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		return NULL;
+	}
+
 	strncat(dirname, app_name, app_name_length);
 	strncat(dirname, "_", 1);
 	snprintf(dirname + strlen(dirname), TIMESTAMP_WIDTH, "%lu",
@@ -139,9 +166,16 @@ char *alloc_cmdline_str(char **app_name) {
 	// Read /proc/pid/cmdline in cmdline
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL) LOG(ERROR, "fopen() failed. %s.", strerror(errno));
+
 	char *cmdline = (char *)malloc(sizeof(char) * CMDLINE_LENGTH);
+	if (cmdline == NULL) {
+		LOG(ERROR, "malloc() failed.");
+		fclose(fp);
+		return NULL;
+	}
 	size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
 	if (rc == 0) LOG(ERROR, "fread() failed.");
+
 	fclose(fp);
 
 	// Replace null bytes between args by white spaces &
@@ -149,6 +183,11 @@ char *alloc_cmdline_str(char **app_name) {
 	int i;
 	int app_name_length = strlen(cmdline);
 	*app_name = (char *)calloc(sizeof(char), app_name_length + 1);
+	if (app_name == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		return cmdline;
+	}
+
 	for (i = 0; i < rc - 1; i++) {
 		if (i < app_name_length) (*app_name)[i] = cmdline[i];
 		if (cmdline[i] == '\0') cmdline[i] = ' ';
@@ -166,10 +205,17 @@ char *alloc_kernel_str() {
 	}
 
 	char *kernel = (char *)calloc(sizeof(char), KERNEL_WIDTH);
+	if (kernel == NULL) {
+		LOG(ERROR, "calloc() failed.");
+		pclose(fp);
+		return NULL;
+	}
+
 	if (fgets(kernel, KERNEL_WIDTH, fp) == NULL) {
 		LOG(ERROR,
 		      "fgets() failed. Error or end of file occured "
 		      "while not characters have been read");
+		pclose(fp);
 		return NULL;
 	}
 
