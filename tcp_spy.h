@@ -15,14 +15,36 @@
 typedef enum TcpEventType {
 	TCP_EV_SOCK_OPENED,
 	TCP_EV_SOCK_CLOSED,
-	TCP_EV_DATA_SENT,
-	TCP_EV_DATA_RECEIVED,
+	TCP_EV_SEND,
+	TCP_EV_SENDTO,
+	TCP_EV_RECV,
+	TCP_EV_RECVFROM,
 	TCP_EV_CONNECT,
 	TCP_EV_INFO_DUMP,
 	TCP_EV_SETSOCKOPT,
 	TCP_EV_SHUTDOWN,
 	TCP_EV_LISTEN
 } TcpEventType;
+
+typedef struct {
+	bool msg_confirm;
+	bool msg_dontroute;
+	bool msg_dontwait;
+	bool msg_eor;
+	bool msg_more;
+	bool msg_nosignal;
+	bool msg_oob;
+} TcpSendFlags;
+
+typedef struct {
+	bool msg_cmsg_cloexec;
+	bool msg_dontwait;
+	bool msg_errqueue;
+	bool msg_oob;
+	bool msg_peek;
+	bool msg_trunc;
+	bool msg_waitall;
+} TcpRecvFlags;
 
 typedef struct {
 	TcpEventType type;
@@ -49,12 +71,28 @@ typedef struct {
 typedef struct {
 	TcpEvent super;
 	size_t bytes;
-} TcpEvDataSent;
+	TcpSendFlags flags;
+} TcpEvSend;
 
 typedef struct {
 	TcpEvent super;
 	size_t bytes;
-} TcpEvDataReceived;
+	TcpSendFlags flags;
+	struct sockaddr_storage addr;
+} TcpEvSendto;
+
+typedef struct {
+	TcpEvent super;
+	size_t bytes;
+	TcpRecvFlags flags;
+} TcpEvRecv;
+
+typedef struct {
+	TcpEvent super;
+	size_t bytes;
+	TcpRecvFlags flags;
+	struct sockaddr_storage addr;
+} TcpEvRecvfrom;
 
 typedef struct {
 	TcpEvent super;
@@ -127,9 +165,12 @@ void tcp_stop_capture(TcpConnection *con);
 void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 		     bool sock_nonblock);
 void tcp_sock_closed(int fd, int return_value, int err, bool detected);
-void tcp_data_sent(int fd, int return_value, int err, size_t bytes);
-void tcp_data_received(int fd, int return_value, int err, size_t bytes);
-
+void tcp_send(int fd, int return_value, int err, size_t bytes, int flags);
+void tcp_sendto(int fd, int return_value, int err, size_t bytes, int flags,
+		const struct sockaddr *addr, socklen_t len);
+void tcp_recv(int fd, int return_value, int err, size_t bytes, int flags);
+void tcp_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
+		  const struct sockaddr *addr, socklen_t len);
 void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
 		 socklen_t len);
 void tcp_info_dump(int fd);

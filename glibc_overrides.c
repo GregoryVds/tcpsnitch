@@ -87,10 +87,9 @@ int socket(int __domain, int __type, int __protocol) {
 	bool sock_cloexec = __type & SOCK_CLOEXEC;
 	bool sock_nonblock = __type & SOCK_NONBLOCK;
 
-	/* Perform syscall */
 	int fd = orig_socket(__domain, __type, __protocol);
+	
 	if (is_tcp_socket(fd)) {
-		LOG(INFO, "socket %d is TCP", fd);
 		tcp_sock_opened(fd, __domain, __protocol, sock_cloexec,
 				sock_nonblock);
 		tcp_info_dump(fd);
@@ -112,8 +111,8 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
 	LOG(INFO, "connect() called on socket %d.", __fd);
 
-	/* Perform syscall */
 	if (is_tcp_socket(__fd)) tcp_start_capture(__fd, __addr);
+
 	int ret = orig_connect(__fd, __addr, __len);
 	int err = errno;
 
@@ -139,8 +138,6 @@ int shutdown(int __fd, int __how) {
 	orig_shutdown = (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
 	LOG(INFO, "shutdown() called on socket %d.", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
 	int ret = orig_shutdown(__fd, __how);
 	int err = errno;
 
@@ -163,7 +160,6 @@ int listen(int __fd, int __n) {
 	orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
 	LOG(INFO, "listen() called on socket %d.", __fd);
 
-	/* Perform syscall */
 	int ret = orig_listen(__fd, __n);
 	int err = errno;
 
@@ -187,7 +183,6 @@ int setsockopt(int __fd, int __level, int __optname, const void *__optval,
 	orig_setsockopt = (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
 	LOG(INFO, "setsockopt() called on socket %d.", __fd);
 
-	/* Perform syscall */
 	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
 	int err = errno;
 
@@ -209,13 +204,11 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
 	orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
 	LOG(INFO, "send() called on socket %d.", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
 	ssize_t ret = orig_send(__fd, __buf, __n, __flags);
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, err, __n);
+		tcp_send(__fd, ret, err, __n, __flags);
 		tcp_info_dump(__fd);
 	}
 
@@ -233,13 +226,11 @@ ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
 	orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
 	LOG(INFO, "recv() called on socket %d.", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
 	ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, err, __n);
+		tcp_recv(__fd, ret, err, __n, __flags);
 		tcp_info_dump(__fd);
 	}
 
@@ -260,18 +251,15 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 
 	/* Extract IP address to human readable string */
 	char *addr_str = alloc_addr_str(__addr);
-	LOG(INFO, "sendto() on socket %d (%zu bytes to %s)", __fd, __n,
-	      addr_str);
+	LOG(INFO, "sendto() on socket %d (to %s)", __fd, addr_str);
 	free(addr_str);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
 	ssize_t ret =
 	    orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, err, __n);
+		tcp_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
 		tcp_info_dump(__fd);
 	}
 
@@ -289,7 +277,7 @@ typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
 				      socklen_t *__restrict __addr_len);
 
 ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
-		 struct sockaddr *__addr, socklen_t *__restrict __addr_len) {
+		 struct sockaddr *__addr, socklen_t *__addr_len) {
 	orig_recvfrom_type orig_recvfrom;
 	orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
 	LOG(INFO, "recvfrom() called.");
@@ -301,14 +289,14 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, err, __n);
+		tcp_recvfrom(__fd, ret, err, __n, __flags, __addr, *__addr_len);
 		tcp_info_dump(__fd);
 	}
 
 	/* Extract IP address to human readable string */
 	char *addr_str = alloc_addr_str(__addr);
 	LOG(INFO, "recvfrom() on socket %d (%zu bytes from %s)", __fd, __n,
-	      addr_str);
+	    addr_str);
 	free(addr_str);
 
 	return ret;
@@ -389,7 +377,7 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_sent(__fd, ret, err, __n);
+		tcp_send(__fd, ret, err, __n, 0);
 		tcp_info_dump(__fd);
 	}
 
@@ -412,7 +400,7 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_data_received(__fd, ret, err, __nbytes);
+		tcp_recv(__fd, ret, err, __nbytes, 0);
 		tcp_info_dump(__fd);
 	}
 
@@ -498,8 +486,7 @@ ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
 	orig_sendfile = (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
 	if (is_inet_socket(__out_fd)) {
-		LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d",
-		      __out_fd);
+		LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", __out_fd);
 	}
 
 	return orig_sendfile(__out_fd, __in_fd, __offset, __count);
@@ -547,7 +534,7 @@ int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
 			if (events & POLLNVAL) strcat(flags, " POLLNVAL");
 
 			LOG(INFO, "poll() on socket %d (%s)", pollfd->fd,
-			      flags);
+			    flags);
 		}
 	}
 

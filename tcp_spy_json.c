@@ -25,13 +25,18 @@ static json_t *build_event(TcpEvent *ev);
 static void build_shared_fields(json_t *json_ev, TcpEvent *ev);
 static json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
 static json_t *build_sock_closed_ev(TcpEvSockClosed *ev);
-static json_t *build_data_sent_ev(TcpEvDataSent *ev);
-static json_t *build_data_received_ev(TcpEvDataReceived *ev);
+static json_t *build_send_ev(TcpEvSend *ev);
+static json_t *build_sendto_ev(TcpEvSendto *ev);
+static json_t *build_recv_ev(TcpEvRecv *ev);
+static json_t *build_recvfrom_ev(TcpEvRecvfrom *ev);
 static json_t *build_connect_ev(TcpEvConnect *ev);
 static json_t *build_info_dump_ev(TcpEvInfoDump *ev);
 static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 static json_t *build_shutdown_ev(TcpEvShutdown *ev);
 static json_t *build_listen_ev(TcpEvListen *ev);
+
+static json_t *build_send_flags(TcpSendFlags *flags);
+static json_t *build_recv_flags(TcpRecvFlags *flags);
 
 #define EV_FAILURE "json_object() failed. Cannot build TCP event."
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
@@ -68,12 +73,12 @@ static json_t *build_tcp_connection(TcpConnection *con) {
 	add(json_con, "kernel", json_string(con->kernel));
 	add(json_con, "timestamp", json_integer(con->timestamp));
 	add(json_con, "id", json_integer(con->id));
-	add(json_con, "eventsCount", json_integer(con->events_count));
-	add(json_con, "bytesSent", json_integer(con->bytes_sent));
-	add(json_con, "bytesReceived", json_integer(con->bytes_received));
-	add(json_con, "gotPcapHandle",
+	add(json_con, "events_count", json_integer(con->events_count));
+	add(json_con, "bytes_sent", json_integer(con->bytes_sent));
+	add(json_con, "bytes_received", json_integer(con->bytes_received));
+	add(json_con, "got_pcap_handle",
 	    json_boolean(con->capture_handle != NULL));
-	add(json_con, "successfulPcap", json_boolean(con->successful_pcap));
+	add(json_con, "successful_pcap", json_boolean(con->successful_pcap));
 
 	/* Loop through all events to build JSON */
 	add(json_con, "events", events);
@@ -97,11 +102,17 @@ static json_t *build_event(TcpEvent *ev) {
 		case TCP_EV_SOCK_CLOSED:
 			r = build_sock_closed_ev((TcpEvSockClosed *)ev);
 			break;
-		case TCP_EV_DATA_SENT:
-			r = build_data_sent_ev((TcpEvDataSent *)ev);
+		case TCP_EV_SEND:
+			r = build_send_ev((TcpEvSend *)ev);
 			break;
-		case TCP_EV_DATA_RECEIVED:
-			r = build_data_received_ev((TcpEvDataReceived *)ev);
+		case TCP_EV_SENDTO:
+			r = build_sendto_ev((TcpEvSendto *)ev);
+			break;
+		case TCP_EV_RECV:
+			r = build_recv_ev((TcpEvRecv *)ev);
+			break;
+		case TCP_EV_RECVFROM:
+			r = build_recvfrom_ev((TcpEvRecvfrom *)ev);
 			break;
 		case TCP_EV_CONNECT:
 			r = build_connect_ev((TcpEvConnect *)ev);
@@ -124,7 +135,7 @@ static json_t *build_event(TcpEvent *ev) {
 
 static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	const char *type_str = string_from_tcp_event_type(ev->type);
-	add(json_ev, "eventType", json_string(type_str));
+	add(json_ev, "event_type", json_string(type_str));
 
 	/* Time stamp */
 	json_t *timestamp_json = json_object();
@@ -138,9 +149,9 @@ static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	add(json_ev, "timestamp", timestamp_json);
 
 	/* Return value & err string */
-	add(json_ev, "returnValue", json_integer(ev->return_value));
+	add(json_ev, "return_value", json_integer(ev->return_value));
 	add(json_ev, "success", json_boolean(ev->success));
-	add(json_ev, "errorStr", json_string(ev->error_str));
+	add(json_ev, "error_str", json_string(ev->error_str));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -154,8 +165,8 @@ static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	add(json_details, "domain", json_string(dom_str));
 	add(json_details, "type", json_string(type_str));
 	add(json_details, "protocol", json_integer(ev->protocol));
-	add(json_details, "sockCloexec", json_boolean(ev->sock_cloexec));
-	add(json_details, "sockNonblock", json_boolean(ev->sock_nonblock));
+	add(json_details, "sock_cloexec", json_boolean(ev->sock_cloexec));
+	add(json_details, "sock_nonblock", json_boolean(ev->sock_nonblock));
 
 	free(dom_str);
 	free(type_str);
@@ -171,18 +182,54 @@ static json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
 	return json_ev;
 }
 
-static json_t *build_data_sent_ev(TcpEvDataSent *ev) {
+static json_t *build_send_ev(TcpEvSend *ev) {
 	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_details, "flags", build_send_flags(&(ev->flags)));
 
 	return json_ev;
 }
 
-static json_t *build_data_received_ev(TcpEvDataReceived *ev) {
+static json_t *build_sendto_ev(TcpEvSendto *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+
+	char *addr_str = alloc_host_str(&(ev->addr));
+	char *port_str = alloc_port_str(&(ev->addr));
+
+	add(json_details, "addr", json_string(addr_str));
+	add(json_details, "port", json_string(port_str));
+	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_details, "flags", build_send_flags(&(ev->flags)));
+
+	free(addr_str);
+	free(port_str);
+
+	return json_ev;
+}
+
+static json_t *build_recv_ev(TcpEvRecv *ev) {
 	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
 	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_details, "flags", build_recv_flags(&(ev->flags)));
+
+	return json_ev;
+}
+
+static json_t *build_recvfrom_ev(TcpEvRecvfrom *ev) {
+	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+
+	char *addr_str = alloc_host_str(&(ev->addr));
+	char *port_str = alloc_port_str(&(ev->addr));
+
+	add(json_details, "addr", json_string(addr_str));
+	add(json_details, "port", json_string(port_str));
+	add(json_details, "bytes", json_integer(ev->bytes));
+	add(json_details, "flags", build_recv_flags(&(ev->flags)));
+
+	free(addr_str);
+	free(port_str);
 
 	return json_ev;
 }
@@ -190,7 +237,6 @@ static json_t *build_data_received_ev(TcpEvDataReceived *ev) {
 static json_t *build_connect_ev(TcpEvConnect *ev) {
 	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
 
-	/* Extract IP address to human readable string */
 	char *addr_str = alloc_host_str(&(ev->addr));
 	char *port_str = alloc_port_str(&(ev->addr));
 
@@ -287,6 +333,44 @@ static json_t *build_listen_ev(TcpEvListen *ev) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static json_t *build_send_flags(TcpSendFlags *flags) {
+	json_t *json_flags = json_object();
+	if (json_flags == NULL) {
+		LOG(ERROR, "json_object() failed. Could not build send flags.");
+		return NULL;
+	}
+
+	add(json_flags, "msg_confirm", json_boolean(flags->msg_confirm));
+	add(json_flags, "msg_dontroute", json_boolean(flags->msg_dontroute));
+	add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
+	add(json_flags, "msg_eor", json_boolean(flags->msg_eor));
+	add(json_flags, "msg_more", json_boolean(flags->msg_more));
+	add(json_flags, "msg_nosignal", json_boolean(flags->msg_nosignal));
+	add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
+
+	return json_flags;
+}
+
+static json_t *build_recv_flags(TcpRecvFlags *flags) {
+	json_t *json_flags = json_object();
+	if (json_flags == NULL) {
+		LOG(ERROR, "json_object() failed. Could not build recv flags.");
+		return NULL;
+	}
+
+	add(json_flags, "msg_cmsg_cloexec",
+	    json_boolean(flags->msg_cmsg_cloexec));
+	add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
+	add(json_flags, "msg_errqueue", json_boolean(flags->msg_errqueue));
+	add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
+	add(json_flags, "msg_peek", json_boolean(flags->msg_peek));
+	add(json_flags, "msg_trunc", json_boolean(flags->msg_trunc));
+	add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
+
+	return json_flags;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
   ____  _   _ ____  _     ___ ____      _    ____ ___
  |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|

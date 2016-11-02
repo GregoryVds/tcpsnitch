@@ -62,6 +62,9 @@ static long get_tcpinfo_ival(const char *env_var);
 static void extract_tcpinfo_ivals();
 static bool should_dump_tcp_info(TcpConnection *con);
 
+static void fill_send_flags(TcpSendFlags *s, int flags);
+static void fill_recv_flags(TcpRecvFlags *s, int flags);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static TcpConnection *alloc_connection() {
@@ -93,13 +96,21 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 			success = (return_value == 0);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvSockClosed));
 			break;
-		case TCP_EV_DATA_SENT:
+		case TCP_EV_SEND:
 			success = (return_value != -1);
-			ev = (TcpEvent *)malloc(sizeof(TcpEvDataSent));
+			ev = (TcpEvent *)malloc(sizeof(TcpEvSend));
 			break;
-		case TCP_EV_DATA_RECEIVED:
+		case TCP_EV_SENDTO:
 			success = (return_value != -1);
-			ev = (TcpEvent *)malloc(sizeof(TcpEvDataReceived));
+			ev = (TcpEvent *)malloc(sizeof(TcpEvSendto));
+			break;
+		case TCP_EV_RECV:
+			success = (return_value != -1);
+			ev = (TcpEvent *)malloc(sizeof(TcpEvRecv));
+			break;
+		case TCP_EV_RECVFROM:
+			success = (return_value != -1);
+			ev = (TcpEvent *)malloc(sizeof(TcpEvRecvfrom));
 			break;
 		case TCP_EV_CONNECT:
 			success = (return_value != -1);
@@ -183,8 +194,7 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 static TcpConnection *get_tcp_connection(int fd) {
 	TcpConnection *con = fd_con_map[fd];
 	if (con == NULL) {
-		LOG(ERROR, "Cannot find matching TcpConnection for fd %d.",
-		      fd);
+		LOG(ERROR, "Cannot find matching TcpConnection for fd %d.", fd);
 	}
 	return con;
 }
@@ -199,9 +209,9 @@ static long get_tcpinfo_ival(const char *env_var) {
 	// On error, we use a default value of 0.
 	if (t < 0) {
 		LOG(WARN,
-		      "Interval %s assumed to be 0. No lower bound "
-		      "set on tcp_info capture frequency.",
-		      env_var);
+		    "Interval %s assumed to be 0. No lower bound "
+		    "set on tcp_info capture frequency.",
+		    env_var);
 	}
 	return (t < 0) ? 0 : t;
 }
@@ -209,10 +219,10 @@ static long get_tcpinfo_ival(const char *env_var) {
 static void extract_tcpinfo_ivals() {
 	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
 	LOG(WARN, "tcp_info min bytes interval set to %lu.",
-	      tcp_info_bytes_ival);
+	    tcp_info_bytes_ival);
 	tcp_info_time_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_MICROS_IVAL);
 	LOG(WARN, "tcp_info min microseconds interval set to %lu.",
-	      tcp_info_time_ival);
+	    tcp_info_time_ival);
 }
 
 static bool should_dump_tcp_info(TcpConnection *con) {
@@ -240,6 +250,27 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static void fill_send_flags(TcpSendFlags *s, int flags) {
+	if (flags || MSG_CONFIRM) s->msg_confirm = true;
+	if (flags || MSG_DONTROUTE) s->msg_dontroute = true;
+	if (flags || MSG_DONTWAIT) s->msg_dontwait = true;
+	if (flags || MSG_EOR) s->msg_eor = true;
+	if (flags || MSG_MORE) s->msg_more = true;
+	if (flags || MSG_NOSIGNAL) s->msg_nosignal = true;
+	if (flags || MSG_OOB) s->msg_oob = true;
+}
+
+static void fill_recv_flags(TcpRecvFlags *s, int flags) {
+	if (flags || MSG_CMSG_CLOEXEC) s->msg_cmsg_cloexec = true;
+	if (flags || MSG_DONTWAIT) s->msg_dontwait = true;
+	if (flags || MSG_ERRQUEUE) s->msg_errqueue = true;
+	if (flags || MSG_OOB) s->msg_oob = true;
+	if (flags || MSG_PEEK) s->msg_peek = true;
+	if (flags || MSG_TRUNC) s->msg_trunc = true;
+	if (flags || MSG_WAITALL) s->msg_waitall = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
   ____  _   _ ____  _     ___ ____      _    ____ ___
  |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
@@ -287,12 +318,12 @@ void tcp_stop_capture(TcpConnection *con) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define FAIL_IF_NULL(var, ev_type_cons)                                       \
-	if (var == NULL) {                                                    \
-		const char *str = string_from_tcp_event_type(ev_type_cons);   \
+#define FAIL_IF_NULL(var, ev_type_cons)                                     \
+	if (var == NULL) {                                                  \
+		const char *str = string_from_tcp_event_type(ev_type_cons); \
 		LOG(ERROR, "Event %s dropped for fd %d. Variable was NULL", \
-		      str, fd);                                               \
-		return;                                                       \
+		    str, fd);                                               \
+		return;                                                     \
 	}
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
@@ -303,10 +334,10 @@ void tcp_stop_capture(TcpConnection *con) {
 
 const char *string_from_tcp_event_type(TcpEventType type) {
 	static const char *strings[] = {
-	    "TCP_EV_SOCK_OPENED",   "TCP_EV_SOCK_CLOSED", "TCP_EV_DATA_SENT",
-	    "TCP_EV_DATA_RECEIVED", "TCP_EV_CONNECT",     "TCP_EV_INFO_DUMP",
-	    "TCP_EV_SETSOCKOPT",    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN",
-	    "TCP_EV_PRECONNECT"};
+	    "TCP_EV_SOCK_OPENED", "TCP_EV_SOCK_CLOSED", "TCP_EV_SEND",
+	    "TCP_EV_SENDTO",      "TCP_EV_RECV",	"TCP_EV_RECVFROM",
+	    "TCP_EV_CONNECT",     "TCP_EV_INFO_DUMP",   "TCP_EV_SETSOCKOPT",
+	    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN",      "TCP_EV_PRECONNECT"};
 	return strings[type];
 }
 
@@ -376,22 +407,49 @@ void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	fd_con_map[fd] = NULL;
 }
 
-void tcp_data_sent(int fd, int return_value, int err, size_t bytes) {
-	// Instantiate local vars TcpConnection *con & TcpEvDataSent *ev
-	TCP_EV_PRELUDE(TCP_EV_DATA_SENT, TcpEvDataSent);
+void tcp_send(int fd, int return_value, int err, size_t bytes, int flags) {
+	// Instantiate local vars TcpConnection *con & TcpEvSend *ev
+	TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
 
 	con->bytes_sent += bytes;
 	ev->bytes = bytes;
+	fill_send_flags(&(ev->flags), flags);
+	push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_sendto(int fd, int return_value, int err, size_t bytes, int flags,
+		const struct sockaddr *addr, socklen_t len) {
+	// Instantiate local vars TcpConnection *con & TcpEvSendto *ev
+	TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
+
+	con->bytes_sent += bytes;
+	ev->bytes = bytes;
+	fill_send_flags(&(ev->flags), flags);
+	memcpy(&(ev->addr), addr, len);
 
 	push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_data_received(int fd, int return_value, int err, size_t bytes) {
-	// Instantiate local vars TcpConnection *con & TcpEvDataReceived *ev
-	TCP_EV_PRELUDE(TCP_EV_DATA_RECEIVED, TcpEvDataReceived);
+void tcp_recv(int fd, int return_value, int err, size_t bytes, int flags) {
+	// Instantiate local vars TcpConnection *con & TcpEvRecv *ev
+	TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
 
 	con->bytes_received += bytes;
 	ev->bytes = bytes;
+	fill_recv_flags(&(ev->flags), flags);
+
+	push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
+		  const struct sockaddr *addr, socklen_t len) {
+	// Instantiate local vars TcpConnection *con & TcpEvRecvfrom *ev
+	TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
+
+	con->bytes_received += bytes;
+	ev->bytes = bytes;
+	fill_recv_flags(&(ev->flags), flags);
+	memcpy(&(ev->addr), addr, len);
 
 	push_event(con, (TcpEvent *)ev);
 }

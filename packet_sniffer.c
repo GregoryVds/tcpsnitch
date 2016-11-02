@@ -169,7 +169,7 @@ char *build_capture_filter(const struct sockaddr *addr) {
 	char *addr_str = alloc_host_str(addr_sto);
 	char *port_str = alloc_port_str(addr_sto);
 	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
-	snprintf(filter, FILTER_SIZE, "host %s and port %s.", addr_str,
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_str,
 		 port_str);
 	free(addr_str);
 	free(port_str);
