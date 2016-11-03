@@ -15,6 +15,7 @@
 #include "packet_sniffer.h"
 #include "string_helpers.h"
 #include "tcp_spy_json.h"
+#include "init.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -44,13 +45,6 @@
 #define MAX_FD 1024
 static TcpConnection *fd_con_map[MAX_FD];
 static int connections_count = 0;
-static long tcp_info_bytes_ival =
-    -1;  // Set to -1 when not parsed. 0 if ommited.
-static long tcp_info_time_ival =
-    -1;  // Set to -1 when not parsed. 0 if ommited.
-
-static const char *nestpy_path = NULL;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
@@ -63,10 +57,7 @@ static void push_event(TcpConnection *con, TcpEvent *ev);
 
 /* HELPERS */
 static TcpConnection *get_tcp_connection(int fd);
-static long get_tcpinfo_ival(const char *env_var);
-static void extract_tcpinfo_ivals();
 static bool should_dump_tcp_info(TcpConnection *con);
-static char *create_con_dir(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 
@@ -84,7 +75,7 @@ static TcpConnection *alloc_connection() {
 	con->id = connections_count;
 	con->cmdline = alloc_cmdline_str(&(con->app_name));
 	con->timestamp = get_time_sec();
-	con->directory = create_con_dir(con);
+	con->directory = log_path;
 	con->kernel = alloc_kernel_str();
 	connections_count++;
 
@@ -158,7 +149,6 @@ static void free_connection(TcpConnection *con) {
 	free_events_list(con->head);
 	free(con->app_name);
 	free(con->cmdline);
-	free(con->directory);
 	free(con->kernel);
 	free(con);
 }
@@ -206,37 +196,7 @@ static TcpConnection *get_tcp_connection(int fd) {
 	return con;
 }
 
-/* Retrieve interval for tcpinfo (could be byte ou time interval).
- * If not set or in incorrect format, we assume 0 and thus no lower bound. */
-static long get_tcpinfo_ival(const char *env_var) {
-	long t = get_env_as_long(env_var);
-	if (t == -1) LOG(WARN, "No interval set with %s.", env_var);
-	if (t == -2) LOG(ERROR, "Invalid interval set with %s.", env_var);
-	if (t == -3) LOG(ERROR, "Interval set with %s overflows.", env_var);
-	// On error, we use a default value of 0.
-	if (t < 0) {
-		LOG(WARN,
-		    "Interval %s assumed to be 0. No lower bound "
-		    "set on tcp_info capture frequency.",
-		    env_var);
-	}
-	return (t < 0) ? 0 : t;
-}
-
-static void extract_tcpinfo_ivals() {
-	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
-	LOG(WARN, "tcp_info min bytes interval set to %lu.",
-	    tcp_info_bytes_ival);
-	tcp_info_time_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_MICROS_IVAL);
-	LOG(WARN, "tcp_info min microseconds interval set to %lu.",
-	    tcp_info_time_ival);
-}
-
 static bool should_dump_tcp_info(TcpConnection *con) {
-	/* Extract env variables if not done yet (set to -1) */
-	if (tcp_info_bytes_ival == -1 || tcp_info_time_ival == -1)
-		extract_tcpinfo_ivals();
-
 	/* Check if time lower bound is set, otherwise assume no lower bound */
 	if (tcp_info_time_ival > 0) {
 		long cur_time = get_time_micros();
@@ -253,66 +213,6 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 
 	/* If we reach this point, no lower bound prevents from dumping */
 	return true;
-}
-
-#define TIMESTAMP_WIDTH 10
-static char *create_con_dir(TcpConnection *con) {
-	// Get netspy path
-	const char *netspy_path = get_netspy_path();
-	if (netspy_path == NULL) {
-		LOG(ERROR,
-		    "Cannot create directory for TCP connection. No valid %s.",
-		    ENV_NETSPY_PATH);
-		return NULL;
-	}
-
-	// Get connection standard directory path
-	char *base_path = alloc_con_base_dir_path(con, netspy_path);
-	if (base_path == NULL) {
-		LOG(ERROR,
-		    "Cannot create directory for TCP connection. Error when "
-		    "building directory path.");
-		return NULL;
-	}
-
-	// Find find first directory starting from base_path
-	int i = 0;
-	char *actual_path = alloc_append_int_to_path(base_path, i);
-
-	bool is_free = false;
-	char *tmp;
-	while (is_free == false) {
-		DIR *dir = opendir(actual_path);
-		if (dir == NULL) {
-			if (errno == ENOENT)  // Does not exists.
-				is_free = true;
-			else {  // Failure for some other reason.
-				LOG(ERROR, "opendir() failed. %s.",
-				    strerror(errno));
-				return NULL;
-			}
-		} else {  // Dir exists, append next integer to path.
-			i++;
-			LOG(INFO,
-			    "Cannot create directory %s since it already "
-			    "exists. Trying by appending next integer (%d).",
-			    actual_path, i);
-			tmp = actual_path;
-			actual_path = alloc_append_int_to_path(base_path, i);
-			free(tmp);
-		}
-	}
-
-	// At this point, actual_path is a directory that does not exists so
-	// we can create it.
-	int ret = mkdir(actual_path, 0700);
-	if (ret == -1) {
-		LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-		return NULL;
-	}
-
-	free(base_path);
-	return actual_path;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -365,35 +265,6 @@ void tcp_dump_json(TcpConnection *con) {
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 
 */
-///////////////////////////////////////////////////////////////////////////////
-
-const char *get_netspy_path() {
-	// If already computed, directly return.
-	if (nestpy_path != NULL) return nestpy_path;
-
-	// Get base path form ENV variable.
-	const char *base_path = getenv(ENV_NETSPY_PATH);
-	if (base_path == NULL) {
-		base_path = NETSPY_DEFAULT_PATH;
-		LOG(INFO, "Log path not specified in %s. Defaults to %s.",
-		    ENV_NETSPY_PATH, base_path);
-	} else
-		LOG(INFO, "Log path is %s=%s.", ENV_NETSPY_PATH, base_path);
-
-	// Verify if can open log base path.
-	DIR *dir = opendir(base_path);
-	if (dir)
-		closedir(dir);  // Dir exists. OK.
-	else {
-		LOG(ERROR, "Cannot open log path %s. %s.", ENV_NETSPY_PATH,
-		    strerror(errno));
-		return NULL;
-	}
-
-	nestpy_path = base_path;
-	return base_path;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 void tcp_start_packet_capture(int fd, const struct sockaddr *addr) {

@@ -1,3 +1,4 @@
+
 #include "string_helpers.h"
 #include <errno.h>
 #include <stdio.h>
@@ -134,8 +135,6 @@ char *alloc_append_int_to_path(const char *path1, int i) {
 
 	strncpy(full_path, path1, path1_len);	
 	snprintf(full_path+path1_len, i_len+2, "_%d", i); 
-
-	LOG(INFO, "new path: %s", full_path);
 	return full_path;
 }
 
@@ -151,23 +150,6 @@ char *alloc_log_path_str(TcpConnection *con) {
 	return alloc_concat_path(con->directory, NETSPY_LOG_FILE);
 }
 
-#define TIMESTAMP_WIDTH 10
-char *alloc_con_dirname_str(TcpConnection *con) {
-	int app_name_length = strlen(con->app_name);
-	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
-	char *dirname = (char *)calloc(sizeof(char), n);
-	if (dirname == NULL) {
-		LOG(ERROR, "calloc() failed.");
-		return NULL;
-	}
-
-	strncat(dirname, con->app_name, app_name_length);
-	strncat(dirname, "_", 1);
-	snprintf(dirname + strlen(dirname), TIMESTAMP_WIDTH, "%lu",
-		 get_time_sec());
-
-	return dirname;
-}
 
 char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path) {
 	char *con_dirname = alloc_con_dirname_str(con);
