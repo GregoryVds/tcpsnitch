@@ -11,7 +11,6 @@ char *alloc_addr_str(const struct sockaddr *addr);
 
 char *alloc_abs_path_str(const char *file_name);
 char *alloc_pcap_path_str();
-char *alloc_log_path_str();
 char *alloc_json_path_str();
 char *alloc_dirname_str(char *app_name);
 

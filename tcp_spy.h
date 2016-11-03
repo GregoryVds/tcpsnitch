@@ -162,8 +162,7 @@ void tcp_stop_capture(TcpConnection *con);
 
 // Events
 
-void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
-		     bool sock_nonblock);
+void tcp_sock_opened(int fd, int domain, int type, int protocol);
 void tcp_sock_closed(int fd, int return_value, int err, bool detected);
 void tcp_send(int fd, int return_value, int err, size_t bytes, int flags);
 void tcp_sendto(int fd, int return_value, int err, size_t bytes, int flags,

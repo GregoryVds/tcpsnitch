@@ -343,8 +343,8 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
-		     bool sock_nonblock) {
+#define SOCK_TYPE_MASK 0b1111
+void tcp_sock_opened(int fd, int domain, int type, int protocol) {
 	/* Check if connection was not properly closed. */
 	if (fd_con_map[fd]) tcp_sock_closed(fd, 0, 0, false);
 
@@ -359,10 +359,10 @@ void tcp_sock_opened(int fd, int domain, int protocol, bool sock_cloexec,
 	FAIL_IF_NULL(ev, TCP_EV_SOCK_OPENED);
 
 	ev->domain = domain;
-	ev->type = SOCK_STREAM;
+	ev->type = type & SOCK_TYPE_MASK;
 	ev->protocol = protocol;
-	ev->sock_cloexec = sock_cloexec;
-	ev->sock_nonblock = sock_nonblock;
+	ev->sock_cloexec = type & SOCK_CLOEXEC;
+	ev->sock_nonblock = type & SOCK_NONBLOCK;
 	push_event(con, (TcpEvent *)ev);
 }
 

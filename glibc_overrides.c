@@ -70,7 +70,6 @@
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
 
-#define SOCK_TYPE_MASK 0b1111
 
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
 
@@ -83,15 +82,10 @@ int socket(int __domain, int __type, int __protocol) {
 	LOG(INFO, "socket() called (domain %s)", domain);
 	free(domain);
 
-	/* Inspect flag parameters */
-	bool sock_cloexec = __type & SOCK_CLOEXEC;
-	bool sock_nonblock = __type & SOCK_NONBLOCK;
-
 	int fd = orig_socket(__domain, __type, __protocol);
 	
 	if (is_tcp_socket(fd)) {
-		tcp_sock_opened(fd, __domain, __protocol, sock_cloexec,
-				sock_nonblock);
+		tcp_sock_opened(fd, __domain, __type, __protocol);
 		tcp_info_dump(fd);
 	}
 
