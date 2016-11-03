@@ -49,11 +49,8 @@ static long tcp_info_bytes_ival =
 static long tcp_info_time_ival =
     -1;  // Set to -1 when not parsed. 0 if ommited.
 
-static const char *nestpy_path = NULL;
-
-///////////////////////////////////////////////////////////////////////////////
-
 /* CREATING & FREEING OBJECTS */
+
 static TcpConnection *alloc_connection();
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_connection(TcpConnection *con);
@@ -62,16 +59,104 @@ static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
 /* HELPERS */
+
 static TcpConnection *get_tcp_connection(int fd);
 static long get_tcpinfo_ival(const char *env_var);
 static void extract_tcpinfo_ivals();
 static bool should_dump_tcp_info(TcpConnection *con);
-static char *create_con_dir(TcpConnection *con);
+
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 
-void tcp_dump_json(TcpConnection *con);
 ///////////////////////////////////////////////////////////////////////////////
+
+const char *get_log_base_path() {
+	// Get dir path.
+	const char *base_path = getenv(ENV_NETSPY_PATH);
+	if (base_path == NULL) {
+		base_path = NETSPY_DEFAULT_PATH;
+		LOG(INFO, "Log path not specified in %s. Defaults to %s.",
+		    ENV_NETSPY_PATH, base_path);
+	} else
+		LOG(INFO, "Log path is %s=%s.", ENV_NETSPY_PATH, base_path);
+
+	// Test if can open dir.
+	DIR *dir = opendir(base_path);
+	if (dir)
+		closedir(dir);  // Dir exists. OK.
+	else {
+		LOG(ERROR, "Cannot open log path %s. %s.", ENV_NETSPY_PATH,
+		    strerror(errno));
+		return NULL;
+	}
+
+	return base_path;
+}
+
+int get_int_len(int i) {
+	int l = 1;
+	while(i>9) {
+		l++;
+		i = i/10;
+	}
+	return l;
+}
+
+char *alloc_append_int_to_path(const char *path1, int i) {
+	int path1_len = strlen(path1);
+	int i_len = get_int_len(i);
+	int full_path_length = path1_len+i_len+1;
+	char *full_path = (char *)malloc(sizeof(char)*full_path_length);
+	strncpy(full_path, path1, path1_len);	
+	snprintf(full_path+path1_len, i_len, "%d", i); 
+	return full_path;
+}
+
+#define TIMESTAMP_WIDTH 10
+DIR *create_log_dir(TcpConnection *con) {
+	char *standard_dirname = alloc_standard_dirname_str(con->app_name);
+	char *standard_path =
+	    alloc_concat_path(con->log_base_path, standard_dirname);
+	char *full_path;
+
+	// Test if dir is available.
+	bool is_free = false;
+	int i = 0;
+	char *tmpt;
+	while (is_free == false) {
+		i++;
+		DIR *dir = opendir(standard_path);
+		if (dir == NULL) {
+			if (errno == ENOENT)
+				is_free = true;
+			else {
+				LOG(ERROR, "opendir() failed. %s.",
+				    strerror(errno));
+				return NULL;
+			}
+		} else {  // Dir exists.
+			concat = alloc_append_int_to_path(standard_path, i);
+			full_path = concat;
+		}
+		i++;
+	}
+
+	DIR *dir = opendir(full_path);
+	if (dir) {
+		LOG(ERROR, "Log dir already exists");
+	} else if (errno == ENOENT) {  // Dir available.
+		int ret = mkdir(full_path, 0700);
+		if (ret == -1) {
+			LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
+			return NULL;
+		}
+	} else {
+		LOG(ERROR, "opendir() failed. %s.", strerror(errno));
+	}
+
+	return dir;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static TcpConnection *alloc_connection() {
@@ -84,7 +169,10 @@ static TcpConnection *alloc_connection() {
 	con->id = connections_count;
 	con->cmdline = alloc_cmdline_str(&(con->app_name));
 	con->timestamp = get_time_sec();
-	con->directory = create_con_dir(con);
+	con->log_base_path = get_log_base_path();
+	if (con->log_base_path == NULL)
+		LOG(ERROR, "No logs, pcap & JSON to file.");
+	con->dirname = alloc_dirname_str(con->app_name);
 	con->kernel = alloc_kernel_str();
 	connections_count++;
 
@@ -158,7 +246,7 @@ static void free_connection(TcpConnection *con) {
 	free_events_list(con->head);
 	free(con->app_name);
 	free(con->cmdline);
-	free(con->directory);
+	free(con->dirname);
 	free(con->kernel);
 	free(con);
 }
@@ -255,66 +343,6 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 	return true;
 }
 
-#define TIMESTAMP_WIDTH 10
-static char *create_con_dir(TcpConnection *con) {
-	// Get netspy path
-	const char *netspy_path = get_netspy_path();
-	if (netspy_path == NULL) {
-		LOG(ERROR,
-		    "Cannot create directory for TCP connection. No valid %s.",
-		    ENV_NETSPY_PATH);
-		return NULL;
-	}
-
-	// Get connection standard directory path
-	char *base_path = alloc_con_base_dir_path(con, netspy_path);
-	if (base_path == NULL) {
-		LOG(ERROR,
-		    "Cannot create directory for TCP connection. Error when "
-		    "building directory path.");
-		return NULL;
-	}
-
-	// Find find first directory starting from base_path
-	int i = 0;
-	char *actual_path = alloc_append_int_to_path(base_path, i);
-
-	bool is_free = false;
-	char *tmp;
-	while (is_free == false) {
-		DIR *dir = opendir(actual_path);
-		if (dir == NULL) {
-			if (errno == ENOENT)  // Does not exists.
-				is_free = true;
-			else {  // Failure for some other reason.
-				LOG(ERROR, "opendir() failed. %s.",
-				    strerror(errno));
-				return NULL;
-			}
-		} else {  // Dir exists, append next integer to path.
-			i++;
-			LOG(INFO,
-			    "Cannot create directory %s since it already "
-			    "exists. Trying by appending next integer (%d).",
-			    actual_path, i);
-			tmp = actual_path;
-			actual_path = alloc_append_int_to_path(base_path, i);
-			free(tmp);
-		}
-	}
-
-	// At this point, actual_path is a directory that does not exists so
-	// we can create it.
-	int ret = mkdir(actual_path, 0700);
-	if (ret == -1) {
-		LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-		return NULL;
-	}
-
-	free(base_path);
-	return actual_path;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
@@ -338,25 +366,6 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-void tcp_dump_json(TcpConnection *con) {
-	char *json = build_tcp_connection_json(con);
-	char *json_file = alloc_json_path_str(con);
-	if (json == NULL || json_file == NULL) {
-		LOG(ERROR, "Cannot save capture to file.");
-		return;
-	}
-
-	int ret = append_string_to_file((const char *)json, json_file);
-	if (ret != 0) {
-		LOG(ERROR, "Error when dumping TcpConnection JSON to file.");
-	}
-
-	free(json_file);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 /*
   ____  _   _ ____  _     ___ ____      _    ____ ___
  |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
@@ -365,70 +374,41 @@ void tcp_dump_json(TcpConnection *con) {
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 
 */
-///////////////////////////////////////////////////////////////////////////////
 
-const char *get_netspy_path() {
-	// If already computed, directly return.
-	if (nestpy_path != NULL) return nestpy_path;
-
-	// Get base path form ENV variable.
-	const char *base_path = getenv(ENV_NETSPY_PATH);
-	if (base_path == NULL) {
-		base_path = NETSPY_DEFAULT_PATH;
-		LOG(INFO, "Log path not specified in %s. Defaults to %s.",
-		    ENV_NETSPY_PATH, base_path);
-	} else
-		LOG(INFO, "Log path is %s=%s.", ENV_NETSPY_PATH, base_path);
-
-	// Verify if can open log base path.
-	DIR *dir = opendir(base_path);
-	if (dir)
-		closedir(dir);  // Dir exists. OK.
-	else {
-		LOG(ERROR, "Cannot open log path %s. %s.", ENV_NETSPY_PATH,
-		    strerror(errno));
-		return NULL;
-	}
-
-	nestpy_path = base_path;
-	return base_path;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void tcp_start_packet_capture(int fd, const struct sockaddr *addr) {
+void tcp_start_capture(int fd, const struct sockaddr *addr) {
 	TcpConnection *con = get_tcp_connection(fd);
-	if (con == NULL) {
-		LOG(ERROR,
-		    "Abort packet capture. Cannot find related"
-		    " connection.");
-		return;
-	}
-
-	if (con->directory == NULL) {
-		LOG(ERROR,
-		    "Abort packet capture. A directory was not created"
-		    " for the TCP connection.");
-		return;
-	}
-
-	char *pcap_file = alloc_pcap_path_str(con);
+	char *file_path = alloc_pcap_path_str();
 	char *filter = build_capture_filter(addr);
-	if (pcap_file == NULL || filter == NULL) {
+
+	if (con == NULL || file_path == NULL || filter == NULL) {
 		LOG(ERROR, "Abort packet capture. NULL variable.");
 		return;
 	}
 
 	con->capture_handle =
-	    start_capture(filter, pcap_file, &(con->capture_thread));
+	    start_capture(filter, file_path, &(con->capture_thread));
 
 	free(filter);
-	free(pcap_file);
+	free(file_path);
 }
 
-void tcp_stop_packet_capture(TcpConnection *con) {
+void tcp_stop_capture(TcpConnection *con) {
 	int rc = stop_capture(con->capture_handle, &(con->capture_thread));
 	con->successful_pcap = (rc == -2);
+
+	char *json = build_tcp_connection_json(con);
+	char *file_path = alloc_json_path_str();
+	if (json == NULL || file_path == NULL) {
+		LOG(ERROR, "Cannot save capture to file.");
+		return;
+	}
+
+	int ret = append_string_to_file((const char *)json, file_path);
+	if (ret != 0) {
+		LOG(ERROR, "Error when dumping TcpConnection JSON to file.");
+	}
+
+	free(file_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -509,15 +489,13 @@ void tcp_info_dump(int fd) {
 }
 
 void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
-	// Instantiate local vars TcpConnection *con & TcpEvSockClosed
-	// *ev
+	// Instantiate local vars TcpConnection *con & TcpEvSockClosed *ev
 	TCP_EV_PRELUDE(TCP_EV_SOCK_CLOSED, TcpEvSockClosed);
 
 	ev->detected = detected;
 	push_event(con, (TcpEvent *)ev);
 
-	if (con->capture_handle != NULL) tcp_stop_packet_capture(con);
-	if (con->directory != NULL) tcp_dump_json(con);
+	if (con->capture_handle != NULL) tcp_stop_capture(con);
 
 	/* Cleanup */
 	free_connection(con);
@@ -581,8 +559,7 @@ void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
 	push_event(con, (TcpEvent *)ev);
 }
 void tcp_setsockopt(int fd, int return_value, int err, int level, int optname) {
-	// Instantiate local vars TcpConnection *con & TcpEvSetsockopt
-	// *ev
+	// Instantiate local vars TcpConnection *con & TcpEvSetsockopt *ev
 	TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
 
 	ev->level = level;

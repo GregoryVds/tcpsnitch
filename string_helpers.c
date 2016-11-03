@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "config.h"
 #include "lib.h"
 #include "logger.h"
@@ -109,29 +111,49 @@ char *alloc_addr_str(const struct sockaddr *addr) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// This function is called in LOG() thus it cannot itself call DEBUG()
-// otherwise it starts an infinite loop.
-char *alloc_abs_path_str(const char *file_name) {
-	const char *base_path = getenv(ENV_NETSPY_PATH);
-	if (base_path == NULL) base_path = NETSPY_DEFAULT_PATH;
-
-	int full_path_length = strlen(base_path) + strlen(file_name) + 2;
+char *alloc_concat_path(const char *path1, const char *path2) {
+	int full_path_length = strlen(path1) + strlen(path2) + 2;
 	char *full_path = (char *)malloc(sizeof(char) * full_path_length);
 	if (full_path == NULL) {
-		LOG(ERROR, "malloc() failed. Could not allocate path str.");
+		LOG(ERROR, "malloc() failed. Could not concat path.");
 		return NULL;
 	}
-	// We cannot use DEBUG on snprintf error.
-	snprintf(full_path, full_path_length, "%s/%s.", base_path, file_name);
+	snprintf(full_path, full_path_length, "%s/%s", path1, path2);
 	return full_path;
 }
 
-char *alloc_pcap_path_str() { return alloc_abs_path_str(NETSPY_PCAP_FILE); }
-char *alloc_json_path_str() { return alloc_abs_path_str(NETSPY_JSON_FILE); }
+char *alloc_append_int_to_path(const char *path1, int i) {
+	int path1_len = strlen(path1);
+	int i_len = get_int_len(i);
+	int full_path_length = path1_len+i_len+2; // Underscore + null byte
+	char *full_path = (char *)malloc(sizeof(char)*full_path_length);
+	if (full_path == NULL) {
+		LOG(ERROR, "malloc failed.");
+		return NULL;
+	}
+
+	strncpy(full_path, path1, path1_len);	
+	snprintf(full_path+path1_len, i_len+2, "_%d", i); 
+
+	LOG(INFO, "new path: %s", full_path);
+	return full_path;
+}
+
+char *alloc_pcap_path_str(TcpConnection *con) { 
+	return alloc_concat_path(con->directory, NETSPY_PCAP_FILE);
+}
+
+char *alloc_json_path_str(TcpConnection *con) { 
+	return alloc_concat_path(con->directory, NETSPY_JSON_FILE);
+}
+
+char *alloc_log_path_str(TcpConnection *con) { 
+	return alloc_concat_path(con->directory, NETSPY_LOG_FILE);
+}
 
 #define TIMESTAMP_WIDTH 10
-char *alloc_dirname_str(char *app_name) {
-	int app_name_length = strlen(app_name);
+char *alloc_con_dirname_str(TcpConnection *con) {
+	int app_name_length = strlen(con->app_name);
 	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
 	char *dirname = (char *)calloc(sizeof(char), n);
 	if (dirname == NULL) {
@@ -139,11 +161,20 @@ char *alloc_dirname_str(char *app_name) {
 		return NULL;
 	}
 
-	strncat(dirname, app_name, app_name_length);
+	strncat(dirname, con->app_name, app_name_length);
 	strncat(dirname, "_", 1);
 	snprintf(dirname + strlen(dirname), TIMESTAMP_WIDTH, "%lu",
 		 get_time_sec());
+
 	return dirname;
+}
+
+char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path) {
+	char *con_dirname = alloc_con_dirname_str(con);
+	if (con_dirname == NULL) return NULL;
+	char *ret = alloc_concat_path(netspy_path, con_dirname);
+	free(con_dirname);
+	return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -368,4 +399,4 @@ char *alloc_error_str(int err) {
 	return alloc_str;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////

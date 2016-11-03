@@ -136,7 +136,7 @@ typedef struct {
 	// To be freed
 	char *app_name;      // Application name with args.
 	char *cmdline;       // Cmdline (app name + args).
-	char *dirname;       // Directory name for log files.
+	char *directory;     // Directory for all logging purpose.
 	char *kernel;	// Kernel version.
 	TcpEventNode *head;  // Head for list of events.
 	TcpEventNode *tail;  // Tail for list of events.
@@ -154,11 +154,12 @@ typedef struct {
 } TcpConnection;
 
 const char *string_from_tcp_event_type(TcpEventType type);
+const char *get_netspy_path();
 
 // Packet capture
 
-void tcp_start_capture(int fd, const struct sockaddr *addr);
-void tcp_stop_capture(TcpConnection *con);
+void tcp_start_packet_capture(int fd, const struct sockaddr *addr);
+void tcp_stop_packet_capture(TcpConnection *con);
 
 // Events
 

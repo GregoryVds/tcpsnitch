@@ -21,5 +21,5 @@ time_t get_time_sec();
 unsigned long get_time_micros();
 
 long get_env_as_long(const char *env_var);
-
+int get_int_len(int i);
 #endif

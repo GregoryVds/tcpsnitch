@@ -1,17 +1,17 @@
+#include "logger.h"
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <errno.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/time.h>
-#include "logger.h"
+#include <sys/types.h>
+#include <unistd.h>
+#include "tcp_spy.h"
 
 #define LOG_TO_STDERR true
 #define LOG_TO_FILE true
-#define LOG_PATH "/home/greg/host/log.txt"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
 #define ANSI_COLOR_RED "\x1b[31m"
@@ -23,8 +23,10 @@
 // Instead we open it once, and let the system automatically close the stream
 // when the process ends. Not sure this is the best way?
 FILE *log_file = NULL;
-
+static bool should_log_to_file = false;
 const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_YELLOW, ANSI_COLOR_RED};
+
+//////////////////////////////////////////////////////////////////////////////
 
 static const char *log_level_str(LogLevel lvl);
 static unsigned long get_timestamp();
@@ -58,17 +60,7 @@ static void log_to_stream(LogLevel log_lvl, const char *formated_str,
 
 static void log_to_file(LogLevel log_lvl, const char *formated_str,
 			const char *file, int line) {
-	if (log_file == NULL) {
-		log_file = fopen(LOG_PATH, "a");
-		if (log_file == NULL) {
-			char str[1024];
-			snprintf(str, sizeof(str), "fopen() failed on %s. %s.",
-				 LOG_PATH, strerror(errno));
-			log_to_stream(ERROR, str, file, line, stderr);
-			return;
-		}
-	}
-
+	if (!should_log_to_file) return;
 	unsigned long time_micros = get_timestamp();
 	fprintf(log_file, "%s-pid(%d)-usec(%lu)-file(%s:%d): %s\n",
 		log_level_str(log_lvl), getpid(), time_micros, file, line,
@@ -76,6 +68,23 @@ static void log_to_file(LogLevel log_lvl, const char *formated_str,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void set_log_path(const char *path) {
+	// Close any previsouly set log file.
+	if (log_file != NULL) fclose(log_file);
+	should_log_to_file = false;
+
+	log_file = fopen(path, "a");
+	if (log_file == NULL) {
+		char str[1024];
+		snprintf(str, sizeof(str),
+			 "fopen() failed on %s. %s. Will not log to file.",
+			 path, strerror(errno));
+		log_to_stream(ERROR, str, __FILE__, __LINE__, stdout);
+		return;
+	}
+	should_log_to_file = true;
+}
 
 void logger(LogLevel log_lvl, const char *formated_str, const char *file,
 	    int line) {

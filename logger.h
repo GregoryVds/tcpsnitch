@@ -4,6 +4,7 @@
 typedef enum LogLevel { INFO, WARN, ERROR } LogLevel;
 
 void logger(LogLevel lvl, const char *formated_str, const char *file, int line);
+void set_log_path(const char *path);
 
 #define LOG(lvl, format, args...)                                          \
 	{                                                                  \
