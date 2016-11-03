@@ -1,12 +1,18 @@
 #ifndef LIB_H
 #define LIB_H
 
+#include <netinet/tcp.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>
+
+#define IF_NULL_ABORT(val, err...)  \
+	if (val == NULL) {          \
+		LOG(ERROR, ##err); \
+		return NULL;        \
+	}
 
 bool is_socket(int fd);
 bool is_inet_socket(int fd);

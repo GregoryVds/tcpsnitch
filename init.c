@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "config.h"
-#include "logger.h"
-#include "tcp_spy.h"
 #include "lib.h"
+#include "logger.h"
 #include "string_helpers.h"
+#include "tcp_spy.h"
 
-char *netspy_path = NULL;
-char *log_path = NULL;
+char *netspy_path = NULL;  // Directory where Netspy runs are recorded.
+char *log_path = NULL;     // Directory in Netspy path for this run of Netspy.
+
 long tcp_info_bytes_ival = 0;
 long tcp_info_time_ival = 0;
 
@@ -23,8 +24,6 @@ static bool initialized = false;
 ///////////////////////////////////////////////////////////////////////////////
 
 char *get_netspy_path() {
-	LOG(INFO, "Getting Netspy path...");
-
 	// Check NETSPY path in ENV
 	char *path = getenv(ENV_NETSPY_PATH);
 	if (path == NULL) {
@@ -37,12 +36,11 @@ char *get_netspy_path() {
 
 	// Make sure we can access it.
 	DIR *dir = opendir(path);
-	if (dir) {
-		closedir(dir);  // Dir exists. OK.
-		LOG(INFO, "Can open Netspy path.");
-	} else {
+	if (dir)  // Ok, we can access.
+		closedir(dir);
+	else {
 		LOG(ERROR, "Cannot access Netspy path. %s.", strerror(errno));
-		LOG(ERROR, "Unable to log data.");
+		LOG(ERROR, "Netspy is unable to log data.");
 		return NULL;
 	}
 
@@ -51,31 +49,37 @@ char *get_netspy_path() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/* For each Netspy run, we create a new log directory in the Netspy path. This
+ * directory is named as follows: [APPLICATION]_[TIMESTAMP]_[X] where X is an
+ * integer serving to differentiate names if the same application runs
+ * multiple times in the same second. For instance: "curl_147819596_0".
+ *
+ * This function returns the base name, without the _[X] part.
+ */
+
 #define TIMESTAMP_WIDTH 10
-char *alloc_base_log_dir_name_str() {
-	char *app_name = program_invocation_name;
+char *alloc_base_log_dir_name() {
+	char *app_name = program_invocation_name;  // Not portable?
 	int app_name_length = strlen(app_name);
 	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
-	char *dirname = (char *)calloc(sizeof(char), n);
-	if (dirname == NULL) {
+
+	char *base_name = (char *)calloc(sizeof(char), n);
+	if (base_name == NULL) {
 		LOG(ERROR, "calloc() failed.");
 		return NULL;
 	}
 
-	strncat(dirname, app_name, app_name_length);
-	strncat(dirname, "_", 1);
-	snprintf(dirname + strlen(dirname), TIMESTAMP_WIDTH, "%lu",
+	strncat(base_name, app_name, app_name_length);
+	strncat(base_name, "_", 1);
+	snprintf(base_name + strlen(base_name), TIMESTAMP_WIDTH, "%lu",
 		 get_time_sec());
 
-	return dirname;
+	return base_name;
 }
 
-#define TIMESTAMP_WIDTH 10
-static char *create_logs_dir() {
-	LOG(INFO, "Computing log path...");
-	
+char *alloc_base_log_dir_path() {
 	// Get base log dir name
-	char *base_name = alloc_base_log_dir_name_str();
+	char *base_name = alloc_base_log_dir_name();
 	if (base_name == NULL) {
 		LOG(ERROR, "alloc_base_log_dir_name_str() failed.");
 		return NULL;
@@ -88,47 +92,50 @@ static char *create_logs_dir() {
 		free(base_name);
 		return NULL;
 	}
-	
 	free(base_name);
 
-	// Find find first directory available starting from base_path and 
-	// concatening increasing integers.
-	int i = 0;
-	char *actual_path = alloc_append_int_to_path(base_path, i);
+	return base_path;
+}
 
-	bool is_free = false;
-	char *tmp;
-	while (is_free == false) {
-		DIR *dir = opendir(actual_path);
-		if (dir == NULL) {
-			if (errno == ENOENT)  // Does not exists.
-				is_free = true;
-			else {  // Failure for some other reason.
-				LOG(ERROR, "opendir() failed. %s.",
-				    strerror(errno));
-				return NULL;
-			}
-		} else {  // Dir exists, append next integer to path.
-			i++;
-			LOG(INFO,
-			    "Cannot use directory %s since it already "
-			    "exists. Trying by appending next integer (%d).",
-			    actual_path, i);
-			tmp = actual_path;
-			actual_path = alloc_append_int_to_path(base_path, i);
-			free(tmp);
-		}
+#define TIMESTAMP_WIDTH 10
+static char *create_logs_dir() {
+	// Get base path
+	char *base_path = alloc_base_log_dir_path();
+	if (base_path == NULL) {
+		LOG(ERROR, "alloc_base_log_dir_path() failed.");
+		return NULL;
 	}
 
-	// At this point, actual_path is a directory that does not exists so
-	// we can create it.
+	// Find first directory available starting from base_path and
+	// concatenating increasing integers.
+	int i = 0;
+	char *actual_path = alloc_append_int_to_path(base_path, i);
+	while (true) {
+		DIR *dir = opendir(actual_path);
+		if (dir == NULL && errno == ENOENT)
+			break;		 // Free.
+		else if (dir == NULL) {  // Failure for some other reason.
+			LOG(ERROR, "opendir() failed. %s.", strerror(errno));
+			return NULL;  // We abort.
+		}
+
+		// Dir exists, append next integer to path.
+		i++;
+		LOG(INFO,
+		    "Cannot use directory %s since it already exists. Trying "
+		    "by appending next integer (%d).",
+		    actual_path, i);
+		actual_path = alloc_append_int_to_path(base_path, i);
+	}
+	free(base_path);
+
+	// Finally, create dir at actual_path.
 	int ret = mkdir(actual_path, 0700);
 	if (ret == -1) {
 		LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
 		return NULL;
 	}
 
-	free(base_path);
 	return actual_path;
 }
 
@@ -166,21 +173,24 @@ void init_netspy() {
 	if (initialized) return;
 
 	LOG(INFO, "Initialization of Netspy library...");
- 	netspy_path = get_netspy_path();
+	initialized = true;
+	get_tcpinfo_ivals();
+
+	netspy_path = get_netspy_path();
 	if (netspy_path == NULL) {
-		LOG(ERROR, "No valid Netspy path. Won't log.");
-	} else {
-		log_path = create_logs_dir();
-		if (log_path == NULL) {
-			LOG(INFO, "Could not create logs directory. Won't log.");
-		} else {
-			LOG(INFO, "Logs directory created at %s.", log_path);
-		}
-		set_log_path(log_path);
+		LOG(ERROR, "get_nestpy_path() failed. Won't log to file.");
+		return;
 	}
 
-	get_tcpinfo_ivals();
-	initialized = true;
+	log_path = create_logs_dir();
+	if (log_path == NULL) {
+		LOG(INFO, "create_logs_dir() failed. Won't log to file.");
+	} else {
+		LOG(INFO, "Logs directory created at %s.", log_path);
+	}
+
+	// Configure log library.
+	set_log_path(log_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
