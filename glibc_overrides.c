@@ -110,7 +110,10 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
 	LOG(INFO, "connect() called on socket %d.", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_start_packet_capture(__fd, __addr);
+	if (is_tcp_socket(__fd)) {
+		tcp_start_packet_capture(
+		    __fd, (const struct sockaddr_storage *)__addr);
+	}
 
 	int ret = orig_connect(__fd, __addr, __len);
 	int err = errno;
@@ -347,16 +350,16 @@ int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	orig_bind_type orig_bind;
 	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
-	LOG(INFO, "bind() called"); 
+	LOG(INFO, "bind() called");
 
 	int ret = orig_bind(__fd, __addr, __len);
 	int err = errno;
-	
+
 	if (is_tcp_socket(__fd)) {
 		tcp_bind(__fd, ret, err, __addr, __len);
 		tcp_info_dump(__fd);
 	}
-	
+
 	return ret;
 }
 

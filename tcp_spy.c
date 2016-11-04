@@ -3,19 +3,22 @@
 #include "tcp_spy.h"
 #include <dirent.h>
 #include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include "config.h"
+#include "init.h"
 #include "lib.h"
 #include "logger.h"
 #include "packet_sniffer.h"
 #include "string_helpers.h"
 #include "tcp_spy_json.h"
-#include "init.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -63,12 +66,13 @@ static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 
 void tcp_dump_json(TcpConnection *con);
+int force_bind(int fd, TcpConnection *con, bool IPV6);
 
 ///////////////////////////////////////////////////////////////////////////////
 
 char *create_logs_dir(TcpConnection *con) {
 	// Log dir is [LOG_DIR]/[ID]
-	int n = get_int_len(con->id)+1;
+	int n = get_int_len(con->id) + 1;
 	char dirname[n];
 	snprintf(dirname, n, "%d", con->id);
 
@@ -236,6 +240,7 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 		long cur_bytes = con->bytes_sent + con->bytes_received;
 		long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
 		if (bytes_elapsed < tcp_info_bytes_ival) return false;
+
 	}
 
 	/* If we reach this point, no lower bound prevents from dumping */
@@ -288,7 +293,40 @@ void tcp_dump_json(TcpConnection *con) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+#define MIN_PORT 32768 // cat /proc/sys/net/ipv4/ip_local_port_range
+#define MAX_PORT 60999
 
+int force_bind(int fd, TcpConnection *con, bool IPV6) {
+	con->force_bind = true;
+	
+	int port;
+	for (port = MIN_PORT; port <= MAX_PORT; port++) {
+		int rc;
+		if (IPV6){
+			struct sockaddr_in6 a;
+			a.sin6_family = AF_INET6;
+			a.sin6_port = htons(port); // Any port
+			a.sin6_addr = in6addr_any;
+			rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
+		} else {
+			struct sockaddr_in a;
+			a.sin_family = AF_INET;
+			a.sin_port = htons(port);
+			a.sin_addr.s_addr = INADDR_ANY;	
+			rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
+		}
+		if (rc == 0) return 0; // Sucessfull bind. Stop.
+		if (rc != EADDRINUSE) { 
+			LOG(ERROR, "bind() failed. %s", strerror(errno));
+			return -1; // Unexpected error.
+		}
+		// Error is expected address in use. Try next port.
+	}
+
+	return 1; // Could not bind.
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
   ____  _   _ ____  _     ___ ____      _    ____ ___
  |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
@@ -299,7 +337,8 @@ void tcp_dump_json(TcpConnection *con) {
 */
 ///////////////////////////////////////////////////////////////////////////////
 
-void tcp_start_packet_capture(int fd, const struct sockaddr *addr) {
+void tcp_start_packet_capture(int fd,
+			      const struct sockaddr_storage *connect_addr) {
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) {
 		LOG(ERROR,
@@ -315,7 +354,21 @@ void tcp_start_packet_capture(int fd, const struct sockaddr *addr) {
 	}
 
 	char *pcap_file = alloc_pcap_path_str(con);
-	char *filter = build_capture_filter(addr);
+	if (con->bind_ev == NULL &&
+	    force_bind(fd, con, connect_addr->ss_family==AF_INET6) == -1) {
+		LOG(ERROR,
+		    "force_bind() failed. Will only filter on dest IP"
+		    " and dest PORT.");
+	}
+
+	char *filter;
+	if (con->bind_ev) {
+		filter =
+		    build_capture_filter(&(con->bind_ev->addr), connect_addr);
+	} else {
+		filter = build_capture_filter(NULL, connect_addr);
+	}
+
 	if (pcap_file == NULL || filter == NULL) {
 		LOG(ERROR, "Abort packet capture. NULL variable.");
 		return;
@@ -390,7 +443,6 @@ void tcp_info_dump(int fd) {
 
 	/* Check if should dump based on byte/time lower bounds */
 	if (!should_dump_tcp_info(con)) return;
-	LOG(INFO, "Dumping tcp_info.");
 
 	/* Get TCP_INFO */
 	struct tcp_info info;
@@ -517,10 +569,9 @@ void tcp_bind(int fd, int return_value, int err, const struct sockaddr *addr,
 	// Instantiate local vars TcpConnection *con & TcpEvBind *ev
 	TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
 
-	memcpy(&(ev->addr), addr, len);	
-	con->bind_ev = ev; 
+	memcpy(&(ev->addr), addr, len);
+	con->bind_ev = ev;
+	ev->force_bind = con->force_bind;
 
 	push_event(con, (TcpEvent *)ev);
 }
-
-

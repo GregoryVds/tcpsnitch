@@ -343,6 +343,7 @@ static json_t *build_bind_ev(TcpEvBind *ev) {
 
 	add(json_details, "addr", json_string(addr_str));
 	add(json_details, "port", json_string(port_str));
+	add(json_details, "force_bind", json_boolean(ev->force_bind));
 
 	free(addr_str);
 	free(port_str);

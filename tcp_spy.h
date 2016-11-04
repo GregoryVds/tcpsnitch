@@ -124,7 +124,8 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
-	struct sockaddr_storage addr;	
+	bool force_bind;
+	struct sockaddr_storage addr;
 } TcpEvBind;
 
 typedef struct TcpEventNode TcpEventNode;
@@ -152,6 +153,7 @@ typedef struct {
 	long last_info_dump_micros;  // Time of last info dump in microseconds.
 	long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
 	time_t timestamp;  // When tcp_spy started tracking the connection.
+	bool force_bind;
 	TcpEvBind *bind_ev;
 } TcpConnection;
 
@@ -159,7 +161,8 @@ const char *string_from_tcp_event_type(TcpEventType type);
 
 // Packet capture
 
-void tcp_start_packet_capture(int fd, const struct sockaddr *addr);
+void tcp_start_packet_capture(int fd,
+			      const struct sockaddr_storage *connect_addr);
 void tcp_stop_packet_capture(TcpConnection *con);
 
 // Events

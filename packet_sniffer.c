@@ -164,16 +164,34 @@ int stop_capture(pcap_t *pcap, pthread_t *thread) {
 	return pcount;
 }
 
-char *build_capture_filter(const struct sockaddr *addr) {
-	const struct sockaddr_storage *addr_sto;
-	addr_sto = (const struct sockaddr_storage *)addr;
-	char *addr_str = alloc_host_str(addr_sto);
-	char *port_str = alloc_port_str(addr_sto);
+char *build_capture_filter(const struct sockaddr_storage *bound_addr,
+			   const struct sockaddr_storage *connect_addr) {
+	char *bound_port_str = NULL;
+
+	if (bound_addr != NULL) {
+		bound_port_str = alloc_port_str(bound_addr);
+	}
+
+	char *connect_addr_str = alloc_host_str(connect_addr);
+	char *connect_port_str = alloc_port_str(connect_addr);
+	// TODO: Handle NULL values from alloc
+	
 	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", addr_str,
-		 port_str);
-	free(addr_str);
-	free(port_str);
+
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", connect_addr_str,
+		 connect_port_str);
+
+	if (bound_addr != NULL) {
+		int n = strlen(filter);
+		snprintf(filter + n, FILTER_SIZE - n,
+			 " and port %s", bound_port_str);
+	}
+
+	free(bound_port_str);
+	free(connect_addr_str);
+	free(connect_port_str);
+
 	LOG(INFO, "Starting capture with filter: '%s'", filter);
+
 	return filter;
 }
