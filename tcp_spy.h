@@ -137,10 +137,10 @@ typedef struct {
 	char *app_name;      // Application name with args.
 	char *cmdline;       // Cmdline (app name + args).
 	char *kernel;	// Kernel version.
+	char *directory;     // Directory for all logging purpose.
 	TcpEventNode *head;  // Head for list of events.
 	TcpEventNode *tail;  // Tail for list of events.
 	// Others
-	char *directory;     // Directory for all logging purpose.
 	int id;			       // Connection id, starting at 0.
 	int events_count;	      // List of events size.
 	unsigned long bytes_sent;      // Total bytes sent.

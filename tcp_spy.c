@@ -48,6 +48,7 @@ static int connections_count = 0;
 ///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
+static char *create_logs_dir(TcpConnection *con);
 static TcpConnection *alloc_connection();
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_connection(TcpConnection *con);
@@ -62,8 +63,29 @@ static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 
 void tcp_dump_json(TcpConnection *con);
+
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+
+char *create_logs_dir(TcpConnection *con) {
+	// Log dir is [LOG_DIR]/[ID]
+	int n = get_int_len(con->id)+1;
+	char dirname[n];
+	snprintf(dirname, n, "%d", con->id);
+
+	char *dir_path = alloc_concat_path(log_path, dirname);
+	if (dir_path == NULL) {
+		LOG(ERROR, "alloc_concat_path() failed.");
+		return NULL;
+	}
+
+	int ret = mkdir(dir_path, 0700);
+	if (ret == -1) {
+		LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
+		return NULL;
+	}
+
+	return dir_path;
+}
 
 static TcpConnection *alloc_connection() {
 	TcpConnection *con = (TcpConnection *)calloc(sizeof(TcpConnection), 1);
@@ -75,10 +97,10 @@ static TcpConnection *alloc_connection() {
 	con->id = connections_count;
 	con->cmdline = alloc_cmdline_str(&(con->app_name));
 	con->timestamp = get_time_sec();
-	con->directory = log_path;
 	con->kernel = alloc_kernel_str();
-	connections_count++;
+	con->directory = create_logs_dir(con);
 
+	connections_count++;
 	return con;
 }
 
@@ -150,6 +172,7 @@ static void free_connection(TcpConnection *con) {
 	free(con->app_name);
 	free(con->cmdline);
 	free(con->kernel);
+	free(con->directory);
 	free(con);
 }
 
@@ -240,6 +263,11 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void tcp_dump_json(TcpConnection *con) {
+	if (con->directory == NULL) {
+		LOG(ERROR, "Cannot dump JSON to file. Con directory is NULL.");
+		return;
+	}
+
 	char *json = build_tcp_connection_json(con);
 	char *json_file = alloc_json_path_str(con);
 	if (json == NULL || json_file == NULL) {
@@ -271,8 +299,7 @@ void tcp_start_packet_capture(int fd, const struct sockaddr *addr) {
 	TcpConnection *con = get_tcp_connection(fd);
 	if (con == NULL) {
 		LOG(ERROR,
-		    "Abort packet capture. Cannot find related"
-		    " connection.");
+		    "Abort packet capture. Cannot find related connection.");
 		return;
 	}
 

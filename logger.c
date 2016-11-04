@@ -12,6 +12,7 @@
 
 #define LOG_TO_STDERR true
 #define LOG_TO_FILE true
+#define LOG_FILE "log.txt"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
 #define ANSI_COLOR_RED "\x1b[31m"
@@ -73,6 +74,7 @@ void set_log_path(const char *path) {
 	// Close any previsouly set log file.
 	if (log_file != NULL) fclose(log_file);
 	should_log_to_file = false;
+
 
 	log_file = fopen(path, "a");
 	if (log_file == NULL) {

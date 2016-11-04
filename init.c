@@ -190,7 +190,9 @@ void init_netspy() {
 	}
 
 	// Configure log library.
-	set_log_path(log_path);
+	char *log_file_path = alloc_concat_path(log_path, NETSPY_LOG_FILE); 
+	set_log_path(log_file_path);
+	free(log_file_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
