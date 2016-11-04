@@ -30,7 +30,7 @@ const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_YELLOW, ANSI_COLOR_RED};
 //////////////////////////////////////////////////////////////////////////////
 
 static const char *log_level_str(LogLevel lvl);
-static unsigned long get_timestamp();
+static unsigned long get_timestamp(void);
 static void log_to_stream(LogLevel log_lvl, const char *formated_str,
 			  const char *file, int line, FILE *stream);
 static void log_to_file(LogLevel log_lvl, const char *formated_str,
@@ -43,7 +43,7 @@ static const char *log_level_str(LogLevel lvl) {
 	return strings[lvl];
 }
 
-static unsigned long get_timestamp() {
+static unsigned long get_timestamp(void) {
 	struct timeval tv;
 	int ret = gettimeofday(&tv, NULL);
 	if (ret == -1) return 0;
@@ -54,7 +54,7 @@ static unsigned long get_timestamp() {
 
 static void log_to_stream(LogLevel log_lvl, const char *formated_str,
 			  const char *file, int line, FILE *stream) {
-	fprintf(stderr, "%s%s-%d(%s:%d): %s%s\n", colors[log_lvl],
+	fprintf(stream, "%s%s-%d(%s:%d): %s%s\n", colors[log_lvl],
 		log_level_str(log_lvl), getpid(), file, line, formated_str,
 		ANSI_COLOR_RESET);
 }

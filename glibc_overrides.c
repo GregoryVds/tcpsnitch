@@ -215,7 +215,7 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_send(__fd, ret, err, __n, __flags);
+		tcp_send(__fd, (int) ret, err, __n, __flags);
 		tcp_info_dump(__fd);
 	}
 

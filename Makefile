@@ -23,8 +23,11 @@ ANGULAR=https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js
 default: netspy
 
 netspy: $(HEADERS) $(SOURCES)
-	$(CC) -g -Wall -fPIC -shared -Wl,-Bsymbolic -Wl,-soname,$(SONAME) \
-		-o $(REAL_NAME) $(SOURCES) $(DEPS) 
+	$(CC) -g -Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -fPIC \
+		-Wpointer-arith -Wcast-align -Wstrict-prototypes \
+		-Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-enum \
+		-Wunreachable-code -shared -Wl,-Bsymbolic \
+		-Wl,-soname,$(SONAME) -o $(REAL_NAME) $(SOURCES) $(DEPS) 
 	ln -sf $(REAL_NAME) $(SONAME)
 	ln -sf $(REAL_NAME) $(LINKER_NAME)
 

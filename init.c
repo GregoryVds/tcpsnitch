@@ -13,7 +13,7 @@
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
-char *netspy_path = NULL;  // Directory where Netspy runs are recorded.
+const char *netspy_path = NULL;  // Directory where Netspy runs are recorded.
 char *log_path = NULL;     // Directory in Netspy path for this run of Netspy.
 
 long tcp_info_bytes_ival = 0;
@@ -23,9 +23,9 @@ static bool initialized = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char *get_netspy_path() {
+const char *get_netspy_path(void) {
 	// Check NETSPY path in ENV
-	char *path = getenv(ENV_NETSPY_PATH);
+	const char *path = getenv(ENV_NETSPY_PATH);
 	if (path == NULL) {
 		path = NETSPY_DEFAULT_PATH;
 		LOG(INFO, "Netspy path not specified in %s. Defaults to %s.",
@@ -58,7 +58,7 @@ char *get_netspy_path() {
  */
 
 #define TIMESTAMP_WIDTH 10
-char *alloc_base_log_dir_name() {
+char *alloc_base_log_dir_name(void) {
 	char *app_name = program_invocation_name;  // Not portable?
 	int app_name_length = strlen(app_name);
 	int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
@@ -77,7 +77,7 @@ char *alloc_base_log_dir_name() {
 	return base_name;
 }
 
-char *alloc_base_log_dir_path() {
+char *alloc_base_log_dir_path(void) {
 	// Get base log dir name
 	char *base_name = alloc_base_log_dir_name();
 	if (base_name == NULL) {
@@ -98,7 +98,7 @@ char *alloc_base_log_dir_path() {
 }
 
 #define TIMESTAMP_WIDTH 10
-static char *create_logs_dir() {
+static char *create_logs_dir(void) {
 	// Get base path
 	char *base_path = alloc_base_log_dir_path();
 	if (base_path == NULL) {
@@ -158,7 +158,7 @@ static long get_tcpinfo_ival(const char *env_var) {
 	return (t < 0) ? 0 : t;
 }
 
-static void get_tcpinfo_ivals() {
+static void get_tcpinfo_ivals(void) {
 	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
 	LOG(WARN, "tcp_info min bytes interval set to %lu.",
 	    tcp_info_bytes_ival);
@@ -169,7 +169,7 @@ static void get_tcpinfo_ivals() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void init_netspy() {
+void init_netspy(void) {
 	if (initialized) return;
 
 	LOG(INFO, "Initialization of Netspy library...");

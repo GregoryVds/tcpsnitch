@@ -20,7 +20,7 @@ char *alloc_pcap_path_str(TcpConnection *con);
 char *alloc_json_path_str(TcpConnection *con);
 
 char *alloc_cmdline_str(char **app_name);
-char *alloc_kernel_str();
+char *alloc_kernel_str(void);
 
 char *alloc_sock_domain_str(int domain);
 char *alloc_sock_type_str(int type);

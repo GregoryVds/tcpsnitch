@@ -203,7 +203,7 @@ char *alloc_cmdline_str(char **app_name) {
 		return cmdline;
 	}
 
-	for (i = 0; i < rc - 1; i++) {
+	for (i = 0; i < (int)rc - 1; i++) {
 		if (i < app_name_length) (*app_name)[i] = cmdline[i];
 		if (cmdline[i] == '\0') cmdline[i] = ' ';
 	}
@@ -212,7 +212,7 @@ char *alloc_cmdline_str(char **app_name) {
 }
 
 #define KERNEL_WIDTH 30
-char *alloc_kernel_str() {
+char *alloc_kernel_str(void) {
 	FILE *fp;
 	if ((fp = popen("uname -r", "r")) == NULL) {
 		LOG(ERROR, "open() failed. %s.", strerror(errno));

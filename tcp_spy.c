@@ -49,7 +49,7 @@ static int connections_count = 0;
 
 /* CREATING & FREEING OBJECTS */
 static char *create_logs_dir(TcpConnection *con);
-static TcpConnection *alloc_connection();
+static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_connection(TcpConnection *con);
 static void free_events_list(TcpEventNode *head);
@@ -87,7 +87,7 @@ char *create_logs_dir(TcpConnection *con) {
 	return dir_path;
 }
 
-static TcpConnection *alloc_connection() {
+static TcpConnection *alloc_connection(void) {
 	TcpConnection *con = (TcpConnection *)calloc(sizeof(TcpConnection), 1);
 	if (con == NULL) {
 		LOG(ERROR, "calloc() failed. Cannot alloc TcpConnection.");

@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <pthread.h>
-#include <string.h>
-#include <pcap.h>
 #include "packet_sniffer.h"
-#include "lib.h"
+#include <pcap.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 #include "config.h"
-#include "string_helpers.h"
+#include "lib.h"
 #include "logger.h"
+#include "string_helpers.h"
 
 void *capture_thread(void *params);
 
@@ -15,16 +15,16 @@ void *capture_thread(void *params);
  *
  * Returns a pcap_t * on success, or NULL in case of error. */
 
-pcap_t *get_capture_handle() {
+pcap_t *get_capture_handle(void) {
 	char *dev = getenv(ENV_NETSPY_DEV);
 	char err_buf[PCAP_ERRBUF_SIZE];
 
 	if (dev == NULL) {
 		// NETSPAY_DEV was not set, get default device.
 		LOG(WARN,
-		      "Env variable %s was not set for capture. Use "
-		      "default device instead.",
-		      ENV_NETSPY_DEV);
+		    "Env variable %s was not set for capture. Use "
+		    "default device instead.",
+		    ENV_NETSPY_DEV);
 		dev = pcap_lookupdev(err_buf);
 		if (dev == NULL) {
 			LOG(ERROR, "pcap_lookupdev() failed. %s.", err_buf);
@@ -68,7 +68,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	if (pcap_compile(handle, &comp_filter, filter_str, 1,
 			 PCAP_NETMASK_UNKNOWN) < 0) {
 		LOG(ERROR, "No capture. pcap_compile() failed. %s.",
-		      pcap_geterr(handle));
+		    pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
 	}
@@ -76,7 +76,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	// Apply filter
 	if (pcap_setfilter(handle, &comp_filter) < 0) {
 		LOG(ERROR, "No capture. pcap_setfilter() failed. %s.",
-		      pcap_geterr(handle));
+		    pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
 	}
@@ -86,7 +86,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	pcap_dumper_t *dump = pcap_dump_open(handle, path);
 	if (dump == NULL) {
 		LOG(ERROR, "No capture. pcap_dump_open() failed. %s.",
-		      pcap_geterr(handle));
+		    pcap_geterr(handle));
 		pcap_close(handle);
 		return NULL;
 	}
@@ -100,7 +100,7 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	int rc = pthread_create(thread, NULL, capture_thread, args);
 	if (rc) {
 		LOG(WARN, "No capture. pthread_create_failed(). %s.",
-		      strerror(rc));
+		    strerror(rc));
 		pcap_close(handle);
 		return NULL;
 	}
@@ -125,7 +125,7 @@ void *capture_thread(void *params) {
 
 	if (*pcount == -1) {
 		LOG(ERROR, "pcap_loop() failed. %s.",
-		      pcap_geterr(args->handle));
+		    pcap_geterr(args->handle));
 	}
 
 	/* The documentation states that pcap_loop() returns -2 if the loop
@@ -165,7 +165,8 @@ int stop_capture(pcap_t *pcap, pthread_t *thread) {
 }
 
 char *build_capture_filter(const struct sockaddr *addr) {
-	struct sockaddr_storage *addr_sto = (struct sockaddr_storage *)addr;
+	const struct sockaddr_storage *addr_sto;
+	addr_sto = (const struct sockaddr_storage *)addr;
 	char *addr_str = alloc_host_str(addr_sto);
 	char *port_str = alloc_port_str(addr_sto);
 	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
