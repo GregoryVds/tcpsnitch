@@ -34,6 +34,7 @@ static json_t *build_info_dump_ev(TcpEvInfoDump *ev);
 static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 static json_t *build_shutdown_ev(TcpEvShutdown *ev);
 static json_t *build_listen_ev(TcpEvListen *ev);
+static json_t *build_bind_ev(TcpEvBind *ev);
 
 static json_t *build_send_flags(TcpSendFlags *flags);
 static json_t *build_recv_flags(TcpRecvFlags *flags);
@@ -129,6 +130,9 @@ static json_t *build_event(TcpEvent *ev) {
 		case TCP_EV_LISTEN:
 			r = build_listen_ev((TcpEvListen *)ev);
 			break;
+		case TCP_EV_BIND:
+			r = build_bind_ev((TcpEvBind *)ev);
+			break;
 	}
 	return r;
 }
@@ -157,7 +161,7 @@ static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 ///////////////////////////////////////////////////////////////////////////////
 
 static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	char *dom_str = alloc_sock_domain_str(ev->domain);
 	char *type_str = alloc_sock_type_str(ev->type);
@@ -175,7 +179,7 @@ static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 }
 
 static json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "detected", json_boolean(ev->detected));
 
@@ -183,7 +187,7 @@ static json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
 }
 
 static json_t *build_send_ev(TcpEvSend *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_send_flags(&(ev->flags)));
@@ -192,7 +196,7 @@ static json_t *build_send_ev(TcpEvSend *ev) {
 }
 
 static json_t *build_sendto_ev(TcpEvSendto *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	char *addr_str = alloc_host_str(&(ev->addr));
 	char *port_str = alloc_port_str(&(ev->addr));
@@ -209,7 +213,7 @@ static json_t *build_sendto_ev(TcpEvSendto *ev) {
 }
 
 static json_t *build_recv_ev(TcpEvRecv *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_recv_flags(&(ev->flags)));
@@ -218,7 +222,7 @@ static json_t *build_recv_ev(TcpEvRecv *ev) {
 }
 
 static json_t *build_recvfrom_ev(TcpEvRecvfrom *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	char *addr_str = alloc_host_str(&(ev->addr));
 	char *port_str = alloc_port_str(&(ev->addr));
@@ -235,7 +239,7 @@ static json_t *build_recvfrom_ev(TcpEvRecvfrom *ev) {
 }
 
 static json_t *build_connect_ev(TcpEvConnect *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	char *addr_str = alloc_host_str(&(ev->addr));
 	char *port_str = alloc_port_str(&(ev->addr));
@@ -250,7 +254,7 @@ static json_t *build_connect_ev(TcpEvConnect *ev) {
 }
 
 static json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	struct tcp_info i = ev->info;
 
@@ -301,7 +305,7 @@ static json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
 }
 
 static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	struct protoent *protocol = getprotobynumber(ev->level);
 	char *optname_str = alloc_sock_optname_str(ev->optname);
@@ -315,7 +319,7 @@ static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev) {
 }
 
 static json_t *build_shutdown_ev(TcpEvShutdown *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "shut_rd", json_boolean(ev->shut_rd));
 	add(json_details, "shut_wr", json_boolean(ev->shut_wr));
@@ -324,9 +328,24 @@ static json_t *build_shutdown_ev(TcpEvShutdown *ev) {
 }
 
 static json_t *build_listen_ev(TcpEvListen *ev) {
-	BUILD_EV_PRELUDE()  // Expose local vars json_ev & json_details
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "backlog", json_integer(ev->backlog));
+
+	return json_ev;
+}
+
+static json_t *build_bind_ev(TcpEvBind *ev) {
+	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+	char *addr_str = alloc_host_str(&(ev->addr));
+	char *port_str = alloc_port_str(&(ev->addr));
+
+	add(json_details, "addr", json_string(addr_str));
+	add(json_details, "port", json_string(port_str));
+
+	free(addr_str);
+	free(port_str);
 
 	return json_ev;
 }

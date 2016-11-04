@@ -152,6 +152,10 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 			success = (return_value != -1);
 			ev = (TcpEvent *)malloc(sizeof(TcpEvListen));
 			break;
+		case TCP_EV_BIND:
+			success = (return_value != -1);
+			ev = (TcpEvent *)malloc(sizeof(TcpEvBind));
+			break;
 	}
 
 	if (ev == NULL) {
@@ -350,7 +354,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 	    "TCP_EV_SOCK_OPENED", "TCP_EV_SOCK_CLOSED", "TCP_EV_SEND",
 	    "TCP_EV_SENDTO",      "TCP_EV_RECV",	"TCP_EV_RECVFROM",
 	    "TCP_EV_CONNECT",     "TCP_EV_INFO_DUMP",   "TCP_EV_SETSOCKOPT",
-	    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN",      "TCP_EV_PRECONNECT"};
+	    "TCP_EV_SHUTDOWN",    "TCP_EV_LISTEN",      "TCP_EV_BIND"};
 	return strings[type];
 }
 
@@ -507,3 +511,16 @@ void tcp_listen(int fd, int return_value, int err, int backlog) {
 
 	push_event(con, (TcpEvent *)ev);
 }
+
+void tcp_bind(int fd, int return_value, int err, const struct sockaddr *addr,
+	      socklen_t len) {
+	// Instantiate local vars TcpConnection *con & TcpEvBind *ev
+	TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
+
+	memcpy(&(ev->addr), addr, len);	
+	con->bind_ev = ev; 
+
+	push_event(con, (TcpEvent *)ev);
+}
+
+

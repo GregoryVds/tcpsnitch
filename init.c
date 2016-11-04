@@ -160,10 +160,10 @@ static long get_tcpinfo_ival(const char *env_var) {
 
 static void get_tcpinfo_ivals(void) {
 	tcp_info_bytes_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_BYTES_IVAL);
-	LOG(WARN, "tcp_info min bytes interval set to %lu.",
+	LOG(INFO, "tcp_info min bytes interval set to %lu.",
 	    tcp_info_bytes_ival);
 	tcp_info_time_ival = get_tcpinfo_ival(ENV_NETSPY_TCPINFO_MICROS_IVAL);
-	LOG(WARN, "tcp_info min microseconds interval set to %lu.",
+	LOG(INFO, "tcp_info min microseconds interval set to %lu.",
 	    tcp_info_time_ival);
 }
 

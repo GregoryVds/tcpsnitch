@@ -30,24 +30,24 @@
 
 #define _GNU_SOURCE
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <dlfcn.h>
-#include <string.h>
-#include <poll.h>
-#include <sys/select.h>
-#include <sys/types.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <stdbool.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include "lib.h"
-#include "tcp_spy.h"
-#include "string_helpers.h"
-#include "logger.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include "init.h"
+#include "lib.h"
+#include "logger.h"
+#include "string_helpers.h"
+#include "tcp_spy.h"
 
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
@@ -63,14 +63,14 @@
  sys/socket.h - Internet Protocol family
 
  functions: socket(), connect(), shutdown(), listen(), getsockopt(),
- setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg().
+ setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
+ bind().
 
 */
 
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
-
 
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
 
@@ -86,7 +86,7 @@ int socket(int __domain, int __type, int __protocol) {
 	free(domain);
 
 	int fd = orig_socket(__domain, __type, __protocol);
-	
+
 	if (is_tcp_socket(fd)) {
 		tcp_sock_opened(fd, __domain, __type, __protocol);
 		tcp_info_dump(fd);
@@ -215,7 +215,7 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
 	int err = errno;
 
 	if (is_tcp_socket(__fd)) {
-		tcp_send(__fd, (int) ret, err, __n, __flags);
+		tcp_send(__fd, (int)ret, err, __n, __flags);
 		tcp_info_dump(__fd);
 	}
 
@@ -230,7 +230,7 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
 
 ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
 	init_netspy();
-	
+
 	orig_recv_type orig_recv;
 	orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
 	LOG(INFO, "recv() called on socket %d.", __fd);
@@ -336,6 +336,30 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 	return orig_recvmsg(__fd, __message, __flags);
 }
 
+/* Give the socket FD the local address ADDR (which is LEN bytes long).  */
+
+typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
+			      socklen_t __len);
+
+int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
+	init_netspy();
+
+	orig_bind_type orig_bind;
+	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
+
+	LOG(INFO, "bind() called"); 
+
+	int ret = orig_bind(__fd, __addr, __len);
+	int err = errno;
+	
+	if (is_tcp_socket(__fd)) {
+		tcp_bind(__fd, ret, err, __addr, __len);
+		tcp_info_dump(__fd);
+	}
+	
+	return ret;
+}
+
 /*
   _   _ _   _ ___ ____ _____ ____       _    ____ ___
  | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
@@ -378,7 +402,7 @@ typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
 
 ssize_t write(int __fd, const void *__buf, size_t __n) {
 	init_netspy();
-	
+
 	orig_write_type orig_write;
 	orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
 	if (is_inet_socket(__fd)) LOG(INFO, "write() on socket %d", __fd);
@@ -467,7 +491,7 @@ typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
 
 ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
 	init_netspy();
-	
+
 	orig_readv_type orig_readv;
 	orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
 

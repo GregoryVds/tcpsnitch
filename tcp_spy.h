@@ -5,12 +5,12 @@
 #ifndef TCP_SPY_H
 #define TCP_SPY_H
 
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <stdio.h>
 #include <netinet/tcp.h>
 #include <pcap/pcap.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <time.h>
 
 typedef enum TcpEventType {
 	TCP_EV_SOCK_OPENED,
@@ -23,7 +23,8 @@ typedef enum TcpEventType {
 	TCP_EV_INFO_DUMP,
 	TCP_EV_SETSOCKOPT,
 	TCP_EV_SHUTDOWN,
-	TCP_EV_LISTEN
+	TCP_EV_LISTEN,
+	TCP_EV_BIND
 } TcpEventType;
 
 typedef struct {
@@ -123,8 +124,8 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
-	char *filter;
-} TcpEvCaptureStart;
+	struct sockaddr_storage addr;	
+} TcpEvBind;
 
 typedef struct TcpEventNode TcpEventNode;
 struct TcpEventNode {
@@ -151,6 +152,7 @@ typedef struct {
 	long last_info_dump_micros;  // Time of last info dump in microseconds.
 	long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
 	time_t timestamp;  // When tcp_spy started tracking the connection.
+	TcpEvBind *bind_ev;
 } TcpConnection;
 
 const char *string_from_tcp_event_type(TcpEventType type);
@@ -176,5 +178,6 @@ void tcp_info_dump(int fd);
 void tcp_setsockopt(int fd, int return_value, int err, int level, int optname);
 void tcp_shutdown(int fd, int return_value, int err, int how);
 void tcp_listen(int fd, int return_value, int err, int backlog);
-
+void tcp_bind(int fd, int return_value, int err, const struct sockaddr *addr,
+	      socklen_t len);
 #endif
