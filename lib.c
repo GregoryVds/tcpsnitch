@@ -17,7 +17,8 @@ bool is_socket(int fd) {
 	struct stat statbuf;
 	int ret = fstat(fd, &statbuf);
 	if (ret == -1) {
-		LOG(ERROR, "fstat() failed. Assume fd is not a socket.");
+		LOG(ERROR, "fstat() failed. %s.", strerror(errno));
+		LOG(ERROR, "Assume fd is not a socket.");
 		return false;
 	}
 	return S_ISSOCK(statbuf.st_mode);

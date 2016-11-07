@@ -86,6 +86,10 @@ int socket(int __domain, int __type, int __protocol) {
 	free(domain);
 
 	int fd = orig_socket(__domain, __type, __protocol);
+	if (fd == -1) {
+		LOG(INFO, "socket() failed. %s.", strerror(errno));
+		return -1;
+	}
 
 	if (is_tcp_socket(fd)) {
 		tcp_sock_opened(fd, __domain, __type, __protocol);

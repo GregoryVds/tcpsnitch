@@ -13,7 +13,7 @@ LINKER_NAME=libnetspy.so
 SONAME=$(LINKER_NAME).$(MAJOR_VERSION)
 REAL_NAME=$(SONAME).$(MINOR_VERSION)
 
-ENV=NETSPY_PATH=~/host \
+ENV=NETSPY_PATH=/home/greg/host \
     NETSPY_TCPINFO_BYTES_IVAL=5000 \
     NETSPY_TCPINFO_MICROS_IVAL=0 \
     LD_PRELOAD=./$(LINKER_NAME) 
@@ -42,3 +42,5 @@ curl: netspy
 angular: netspy
 	$(ENV) curl -s $(ANGULAR) > /dev/null
 
+tests: netspy
+	$(ENV) packetdrill ../tests/test.pdrill
