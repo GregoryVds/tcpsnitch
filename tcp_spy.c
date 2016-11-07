@@ -383,7 +383,7 @@ void tcp_start_packet_capture(int fd,
 }
 
 void tcp_stop_packet_capture(TcpConnection *con) {
-	stop_capture(con->capture_switch, 1);
+	stop_capture(con->capture_switch, con->rtt*2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

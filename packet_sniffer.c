@@ -184,7 +184,8 @@ error:
 void *delayed_stop_thread(void *params) {
 	LOG(INFO, "Delayed stop thread started.");
 	DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
-	sleep(args->delay_ms);
+	struct timespec ns = {0, args->delay_ms*1000000};
+	nanosleep(&ns, NULL);
 	*(args->switch_flag) = false;
 	LOG(INFO, "Turned off capture switch.");
 	return NULL;
