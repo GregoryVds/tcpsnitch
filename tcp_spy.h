@@ -1,4 +1,5 @@
 /* tcp_spy.h exposes a set of functions to record all "events" that happened
+	
  * for a given TCP connection.
  */
 
@@ -147,14 +148,14 @@ typedef struct {
 	int events_count;	      // List of events size.
 	unsigned long bytes_sent;      // Total bytes sent.
 	unsigned long bytes_received;  // Total bytes received.
-	pthread_t capture_thread;      // pthread used for capturing packets.
-	pcap_t *capture_handle;	// Pcap capture handle.
 	bool successful_pcap;	// Successfully captured packets on handle.
 	long last_info_dump_micros;  // Time of last info dump in microseconds.
 	long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
 	time_t timestamp;  // When tcp_spy started tracking the connection.
 	bool force_bind;
 	TcpEvBind *bind_ev;
+	int rtt;
+	bool *capture_switch;
 } TcpConnection;
 
 const char *string_from_tcp_event_type(TcpEventType type);

@@ -393,7 +393,6 @@ int close(int __fd) {
 	/* Perform syscall */
 	int ret = orig_close(__fd);
 	int err = errno;
-
 	if (is_tcp) tcp_sock_closed(__fd, ret, err, true);
 
 	return ret;

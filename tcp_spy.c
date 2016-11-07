@@ -316,8 +316,10 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
 			rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
 		}
 		if (rc == 0) return 0; // Sucessfull bind. Stop.
-		if (rc != EADDRINUSE) { 
-			LOG(ERROR, "bind() failed. %s", strerror(errno));
+	
+		if (errno != EADDRINUSE) { 
+			LOG(ERROR, "error code %d", errno);
+			LOG(ERROR, "bind() failed. %s.", strerror(errno));
 			return -1; // Unexpected error.
 		}
 		// Error is expected address in use. Try next port.
@@ -374,16 +376,14 @@ void tcp_start_packet_capture(int fd,
 		return;
 	}
 
-	con->capture_handle =
-	    start_capture(filter, pcap_file, &(con->capture_thread));
+	con->capture_switch = start_capture(filter, pcap_file);
 
 	free(filter);
 	free(pcap_file);
 }
 
 void tcp_stop_packet_capture(TcpConnection *con) {
-	int rc = stop_capture(con->capture_handle, &(con->capture_thread));
-	con->successful_pcap = (rc == -2);
+	stop_capture(con->capture_switch, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -453,11 +453,14 @@ void tcp_info_dump(int fd) {
 	TcpEvInfoDump *ev =
 	    (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, err);
 	FAIL_IF_NULL(ev, TCP_EV_INFO_DUMP);
+	memcpy(&(ev->info), &info, sizeof(info));
 
 	/* Register time/bytes of last dump */
-	memcpy(&(ev->info), &info, sizeof(info));
 	con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
 	con->last_info_dump_micros = get_time_micros();
+
+	/* Update con RTT */
+	con->rtt = info.tcpi_rtt; 
 
 	push_event(con, (TcpEvent *)ev);
 }
@@ -470,7 +473,7 @@ void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	ev->detected = detected;
 	push_event(con, (TcpEvent *)ev);
 
-	if (con->capture_handle != NULL) tcp_stop_packet_capture(con);
+	if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
 	if (con->directory != NULL) tcp_dump_json(con);
 
 	/* Cleanup */

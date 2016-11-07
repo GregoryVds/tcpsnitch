@@ -3,12 +3,14 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "config.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 
 void *capture_thread(void *params);
+void *delayed_stop_thread(void *params);
 
 /* Return handle to capture handle. If env var NETSPY_DEV is not specified,
  * then return the default device obtained with pcap_lookupdev().
@@ -20,28 +22,18 @@ pcap_t *get_capture_handle(void) {
 	char err_buf[PCAP_ERRBUF_SIZE];
 
 	if (dev == NULL) {
-		// NETSPAY_DEV was not set, get default device.
 		LOG(WARN,
-		    "Env variable %s was not set for capture. Use "
-		    "default device instead.",
+		    "Env variable %s was not set. Capture on all interfaces.",
 		    ENV_NETSPY_DEV);
-		dev = pcap_lookupdev(err_buf);
-		if (dev == NULL) {
-			LOG(ERROR, "pcap_lookupdev() failed. %s.", err_buf);
-			LOG(WARN, "Capture on all interfaces.");
-		}
 	}
 
 	// Set err_buf to empty string to get warnings.
 	err_buf[0] = 0;
 	pcap_t *handle = pcap_open_live(dev, BUFSIZ, 0, 0, err_buf);
-	if (err_buf[0] != 0) {
-		LOG(WARN, "pcap_open_live() warning. %s.", err_buf);
-	}
 
-	if (handle == NULL) {
-		LOG(ERROR, "pcap_open_live() failed. %s.", err_buf);
-	}
+	if (err_buf[0] != 0)
+		LOG(WARN, "pcap_open_live() warning. %s.", err_buf);
+	if (handle == NULL) LOG(ERROR, "pcap_open_live() failed. %s.", err_buf);
 
 	return handle;
 }
@@ -53,9 +45,10 @@ pcap_t *get_capture_handle(void) {
 typedef struct {
 	pcap_t *handle;
 	pcap_dumper_t *dump;
+	bool *switch_flag;
 } CaptureThreadArgs;
 
-pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
+bool *start_capture(char *filter_str, char *path) {
 	// Get handle
 	pcap_t *handle = get_capture_handle();
 	if (handle == NULL) {
@@ -67,131 +60,175 @@ pcap_t *start_capture(char *filter_str, char *path, pthread_t *thread) {
 	struct bpf_program comp_filter;
 	if (pcap_compile(handle, &comp_filter, filter_str, 1,
 			 PCAP_NETMASK_UNKNOWN) < 0) {
-		LOG(ERROR, "No capture. pcap_compile() failed. %s.",
-		    pcap_geterr(handle));
-		pcap_close(handle);
-		return NULL;
+		LOG(ERROR, "pcap_compile() failed. %s.", pcap_geterr(handle));
+		goto error1;
 	}
 
 	// Apply filter
 	if (pcap_setfilter(handle, &comp_filter) < 0) {
-		LOG(ERROR, "No capture. pcap_setfilter() failed. %s.",
-		    pcap_geterr(handle));
-		pcap_close(handle);
-		return NULL;
+		LOG(ERROR, "pcap_setfilter() failed. %s.", pcap_geterr(handle));
+		goto error1;
 	}
 
-	// Open a file to which to write packets. The pcap_dumper_t * can be
-	// passed to pcap_dump.
+	// Set capture handle into 'non-blocking' mode
+	char errbuf[PCAP_ERRBUF_SIZE];
+	if (pcap_setnonblock(handle, 1, errbuf) == -1) {
+		LOG(ERROR, "pcap_setnonblock() failed. %s.", errbuf);
+		goto error1;
+	}
+
+	// Open a file to which to write packets.
+	// The pcap_dumper_t * can be passed to pcap_dump.
 	pcap_dumper_t *dump = pcap_dump_open(handle, path);
 	if (dump == NULL) {
-		LOG(ERROR, "No capture. pcap_dump_open() failed. %s.",
-		    pcap_geterr(handle));
-		pcap_close(handle);
-		return NULL;
+		LOG(ERROR, "pcap_dump_open() failed. %s.", pcap_geterr(handle));
+		goto error1;
 	}
+
+	// Alloc flag for controlling capture end. This flag can be turned off
+	// at any time by called thread to end the capture.
+	bool *switch_flag = malloc(sizeof(bool));
+	if (switch_flag == NULL) {
+		LOG(ERROR, "malloc() failed");
+		goto error2;
+	}
+	(*switch_flag) = true;
 
 	// Start capture in another thread.
 	CaptureThreadArgs *args =
 	    (CaptureThreadArgs *)malloc(sizeof(CaptureThreadArgs));
-	args->handle = handle;
-	args->dump = dump;
-
-	int rc = pthread_create(thread, NULL, capture_thread, args);
-	if (rc) {
-		LOG(WARN, "No capture. pthread_create_failed(). %s.",
-		    strerror(rc));
-		pcap_close(handle);
-		return NULL;
+	if (args == NULL) {
+		LOG(ERROR, "malloc() failed.");
+		goto error3;
 	}
 
-	return handle;
-}
+	args->handle = handle;
+	args->dump = dump;
+	args->switch_flag = switch_flag;
 
-/* params should be CaptureThreadArgs *.
- * Return a int * with the number of packets captured in case of success, of a
- * negative value in case of error. */
+	pthread_t thread;
+	int rc = pthread_create(&thread, NULL, capture_thread, args);
+	if (rc) {
+		LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
+		goto error2;
+	}
+
+	return switch_flag;
+error3:
+	free(switch_flag);
+	goto error2;
+error2:
+	pcap_dump_close(dump);
+	goto error1;
+error1:
+	pcap_close(handle);
+	LOG(ERROR, "No capture.");
+	return NULL;
+}
 
 void *capture_thread(void *params) {
 	LOG(INFO, "Capture thread started.");
 	CaptureThreadArgs *args = (CaptureThreadArgs *)params;
 
-	// Start capture. -1 means infinity, packets are processed until
-	// pcap_breakloop() is called when we are done capturing.
-	int *pcount = (int *)malloc(sizeof(int));
-	*pcount = pcap_loop(args->handle, -1, &pcap_dump, (u_char *)args->dump);
+	bool *should_capture = args->switch_flag;
+	while (*should_capture) {
+		if (pcap_dispatch(args->handle, -1, &pcap_dump,
+				  (u_char *)args->dump) == -1) {
+			LOG(ERROR, "pcap_dispatch() failed. %s.",
+			    pcap_geterr(args->handle));
+		}
+	}
 
 	LOG(INFO, "Capture ended.");
-
-	if (*pcount == -1) {
-		LOG(ERROR, "pcap_loop() failed. %s.",
-		    pcap_geterr(args->handle));
-	}
-
-	/* The documentation states that pcap_loop() returns -2 if the loop
-	 * terminated due to a call to pcap_breakloop() BEFORE ANY PACKET WERE
-	 * PROCESSED. The uppercase part is NOT true. It always returns -2 when
-	 * pcap_breakloop() is called, even if some packets were captured. */
-	if (*pcount != -2) {
-		LOG(WARN, "pcap_loop() terminated before pcap_breakloop().");
-	}
-
 	pcap_close(args->handle);
 	pcap_dump_close(args->dump);
+	free(should_capture);
 	free(args);
-
-	return pcount;
+	return NULL;
 }
 
-/* Stop the ongoing capture on *pcap.
- * Retrieve return value from pcap_loop() or -3 on pthread_join() error. */
+///////////////////////////////////////////////////////////////////////////////
 
-int stop_capture(pcap_t *pcap, pthread_t *thread) {
-	pcap_breakloop(pcap);
+typedef struct {
+	bool *switch_flag;
+	int delay_ms;
+} DelayStopThreadArgs;
 
-	// Retrieve thread.
-	int *pcount_ptr;
-	int pcount, rc;
-
-	rc = pthread_join(*thread, (void **)&(pcount_ptr));
-	if (rc != 0) {
-		LOG(ERROR, "pthread_join() failed. %s.", strerror(rc));
-		return -3;
+int stop_capture(bool *switch_flag, int delay_ms) {
+	DelayStopThreadArgs *args =
+	    (DelayStopThreadArgs *)malloc(sizeof(DelayStopThreadArgs));
+	if (args == NULL) {
+		LOG(ERROR, "malloc failed.");
+		goto error;
 	}
 
-	pcount = *pcount_ptr;
-	free(pcount_ptr);
-	return pcount;
+	args->switch_flag = switch_flag;
+	args->delay_ms = delay_ms;
+
+	pthread_t delay_thread;
+	int rc = pthread_create(&delay_thread, NULL, delayed_stop_thread, args);
+	if (rc != 0) {
+		LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
+		goto error;
+	}
+
+	return 0;
+error:
+	LOG(ERROR,
+	    "Failed to create thread to delay packet capture end. "
+	    "Ending packet capture immediately.");
+	*(switch_flag) = false;
+	return -1;
 }
+
+void *delayed_stop_thread(void *params) {
+	LOG(INFO, "Delayed stop thread started.");
+	DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
+	sleep(args->delay_ms);
+	*(args->switch_flag) = false;
+	LOG(INFO, "Turned off capture switch.");
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 char *build_capture_filter(const struct sockaddr_storage *bound_addr,
 			   const struct sockaddr_storage *connect_addr) {
-	char *bound_port_str = NULL;
+	char *bound_port = NULL, *connect_port = NULL, *connect_host = NULL,
+	     *filter = NULL;
 
-	if (bound_addr != NULL) {
-		bound_port_str = alloc_port_str(bound_addr);
-	}
+	if (bound_addr)
+		if (!(bound_port = alloc_port_str(bound_addr))) return NULL;
 
-	char *connect_addr_str = alloc_host_str(connect_addr);
-	char *connect_port_str = alloc_port_str(connect_addr);
-	// TODO: Handle NULL values from alloc
-	
-	char *filter = (char *)malloc(sizeof(char) * FILTER_SIZE);
+	if (!(connect_host = alloc_host_str(connect_addr))) goto error1;
+	if (!(connect_port = alloc_port_str(connect_addr))) goto error2;
 
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", connect_addr_str,
-		 connect_port_str);
+	if (!(filter = (char *)malloc(sizeof(char) * FILTER_SIZE)))
+		goto error3;
 
-	if (bound_addr != NULL) {
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", connect_host,
+		 connect_port);
+
+	// If bound_addr, then we apport additionnal filter on source port.
+	if (bound_addr) {
 		int n = strlen(filter);
-		snprintf(filter + n, FILTER_SIZE - n,
-			 " and port %s", bound_port_str);
+		snprintf(filter + n, FILTER_SIZE - n, " and port %s",
+			 bound_port);
 	}
-
-	free(bound_port_str);
-	free(connect_addr_str);
-	free(connect_port_str);
 
 	LOG(INFO, "Starting capture with filter: '%s'", filter);
+	free(bound_port);
+	free(connect_host);
+	free(connect_port);
 
 	return filter;
+error3:
+	free(connect_port);
+	goto error2;
+error2:
+	free(connect_host);
+	goto error1;
+error1:
+	free(bound_port);
+	return NULL;
 }

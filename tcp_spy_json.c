@@ -77,8 +77,6 @@ static json_t *build_tcp_connection(TcpConnection *con) {
 	add(json_con, "events_count", json_integer(con->events_count));
 	add(json_con, "bytes_sent", json_integer(con->bytes_sent));
 	add(json_con, "bytes_received", json_integer(con->bytes_received));
-	add(json_con, "got_pcap_handle",
-	    json_boolean(con->capture_handle != NULL));
 	add(json_con, "successful_pcap", json_boolean(con->successful_pcap));
 
 	/* Loop through all events to build JSON */
