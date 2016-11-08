@@ -2,7 +2,7 @@ CC=gcc
 DEPS=-ljansson -ldl -lpthread -lpcap 
 HEADERS=lib.h tcp_spy.h string_helpers.h tcp_spy_json.h packet_sniffer.h \
 	logger.h init.h
-SOURCES=glibc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_spy_json.c \
+SOURCES=libc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_spy_json.c \
 	packet_sniffer.c logger.c init.c 
 
 MAJOR_VERSION=1
@@ -43,4 +43,4 @@ angular: netspy
 	$(ENV) curl -s $(ANGULAR) > /dev/null
 
 tests: netspy
-	$(ENV) packetdrill ../tests/test.pdrill
+	cd tests && rake
