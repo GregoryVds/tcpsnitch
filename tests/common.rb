@@ -4,12 +4,40 @@ PACKET_DRILL="packetdrill --tolerance_usecs=10000"
 # packetdrill scripts
 PKT_SCRIPTS_PATH="./pkt_scripts"
 
-# Env
-NETSPY_PATH="NETSPY_PATH=."
+DEFAULT_PATH="/tmp/netspy"
+JSON_FILE="dump.json"
+PCAP_FILE="dump.pcap"
+LOG_FILE="log.txt"
 
 # Env variables
-DEFAULT_PATH="/tmp/netspy"
 ENV_PATH="NETSPY_PATH"
 ENV_BYTES_IVAL="NETSPY_BYTES_IVAL"
 ENV_MICROS_IVAL="NETSPY_MICROS_IVAL"
+
+def mkdir(path)
+  system("test -d #{path} || mkdir #{path}")
+end
+
+def rmdir(path)
+  system("rm -rf #{dir}")
+end
+
+def dir_exists?(path)
+  system("test -d #{path}")
+end
+
+def contains?(dir, el)
+  system("ls #{dir}/#{el} >/dev/null 2>&1")
+end
+
+def dir_empty?(path)
+  !system("ls #{path}/* >/dev/null 2>&1")
+end
+
+def reset_dir(path)
+  rmdir(path)
+  mkdir(path)
+end
+
+
 

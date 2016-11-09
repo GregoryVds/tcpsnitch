@@ -11,6 +11,7 @@ describe "Initialization" do
 		
 	let(:script_path) { PKT_SCRIPTS_PATH + '/init' }
 	let(:cmd) {"#{LD_PRELOAD} #{PACKET_DRILL} #{script_path}/no_env.pkt 2>/dev/null"}
+  let(:dir) { "/tmp/dummy" }
 
 	describe "when no ENV variable is set" do
 		it "should simply not crash" do
@@ -18,28 +19,25 @@ describe "Initialization" do
 	 	end
 
 		it "should create #{DEFAULT_PATH} if does not exits" do
-			system "rm -rf #{DEFAULT_PATH}"
-			system cmd 
-      assert system("test -d #{DEFAULT_PATH}")
+      rmdir(DEFAULT_PATH)
+			system(cmd)
+      assert dir_exists?(DEFAULT_PATH) 
 		end
 	
 		it "should not crash when #{DEFAULT_PATH} already exists" do
-      system "test -d #{DEFAULT_PATH} || mkdir #{DEFAULT_PATH}"
-      assert system cmd
+      mkdir(DEFAULT_PATH)
+      assert system(cmd)
 		end
 	end
 
 	describe "when #{ENV_PATH} is set" do
 		it "should not crash when #{ENV_PATH} exists" do
-      dir = "/tmp/dummy"
-      system "test -d #{dir} || mkdir #{dir}"
+      mkdir(dir)
 			assert system("#{ENV_PATH}=#{dir} #{cmd}")
-      system "rm -rf #{dir}"
     end
 
 		it "should not crash when #{ENV_PATH} does not exists" do
-      dir = "/tmp/dontexists"
-      system "rm -rf #{dir}"
+      rmdir(dir)
 			assert system("#{ENV_PATH}=#{dir} #{cmd}")
 		end
 
@@ -58,11 +56,15 @@ describe "Initialization" do
 		end
 
 		it "should create a log dir in PATH" do 
-			assert true
+      reset_dir(dir)
+			assert system("#{ENV_PATH}=#{dir} #{cmd}")
+      assert !dir_empty?(dir)
 		end
 		
 		it "should create a log file in PATH" do
-			assert true
+      reset_dir(dir)
+      assert system("#{ENV_PATH}=#{dir} #{cmd}")
+      assert contains?(dir, "*/#{LOG_FILE}")
 		end
 	end
 
