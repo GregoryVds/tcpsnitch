@@ -7,6 +7,7 @@
 
 ## Dependencies
 
+- packetdrill (must be compiled without `-static` flag).
 - Requires Ruby 2.x
 - Requires Bundler
 

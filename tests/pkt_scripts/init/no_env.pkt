@@ -1,0 +1,3 @@
+// Simple socket() call to trigger lib initialization
+// Use SOCK_DGRAM to avoid triggering tcp_spy.c
+0 socket(..., SOCK_DGRAM, 0) = 3
