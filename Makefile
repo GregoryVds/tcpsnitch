@@ -14,8 +14,8 @@ SONAME=$(LINKER_NAME).$(MAJOR_VERSION)
 REAL_NAME=$(SONAME).$(MINOR_VERSION)
 
 ENV=NETSPY_PATH=/home/greg/host \
-    NETSPY_TCPINFO_BYTES_IVAL=5000 \
-    NETSPY_TCPINFO_MICROS_IVAL=0 \
+    NETSPY_BYTES_IVAL=5000 \
+    NETSPY_MICROS_IVAL=0 \
     LD_PRELOAD=./$(LINKER_NAME) 
 
 ANGULAR=https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js 
@@ -35,6 +35,7 @@ clean:
 	rm -f *.o
 	rm -f .*.s*
 	rm -f *.so*
+	rm -f tests/.*.s*
 
 curl: netspy
 	$(ENV) curl -s google.com > /dev/null

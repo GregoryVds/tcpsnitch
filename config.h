@@ -7,13 +7,13 @@
 #define NETSPY_LOG_FILE "log.txt"
 
 /* Env variables */
-#define ENV_NETSPY_PATH "NETSPY_PATH"
-#define ENV_NETSPY_DEV "NETSPY_DEV"
+#define ENV_PATH "NETSPY_PATH"
+#define ENV_DEV "NETSPY_DEV"
 
 /* LOWER bounds for capture of tcp_info. If either one if not fullfiled, then
  * we do NOT dump. */
-#define ENV_NETSPY_TCPINFO_BYTES_IVAL "NETSPY_TCPINFO_BYTES_IVAL"
-#define ENV_NETSPY_TCPINFO_MICROS_IVAL "NETSPY_TCPINFO_MICROS_IVAL"
+#define ENV_BYTES_IVAL "NETSPY_BYTES_IVAL"
+#define ENV_MICROS_IVAL "NETSPY_MICROS_IVAL"
 
 
 #endif

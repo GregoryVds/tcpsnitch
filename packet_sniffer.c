@@ -18,13 +18,13 @@ void *delayed_stop_thread(void *params);
  * Returns a pcap_t * on success, or NULL in case of error. */
 
 pcap_t *get_capture_handle(void) {
-	char *dev = getenv(ENV_NETSPY_DEV);
+	char *dev = getenv(ENV_DEV);
 	char err_buf[PCAP_ERRBUF_SIZE];
 
 	if (dev == NULL) {
 		LOG(WARN,
 		    "Env variable %s was not set. Capture on all interfaces.",
-		    ENV_NETSPY_DEV);
+		    ENV_DEV);
 	}
 
 	// Set err_buf to empty string to get warnings.

@@ -71,6 +71,11 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 ///////////////////////////////////////////////////////////////////////////////
 
 char *create_logs_dir(TcpConnection *con) {
+	if (netspy_path == NULL) {
+		LOG(WARN, "Cannot create logs directory. netspy_path is NULL.");
+		return NULL;
+	}
+
 	// Log dir is [LOG_DIR]/[ID]
 	int n = get_int_len(con->id) + 1;
 	char dirname[n];
@@ -273,7 +278,7 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 
 void tcp_dump_json(TcpConnection *con) {
 	if (con->directory == NULL) {
-		LOG(ERROR, "Cannot dump JSON to file. Con directory is NULL.");
+		LOG(WARN, "Cannot dump JSON to file. con->directory is NULL.");
 		return;
 	}
 
@@ -349,9 +354,7 @@ void tcp_start_packet_capture(int fd,
 	}
 
 	if (con->directory == NULL) {
-		LOG(ERROR,
-		    "Abort packet capture. A directory was not created"
-		    " for the TCP connection.");
+		LOG(WARN, "Do not start packet capture. con->directory is NULL.");
 		return;
 	}
 
@@ -474,7 +477,7 @@ void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
 	push_event(con, (TcpEvent *)ev);
 
 	if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
-	if (con->directory != NULL) tcp_dump_json(con);
+	tcp_dump_json(con);
 
 	/* Cleanup */
 	free_connection(con);
