@@ -22,7 +22,7 @@ describe "libc overrides" do
       EOT
     end
 
-    it "should not crash with failing() socket" do
+    it "should not crash with failing socket()" do
       skip
       assert run_pkt_script(<<-EOT)
         0 socket(..., -42, 0) = -1 
@@ -42,6 +42,42 @@ describe "libc overrides" do
     end
 
     it "should not crash with UDP socket" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 connect(3, ..., ...) = 0
+      EOT
+    end
+
+    it "should not crash with failing socket()" do
+      skip
+    end
+  end
+
+  describe "when calling shutdown()" do
+    it "should not crash with TCP socket" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        0.0...0.1 connect(3, ..., ...) = 0
+        *  > S  0:0(0) <...>
+        +0 < S. 0:0(0) ack 1 win 1000
+        *  > .  1:1(0) ack 1
+ 
+        +0 shutdown(3, SHUT_RD) = 0
+        +0 shutdown(3, SHUT_WR) = 0
+      EOT
+    end
+    
+    it "should not crash with UDP socket" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 connect(3, ..., ...) = 0
+
+        +0 shutdown(3, SHUT_RD) = 0
+        +0 shutdown(3, SHUT_WR) = 0
+      EOT
+    end
+
+    it "should not crash with failing shutdown()" do
       skip
     end
   end
