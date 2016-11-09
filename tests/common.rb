@@ -1,3 +1,8 @@
+require 'tempfile'
+
+NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
+puts NETSPY_PATH
+
 LD_PRELOAD="LD_PRELOAD=../libnetspy.so"
 PACKET_DRILL="packetdrill --tolerance_usecs=10000"
 
@@ -39,5 +44,17 @@ def reset_dir(path)
   mkdir(path)
 end
 
+def run_pkt_cmd_str(path, env='')
+  cmd = "#{LD_PRELOAD} #{PACKET_DRILL} #{path} 2>/dev/null" 
+  if env then env+' '+cmd else cmd end
+end
 
+def run_pkt_script(script, env='')
+  file = Tempfile.new("foo")
+  file.write(script)
+  file.close
+  rc = system(run_pkt_cmd_str(file.path, env)) 
+  file.unlink
+  rc
+end
 
