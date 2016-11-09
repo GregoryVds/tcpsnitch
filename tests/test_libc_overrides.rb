@@ -30,4 +30,20 @@ describe "libc overrides" do
     end
   end
 
+  describe "when calling connect()" do
+    it "should not crash with TCP socket" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        0.0...0.1 connect(3, ..., ...) = 0
+        *  > S  0:0(0) <...>
+        +0 < S. 0:0(0) ack 1 win 1000
+        *  > .  1:1(0) ack 1
+      EOT
+    end
+
+    it "should not crash with UDP socket" do
+      skip
+    end
+  end
+
 end

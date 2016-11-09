@@ -87,7 +87,6 @@ int socket(int __domain, int __type, int __protocol) {
 
 	int fd = orig_socket(__domain, __type, __protocol);
 	if (fd == -1) {
-                exit(1);
 		LOG(INFO, "socket() failed. %s.", strerror(errno));
 		return -1;
 	}

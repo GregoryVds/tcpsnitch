@@ -4,7 +4,7 @@ NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
 puts NETSPY_PATH
 
 LD_PRELOAD="LD_PRELOAD=../libnetspy.so"
-PACKET_DRILL="packetdrill --tolerance_usecs=10000"
+PACKET_DRILL="packetdrill --tolerance_usecs=10000000"
 
 # packetdrill scripts
 PKT_SCRIPTS_PATH="./pkt_scripts"
