@@ -336,5 +336,99 @@ describe "libc overrides" do
     end
   end
 
+=begin
+  _   _ ___ ___       _    ____ ___
+ | | | |_ _/ _ \     / \  |  _ \_ _|
+ | | | || | | | |   / _ \ | |_) | |
+ | |_| || | |_| |  / ___ \|  __/| |
+  \___/|___\___/  /_/   \_\_|  |___|
+
+ sys/uio.h - definitions for vector I/O operations
+
+ functions: writev(), readv()
+
+=end
+
+  describe "when calling writev()" do
+    it "writev() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "writev() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing writev()" do
+      skip
+    end
+  end
+
+  describe "when calling readv()" do
+    it "readv() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "readv() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing readv()" do
+      skip
+    end
+  end
+
+=begin
+  ____  _____ _   _ ____  _____ ___ _     _____      _    ____ ___
+ / ___|| ____| \ | |  _ \|  ___|_ _| |   | ____|    / \  |  _ \_ _|
+ \___ \|  _| |  \| | | | | |_   | || |   |  _|     / _ \ | |_) | |
+  ___) | |___| |\  | |_| |  _|  | || |___| |___   / ___ \|  __/| |
+ |____/|_____|_| \_|____/|_|   |___|_____|_____| /_/   \_\_|  |___|
+
+ sendfile - transfer data between file descriptors
+
+ functions: sendfile()
+
+=end
+
+  describe "when calling sendfile()" do
+    it "sendfile() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "sendfile() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing sendfile()" do
+      skip
+    end
+  end
+
+=begin
+  ____   ___  _     _          _    ____ ___
+ |  _ \ / _ \| |   | |        / \  |  _ \_ _|
+ | |_) | | | | |   | |       / _ \ | |_) | |
+ |  __/| |_| | |___| |___   / ___ \|  __/| |
+ |_|    \___/|_____|_____| /_/   \_\_|  |___|
+
+ poll.h - definitions for the poll() function
+
+ functions: poll()
+
+=end
+
+  describe "when calling poll()" do
+    it "poll() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "poll() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing poll()" do
+      skip
+    end
+  end
 
 end
