@@ -8,15 +8,24 @@ require './common.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 describe "libc overrides" do
+  let(:connected_sock_stream) {
+    <<-EOT
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        0.0...0.1 connect(3, ..., ...) = 0
+        *  > S  0:0(0) <...>
+        +0 < S. 0:0(0) ack 1 win 1000
+        *  > .  1:1(0) ack 1
+    EOT
+  }
 
   describe "when calling socket()" do
-    it "should not crash with TCP socket" do
+    it "socket() should not crash with SOCK_STREAM" do
       assert run_pkt_script(<<-EOT)
         0 socket(..., SOCK_STREAM, 0) = 3 
       EOT
     end
 
-    it "should not crash with UDP socket" do
+    it "socket() should not crash with SOCK_DGRAM" do
       assert run_pkt_script(<<-EOT)
         0 socket(..., SOCK_DGRAM, 0) = 3 
       EOT
@@ -31,43 +40,32 @@ describe "libc overrides" do
   end
 
   describe "when calling connect()" do
-    it "should not crash with TCP socket" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        0.0...0.1 connect(3, ..., ...) = 0
-        *  > S  0:0(0) <...>
-        +0 < S. 0:0(0) ack 1 win 1000
-        *  > .  1:1(0) ack 1
-      EOT
+    it "connect() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(connected_sock_stream)
     end
 
-    it "should not crash with UDP socket" do
+    it "connect() should not crash with SOCK_DGRAM" do
       assert run_pkt_script(<<-EOT)
         0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
         +0 connect(3, ..., ...) = 0
       EOT
     end
 
-    it "should not crash with failing socket()" do
+    it "should not crash with failing connect()" do
       skip
     end
   end
 
   describe "when calling shutdown()" do
-    it "should not crash with TCP socket" do
+    it "shutdown() should not crash with SOCK_STREAM" do
       assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        0.0...0.1 connect(3, ..., ...) = 0
-        *  > S  0:0(0) <...>
-        +0 < S. 0:0(0) ack 1 win 1000
-        *  > .  1:1(0) ack 1
- 
+        #{connected_sock_stream}
         +0 shutdown(3, SHUT_RD) = 0
         +0 shutdown(3, SHUT_WR) = 0
       EOT
     end
     
-    it "should not crash with UDP socket" do
+    it "shutdown() should not crash with SOCK_DGRAM" do
       assert run_pkt_script(<<-EOT)
         0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
         +0 connect(3, ..., ...) = 0
@@ -81,5 +79,61 @@ describe "libc overrides" do
       skip
     end
   end
+
+  describe "when calling listen()" do
+    it "listen() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        +0 listen(3, 1) = 0
+      EOT
+    end
+
+    it "should not crash with failing listen()" do
+      skip
+    end
+  end
+
+  describe "when calling setsockopt()" do
+    it "setsockopt() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        +0 setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+      EOT
+    end
+    
+    it "setsockopt() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+      EOT
+    end
+
+    it "should not crash with failing setsockopt()" do
+      skip
+    end
+  end
+
+  describe "when calling send()" do
+    it "send() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 send(3, ..., 100, 0) = 100
+      EOT
+    end
+
+    it "connect() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 connect(3, ..., ...) = 0
+        +0 send(3, ..., 100, 0) = 100
+      EOT
+    end
+
+    it "should not crash with failing send()" do
+      skip
+    end
+  end
+
+
 
 end

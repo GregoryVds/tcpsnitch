@@ -1,0 +1,6 @@
+# Quick & dirty debbuging script to run a .pkt with with/without Netspy (0 or 1 for $2)
+if [ "$2" -eq 1 ]; then
+        sudo LD_PRELOAD=../libnetspy.so packetdrill --tolerance_usecs=1000000 $1
+else 
+        sudo packetdrill --tolerance_usecs=1000000 $1
+fi
