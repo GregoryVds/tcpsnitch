@@ -134,6 +134,68 @@ describe "libc overrides" do
     end
   end
 
+  describe "when calling recv()" do
+    it "recv() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 < P. 1:1001(1000) ack 1 win 1000
+        +0 recv(3, ..., 1000, 0) = 1000
+      EOT
+    end
 
+    it "recv() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+        +0 recv(3, ..., 1000, 0) = -1
+      EOT
+    end
+
+    it "should not crash with failing recv()" do
+      skip
+    end
+  end
+
+  describe "when calling sendto()" do
+    it "sendto() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 sendto(3, ..., 100, 0, ..., ...) = 100
+      EOT
+    end
+
+    it "sendto() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 sendto(3, ..., 100, 0, ..., ...) = 100
+      EOT
+    end
+
+    it "should not crash with failing sendto()" do
+      skip
+    end
+  end
+
+  describe "when calling recvfrom()" do
+    it "recvfrom() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 < P. 1:1001(1000) ack 1 win 1000
+        +0 recvfrom(3, ..., 1000, 0, ..., ...) = 1000
+      EOT
+    end
+
+    it "recvfrom() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+        +0 recvfrom(3, ..., 100, 0, ..., ...) = -1
+      EOT
+    end
+
+    it "should not crash with failing recvfrom()" do
+      skip
+    end
+  end
 
 end
