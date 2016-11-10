@@ -18,6 +18,20 @@ describe "libc overrides" do
     EOT
   }
 
+=begin
+  ____   ___   ____ _  _______ _____      _    ____ ___
+ / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
+ \___ \| | | | |   | ' /|  _|   | |     / _ \ | |_) | |
+  ___) | |_| | |___| . \| |___  | |    / ___ \|  __/| |
+ |____/ \___/ \____|_|\_\_____| |_|   /_/   \_\_|  |___|
+
+ sys/socket.h - Internet Protocol family
+
+ functions: socket(), bind(), connect(), shutdown(), listen(), getsockopt(),
+ setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
+
+=end
+
   describe "when calling socket()" do
     it "socket() should not crash with SOCK_STREAM" do
       assert run_pkt_script(<<-EOT)
@@ -36,6 +50,26 @@ describe "libc overrides" do
       assert run_pkt_script(<<-EOT)
         0 socket(..., -42, 0) = -1 
       EOT
+    end
+  end
+
+  describe "when calling bind()" do
+        it "bind() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
+        +0 bind(3, ..., ...) = 0
+      EOT
+    end
+
+    it "bind() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 bind(3, ..., ...) = 0
+      EOT
+    end
+
+    it "should not crash with failing bind()" do
+      skip
     end
   end
 
@@ -197,5 +231,110 @@ describe "libc overrides" do
       skip
     end
   end
+
+  describe "when calling sendmsg()" do
+    it "sendmsg() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "sendmsg() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing sendmsg()" do
+      skip
+    end
+  end
+
+  describe "when calling recvmsg()" do
+    it "recvmsg() should not crash with SOCK_STREAM" do
+      skip
+    end
+
+    it "recvmsg() should not crash with SOCK_DGRAM" do
+      skip
+    end
+
+    it "should not crash with failing recvmsg()" do
+      skip
+    end
+  end
+
+=begin
+  _   _ _   _ ___ ____ _____ ____       _    ____ ___
+ | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
+ | | | |  \| || |\___ \ | | | | | |   / _ \ | |_) | |
+ | |_| | |\  || | ___) || | | |_| |  / ___ \|  __/| |
+  \___/|_| \_|___|____/ |_| |____/  /_/   \_\_|  |___|
+
+ unistd.h - standard symbolic constants and types
+
+ functions: close(), write(), read().
+
+=end
+
+  describe "when calling close()" do
+    it "close() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+        +0 close(3) = 0
+      EOT
+    end
+
+    it "close() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, 0) = 3 
+        +0 close(3) = 0
+      EOT
+    end
+
+    it "should not crash with failing close()" do
+      skip
+    end
+  end
+
+  describe "when calling write()" do
+    it "write() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 write(3, ..., 100) = 100
+      EOT
+    end
+
+    it "connect() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 connect(3, ..., ...) = 0
+        +0 write(3, ..., 100) = 100
+      EOT
+    end
+
+    it "should not crash with failing write()" do
+      skip
+    end
+  end
+
+  describe "when calling read()" do
+    it "read() should not crash with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        #{connected_sock_stream} 
+        +0 < P. 1:1001(1000) ack 1 win 1000
+        +0 read(3, ..., 1000) = 1000
+      EOT
+    end
+
+    it "read() should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
+        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+        +0 read(3, ..., 1000) = -1
+      EOT
+    end
+
+    it "should not crash with failing read()" do
+      skip
+    end
+  end
+
 
 end

@@ -62,9 +62,8 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), connect(), shutdown(), listen(), getsockopt(),
+ functions: socket(), bind(), connect(), shutdown(), listen(), getsockopt(),
  setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
- bind().
 
 */
 
@@ -97,6 +96,30 @@ int socket(int __domain, int __type, int __protocol) {
 	}
 
 	return fd;
+}
+
+/* Give the socket FD the local address ADDR (which is LEN bytes long).  */
+
+typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
+			      socklen_t __len);
+
+int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
+	init_netspy();
+
+	orig_bind_type orig_bind;
+	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
+
+	LOG(INFO, "bind() called");
+
+	int ret = orig_bind(__fd, __addr, __len);
+	int err = errno;
+
+	if (is_tcp_socket(__fd)) {
+		tcp_bind(__fd, ret, err, __addr, __len);
+		tcp_info_dump(__fd);
+	}
+
+	return ret;
 }
 
 /* Open a connection on socket FD to peer at ADDR (which LEN bytes long).
@@ -341,30 +364,6 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 	orig_recvmsg_type orig_recvmsg;
 	orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
 	return orig_recvmsg(__fd, __message, __flags);
-}
-
-/* Give the socket FD the local address ADDR (which is LEN bytes long).  */
-
-typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
-			      socklen_t __len);
-
-int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-	init_netspy();
-
-	orig_bind_type orig_bind;
-	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
-
-	LOG(INFO, "bind() called");
-
-	int ret = orig_bind(__fd, __addr, __len);
-	int err = errno;
-
-	if (is_tcp_socket(__fd)) {
-		tcp_bind(__fd, ret, err, __addr, __len);
-		tcp_info_dump(__fd);
-	}
-
-	return ret;
 }
 
 /*
