@@ -137,7 +137,7 @@ static json_t *build_event(TcpEvent *ev) {
 
 static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 	const char *type_str = string_from_tcp_event_type(ev->type);
-	add(json_ev, "event_type", json_string(type_str));
+	add(json_ev, "type", json_string(type_str));
 
 	/* Time stamp */
 	json_t *timestamp_json = json_object();
@@ -406,7 +406,7 @@ char *build_tcp_connection_json(TcpConnection *con) {
 		return NULL;
 	}
 
-	char *json_string = json_dumps(json_con, 0);
+	char *json_string = json_dumps(json_con, JSON_PRESERVE_ORDER);
 	json_decref(json_con);
 	return json_string;
 }

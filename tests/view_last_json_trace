@@ -1,0 +1,4 @@
+#!/bin/bash
+
+last=$(ls /tmp/netspy | grep packetdrill | tail -n 1)
+python -m json.tool /tmp/netspy/$last/1/dump.json | less

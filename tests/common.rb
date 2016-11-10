@@ -19,12 +19,18 @@ ENV_PATH="NETSPY_PATH"
 ENV_BYTES_IVAL="NETSPY_BYTES_IVAL"
 ENV_MICROS_IVAL="NETSPY_MICROS_IVAL"
 
+# As suggested by Jansson library.
+# http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean#answer-3028378
+module Boolean; end
+class TrueClass; include Boolean; end
+class FalseClass; include Boolean; end
+
 def mkdir(path)
   system("test -d #{path} || mkdir #{path}")
 end
 
 def rmdir(path)
-  system("rm -rf #{dir}")
+  system("rm -rf #{path}")
 end
 
 def dir_exists?(path)
@@ -57,4 +63,19 @@ def run_pkt_script(script, env='')
   file.unlink
   rc
 end
+
+# Packetdrill forks a bunch of programs such as ip, sh, etc. Assuming the 
+# DEFAULT_PATH was emptied before executing the test, then our log should be
+# in the ONLY directory starting with packetdrill_*. In case it was not emptied,
+# the last should still be the good one since a timestamp is appended.
+def log_dir_str
+  Dir[DEFAULT_PATH+"/packetdrill_*"].last
+end
+
+# Not very robust but it seems that packetdrill always open another TCP connection
+# before the script. So the first connection we are interested in is at /1/
+def json_str
+  File.read(log_dir_str+"/1/"+JSON_FILE)
+end
+
 

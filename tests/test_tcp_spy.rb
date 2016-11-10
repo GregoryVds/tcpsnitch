@@ -3,6 +3,7 @@
 require 'minitest/autorun'
 require 'minitest/reporters'
 require 'minitest/spec'
+require 'json_expressions/minitest'
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
@@ -18,39 +19,27 @@ describe "tcp_spy" do
     EOT
   }
 
-=begin
-  ____   ___   ____ _  _______ _____      _    ____ ___
- / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
- \___ \| | | | |   | ' /|  _|   | |     / _ \ | |_) | |
-  ___) | |_| | |___| . \| |___  | |    / ___ \|  __/| |
- |____/ \___/ \____|_|\_\_____| |_|   /_/   \_\_|  |___|
+  describe "when dumping any connection" do
 
- sys/socket.h - Internet Protocol family
-
- functions: socket(), bind(), connect(), shutdown(), listen(), getsockopt(),
- setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
-
-=end
-
-  describe "when calling socket()" do
-    it "socket() should not crash with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
+    it "should have correct top level JSON object" do
+      run_pkt_script(<<-EOT)
         0 socket(..., SOCK_STREAM, 0) = 3 
       EOT
-    end
 
-    it "socket() should not crash with SOCK_DGRAM" do
-      skip
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, 0) = 3 
-      EOT
-    end
-
-    it "should not crash with failing socket()" do
-      skip
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., -42, 0) = -1 
-      EOT
+      pattern = {
+        app_name: String,
+        bytes_received: Fixnum,
+        bytes_sent: Fixnum,
+        cmdline: String,
+        directory: String,
+        events: Array,
+        events_count: Fixnum,
+        id: Fixnum,
+        kernel: String,
+        successful_pcap: Boolean,
+        timestamp: Fixnum,
+      }
+      assert_json_match(pattern, json_str)
     end
   end
 end
