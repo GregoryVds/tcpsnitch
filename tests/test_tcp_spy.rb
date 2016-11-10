@@ -3,7 +3,6 @@
 require 'minitest/autorun'
 require 'minitest/reporters'
 require 'minitest/spec'
-require 'json_expressions/minitest'
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
@@ -19,13 +18,11 @@ describe "tcp_spy" do
     EOT
   }
 
-  describe "when dumping any connection" do
-
-    it "should have correct top level JSON object" do
+  describe "a TcpConnection" do
+    it "should have correct top level JSON fields" do
       run_pkt_script(<<-EOT)
         0 socket(..., SOCK_STREAM, 0) = 3 
       EOT
-
       pattern = {
         app_name: String,
         bytes_received: Fixnum,
@@ -42,5 +39,51 @@ describe "tcp_spy" do
       assert_json_match(pattern, json_str)
     end
   end
+ 
+  describe "an event" do
+    it "should have the correct shared fields" do
+      run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+      EOT
+      pattern = {
+        events: [
+          {
+            details: Hash,
+            return_value: Fixnum,
+            success: Boolean,
+            timestamp: {
+              sec: Fixnum,
+              usec: Fixnum
+            },
+            type: String
+          }.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern, json_str)
+    end
+  end
+ 
+  describe "a socket() event" do
+    it "should have the correct fields" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+      EOT
+      pattern = {
+        events: [
+          {
+            details: {
+              domain: String,
+              protocol: Fixnum,
+              sock_cloexec: Boolean,
+              sock_nonblock: Boolean,
+              type: String
+            }
+          }.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern, json_str)
+    end
+  end
+
 end
 

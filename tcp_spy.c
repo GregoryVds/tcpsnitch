@@ -128,11 +128,11 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         bool success;
         TcpEvent *ev;
         switch (type) {
-                case TCP_EV_SOCK_OPENED:
+                case TCP_EV_SOCKET:
                         ev = (TcpEvent *)malloc(sizeof(TcpEvSockOpened));
                         success = (return_value != 0);
                         break;
-                case TCP_EV_SOCK_CLOSED:
+                case TCP_EV_CLOSE:
                         success = (return_value == 0);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvSockClosed));
                         break;
@@ -156,7 +156,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         success = (return_value != -1);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvConnect));
                         break;
-                case TCP_EV_INFO_DUMP:
+                case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvInfoDump));
                         break;
@@ -433,13 +433,13 @@ void tcp_sock_opened(int fd, int domain, int type, int protocol) {
 
         /* Create new connection */
         TcpConnection *con = alloc_connection();
-        FAIL_IF_NULL(con, TCP_EV_SOCK_OPENED);
+        FAIL_IF_NULL(con, TCP_EV_SOCKET);
         fd_con_map[fd] = con;
 
         /* Create event */
         TcpEvSockOpened *ev =
-            (TcpEvSockOpened *)alloc_event(TCP_EV_SOCK_OPENED, fd, 0);
-        FAIL_IF_NULL(ev, TCP_EV_SOCK_OPENED);
+            (TcpEvSockOpened *)alloc_event(TCP_EV_SOCKET, fd, 0);
+        FAIL_IF_NULL(ev, TCP_EV_SOCKET);
 
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
@@ -452,7 +452,7 @@ void tcp_sock_opened(int fd, int domain, int type, int protocol) {
 void tcp_info_dump(int fd) {
         /* Get TcpConnection */
         TcpConnection *con = get_tcp_connection(fd);
-        FAIL_IF_NULL(con, TCP_EV_INFO_DUMP);
+        FAIL_IF_NULL(con, TCP_EV_TCP_INFO);
 
         /* Check if should dump based on byte/time lower bounds */
         if (!should_dump_tcp_info(con)) return;
@@ -464,8 +464,8 @@ void tcp_info_dump(int fd) {
 
         /* Create event */
         TcpEvInfoDump *ev =
-            (TcpEvInfoDump *)alloc_event(TCP_EV_INFO_DUMP, ret, err);
-        FAIL_IF_NULL(ev, TCP_EV_INFO_DUMP);
+            (TcpEvInfoDump *)alloc_event(TCP_EV_TCP_INFO, ret, err);
+        FAIL_IF_NULL(ev, TCP_EV_TCP_INFO);
         memcpy(&(ev->info), &info, sizeof(info));
 
         /* Register time/bytes of last dump */
@@ -481,7 +481,7 @@ void tcp_info_dump(int fd) {
 void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
         // Instantiate local vars TcpConnection *con & TcpEvSockClosed
         // *ev
-        TCP_EV_PRELUDE(TCP_EV_SOCK_CLOSED, TcpEvSockClosed);
+        TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvSockClosed);
 
         ev->detected = detected;
         push_event(con, (TcpEvent *)ev);

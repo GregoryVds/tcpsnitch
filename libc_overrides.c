@@ -62,7 +62,7 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), bind(), connect(), shutdown(), listen(), getsockopt(),
+ functions: socket(), bind(), connect(), shutdown(), listen(),
  setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
 
 */
@@ -514,7 +514,7 @@ ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
   ___) | |___| |\  | |_| |  _|  | || |___| |___   / ___ \|  __/| |
  |____/|_____|_| \_|____/|_|   |___|_____|_____| /_/   \_\_|  |___|
 
- sendfile - transfer data between file descriptors
+ sendfile.h - transfer data between file descriptors
 
  functions: sendfile()
 */

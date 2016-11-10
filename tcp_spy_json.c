@@ -95,10 +95,10 @@ static json_t *build_tcp_connection(TcpConnection *con) {
 static json_t *build_event(TcpEvent *ev) {
 	json_t *r;
 	switch (ev->type) {
-		case TCP_EV_SOCK_OPENED:
+		case TCP_EV_SOCKET:
 			r = build_sock_opened_ev((TcpEvSockOpened *)ev);
 			break;
-		case TCP_EV_SOCK_CLOSED:
+		case TCP_EV_CLOSE:
 			r = build_sock_closed_ev((TcpEvSockClosed *)ev);
 			break;
 		case TCP_EV_SEND:
@@ -116,7 +116,7 @@ static json_t *build_event(TcpEvent *ev) {
 		case TCP_EV_CONNECT:
 			r = build_connect_ev((TcpEvConnect *)ev);
 			break;
-		case TCP_EV_INFO_DUMP:
+		case TCP_EV_TCP_INFO:
 			r = build_info_dump_ev((TcpEvInfoDump *)ev);
 			break;
 		case TCP_EV_SETSOCKOPT:
