@@ -1,8 +1,8 @@
 # Purpose: test that all libc overrides do not crash the main process.
-
 require 'minitest/autorun'
-require 'minitest/reporters'
 require 'minitest/spec'
+require 'minitest/reporters'
+
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new

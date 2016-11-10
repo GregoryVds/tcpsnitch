@@ -1,8 +1,8 @@
 # Purpose: test initialization (init.c) of Netspy.
-
 require 'minitest/autorun'
-require 'minitest/reporters'
 require 'minitest/spec'
+require 'minitest/reporters'
+
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new

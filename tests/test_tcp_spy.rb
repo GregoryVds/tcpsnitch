@@ -1,8 +1,8 @@
 # Purpose: test the JSON output file of a given TCP connection
-
 require 'minitest/autorun'
-require 'minitest/reporters'
 require 'minitest/spec'
+require 'minitest/reporters'
+
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
@@ -36,7 +36,7 @@ describe "tcp_spy" do
         successful_pcap: Boolean,
         timestamp: Fixnum,
       }
-      assert_json_match(pattern, json_str)
+      assert_json_match(pattern, json_dump)
     end
   end
  
@@ -59,7 +59,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_str)
+      assert_json_match(pattern, json_dump)
     end
   end
  
@@ -81,7 +81,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_str)
+      assert_json_match(pattern, json_dump)
     end
   end
 

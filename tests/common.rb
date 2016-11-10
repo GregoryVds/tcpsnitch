@@ -1,8 +1,7 @@
-require 'tempfile'
 require 'json_expressions/minitest'
+require 'tempfile'
 
 NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
-puts NETSPY_PATH
 
 LD_PRELOAD="LD_PRELOAD=../libnetspy.so"
 PACKET_DRILL="packetdrill --tolerance_usecs=10000000"
@@ -107,7 +106,7 @@ end
 
 # Not very robust but it seems that packetdrill always open another TCP connection
 # before the script. So the first connection we are interested in is at /1/
-def json_str
+def json_dump
   File.read(log_dir_str+"/1/"+JSON_FILE)
 end
 
@@ -120,6 +119,6 @@ def assert_event_present(type, success=true)
       }.ignore_extra_keys!
     ].ignore_extra_values!
   }.ignore_extra_keys!
-  assert_json_match(pattern, json_str)
+  assert_json_match(pattern, json_dump)
 end
 
