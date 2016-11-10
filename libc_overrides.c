@@ -109,7 +109,7 @@ int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 	orig_bind_type orig_bind;
 	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
-	LOG(INFO, "bind() called");
+	LOG(INFO, "bind() called on socket %d", __fd);
 
 	int ret = orig_bind(__fd, __addr, __len);
 	int err = errno;

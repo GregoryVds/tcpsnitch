@@ -70,6 +70,17 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void tcp_cleanup(void) {
+        int i;
+        for (i = 0; i < MAX_FD; i++) {
+                if (fd_con_map[i] != NULL) {
+                        tcp_sock_closed(i, 0, 0, false);
+                }
+        }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char *create_logs_dir(TcpConnection *con) {
 	if (netspy_path == NULL) {
 		LOG(WARN, "Cannot create logs directory. netspy_path is NULL.");
@@ -87,7 +98,7 @@ char *create_logs_dir(TcpConnection *con) {
 		return NULL;
 	}
 
-	int ret = mkdir(dir_path, 0700);
+	int ret = mkdir(dir_path, 0777);
 	if (ret == -1) {
 		LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
 		return NULL;

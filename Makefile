@@ -45,3 +45,6 @@ angular: netspy
 
 tests: netspy
 	cd tests && rake
+
+index: 
+	ctags -R .

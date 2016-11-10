@@ -184,4 +184,7 @@ void tcp_shutdown(int fd, int return_value, int err, int how);
 void tcp_listen(int fd, int return_value, int err, int backlog);
 void tcp_bind(int fd, int return_value, int err, const struct sockaddr *addr,
 	      socklen_t len);
+
+void tcp_cleanup(void);
+
 #endif

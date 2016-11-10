@@ -35,7 +35,7 @@ const char *get_netspy_path(void) {
                         closedir(dir);
                 } else if (errno == ENOENT) {  // Does not exists.
                         LOG(INFO, "%s does not exists. Creating it.", path);
-                        if (mkdir(path, 0700) == -1) {
+                        if (mkdir(path, 0777) == -1) {
                                 LOG(ERROR, "mkdir() failed. %s.",
                                     strerror(errno));
                                 return NULL;
@@ -145,7 +145,7 @@ static char *create_logs_dir(void) {
         free(base_path);
 
         // Finally, create dir at actual_path.
-        int ret = mkdir(actual_path, 0700);
+        int ret = mkdir(actual_path, 0777);
         if (ret == -1) {
                 LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
                 return NULL;
@@ -184,11 +184,21 @@ static void get_tcpinfo_ivals(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void cleanup(void) {
+        LOG(INFO, "Performing cleanup.");
+        tcp_cleanup();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void init_netspy(void) {
         if (initialized) return;
 
         LOG(INFO, "Initialization of Netspy library...");
         initialized = true;
+        
+        atexit(cleanup);
+        
         get_tcpinfo_ivals();
 
         netspy_path = get_netspy_path();
