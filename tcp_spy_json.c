@@ -20,17 +20,17 @@
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
 static add_type add = &json_object_set_new;
 
-static json_t *build_tcp_connection(TcpConnection *con);
+static json_t *build_tcp_ev_connection(TcpConnection *con);
 static json_t *build_event(TcpEvent *ev);
 static void build_shared_fields(json_t *json_ev, TcpEvent *ev);
-static json_t *build_sock_opened_ev(TcpEvSockOpened *ev);
-static json_t *build_sock_closed_ev(TcpEvSockClosed *ev);
+static json_t *build_sock_opened_ev(TcpEvSocket *ev);
+static json_t *build_sock_closed_ev(TcpEvClose *ev);
 static json_t *build_send_ev(TcpEvSend *ev);
 static json_t *build_sendto_ev(TcpEvSendto *ev);
 static json_t *build_recv_ev(TcpEvRecv *ev);
 static json_t *build_recvfrom_ev(TcpEvRecvfrom *ev);
 static json_t *build_connect_ev(TcpEvConnect *ev);
-static json_t *build_info_dump_ev(TcpEvInfoDump *ev);
+static json_t *build_info_dump_ev(TcpEvTcpInfo *ev);
 static json_t *build_setsockopt_ev(TcpEvSetsockopt *ev);
 static json_t *build_shutdown_ev(TcpEvShutdown *ev);
 static json_t *build_listen_ev(TcpEvListen *ev);
@@ -60,7 +60,7 @@ static json_t *build_recv_flags(TcpRecvFlags *flags);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static json_t *build_tcp_connection(TcpConnection *con) {
+static json_t *build_tcp_ev_connection(TcpConnection *con) {
 	json_t *json_con = json_object();
 	json_t *events = json_array();
 	if (json_con == NULL || events == NULL) {
@@ -96,10 +96,10 @@ static json_t *build_event(TcpEvent *ev) {
 	json_t *r;
 	switch (ev->type) {
 		case TCP_EV_SOCKET:
-			r = build_sock_opened_ev((TcpEvSockOpened *)ev);
+			r = build_sock_opened_ev((TcpEvSocket *)ev);
 			break;
 		case TCP_EV_CLOSE:
-			r = build_sock_closed_ev((TcpEvSockClosed *)ev);
+			r = build_sock_closed_ev((TcpEvClose *)ev);
 			break;
 		case TCP_EV_SEND:
 			r = build_send_ev((TcpEvSend *)ev);
@@ -117,7 +117,7 @@ static json_t *build_event(TcpEvent *ev) {
 			r = build_connect_ev((TcpEvConnect *)ev);
 			break;
 		case TCP_EV_TCP_INFO:
-			r = build_info_dump_ev((TcpEvInfoDump *)ev);
+			r = build_info_dump_ev((TcpEvTcpInfo *)ev);
 			break;
 		case TCP_EV_SETSOCKOPT:
 			r = build_setsockopt_ev((TcpEvSetsockopt *)ev);
@@ -158,7 +158,7 @@ static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
+static json_t *build_sock_opened_ev(TcpEvSocket *ev) {
 	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	char *dom_str = alloc_sock_domain_str(ev->domain);
@@ -176,7 +176,7 @@ static json_t *build_sock_opened_ev(TcpEvSockOpened *ev) {
 	return json_ev;
 }
 
-static json_t *build_sock_closed_ev(TcpEvSockClosed *ev) {
+static json_t *build_sock_closed_ev(TcpEvClose *ev) {
 	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	add(json_details, "detected", json_boolean(ev->detected));
@@ -251,7 +251,7 @@ static json_t *build_connect_ev(TcpEvConnect *ev) {
 	return json_ev;
 }
 
-static json_t *build_info_dump_ev(TcpEvInfoDump *ev) {
+static json_t *build_info_dump_ev(TcpEvTcpInfo *ev) {
 	BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
 	struct tcp_info i = ev->info;
@@ -397,11 +397,11 @@ static json_t *build_recv_flags(TcpRecvFlags *flags) {
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 */
 
-char *build_tcp_connection_json(TcpConnection *con) {
-	json_t *json_con = build_tcp_connection(con);
+char *build_tcp_ev_connection_json(TcpConnection *con) {
+	json_t *json_con = build_tcp_ev_connection(con);
 	if (json_con == NULL) {
 		LOG(ERROR,
-		    "build_tcp_connection() failed. Could not generate JSON "
+		    "build_tcp_ev_connection() failed. Could not generate JSON "
 		    "representation for TCP connection");
 		return NULL;
 	}

@@ -18,6 +18,10 @@ describe "tcp_spy" do
     EOT
   }
 
+  before do
+    reset_dir(DEFAULT_PATH) 
+  end
+
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
       run_pkt_script(<<-EOT)

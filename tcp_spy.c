@@ -60,7 +60,7 @@ static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
 /* HELPERS */
-static TcpConnection *get_tcp_connection(int fd);
+static TcpConnection *get_tcp_ev_connection(int fd);
 static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
@@ -74,7 +74,7 @@ void tcp_cleanup(void) {
         int i;
         for (i = 0; i < MAX_FD; i++) {
                 if (fd_con_map[i] != NULL) {
-                        tcp_sock_closed(i, 0, 0, false);
+                        tcp_ev_close(i, 0, 0, false);
                 }
         }
 }
@@ -129,12 +129,12 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         TcpEvent *ev;
         switch (type) {
                 case TCP_EV_SOCKET:
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSockOpened));
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvSocket));
                         success = (return_value != 0);
                         break;
                 case TCP_EV_CLOSE:
                         success = (return_value == 0);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSockClosed));
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvClose));
                         break;
                 case TCP_EV_SEND:
                         success = (return_value != -1);
@@ -158,7 +158,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         break;
                 case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvInfoDump));
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvTcpInfo));
                         break;
                 case TCP_EV_SETSOCKOPT:
                         success = (return_value != -1);
@@ -235,7 +235,7 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static TcpConnection *get_tcp_connection(int fd) {
+static TcpConnection *get_tcp_ev_connection(int fd) {
         TcpConnection *con = fd_con_map[fd];
         if (con == NULL) {
                 LOG(ERROR, "Cannot find matching TcpConnection for fd %d.", fd);
@@ -292,7 +292,7 @@ void tcp_dump_json(TcpConnection *con) {
                 return;
         }
 
-        char *json = build_tcp_connection_json(con);
+        char *json = build_tcp_ev_connection_json(con);
         char *json_file = alloc_json_path_str(con);
         if (json == NULL || json_file == NULL) {
                 LOG(ERROR, "Cannot save capture to file.");
@@ -356,7 +356,7 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
 
 void tcp_start_packet_capture(int fd,
                               const struct sockaddr_storage *connect_addr) {
-        TcpConnection *con = get_tcp_connection(fd);
+        TcpConnection *con = get_tcp_ev_connection(fd);
         if (con == NULL) {
                 LOG(ERROR,
                     "Abort packet capture. Cannot find related connection.");
@@ -411,25 +411,25 @@ void tcp_stop_packet_capture(TcpConnection *con) {
         }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        TcpConnection *con = get_tcp_connection(fd);                           \
+        TcpConnection *con = get_tcp_ev_connection(fd);                        \
         FAIL_IF_NULL(con, ev_type_cons);                                       \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
         FAIL_IF_NULL(ev, ev_type_cons);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket()",     "close()",    "send()",    "sendto()",
-            "recv()",       "recvfrom()", "connect()", "tcp_info",
-            "setsockopt()", "shutdown()", "listen()",  "bind()"};
+            "socket()", "bind()",       "connect()", "shutdown()",
+            "listen()", "setsockopt()", "send()",    "recv()",
+            "sendto()", "recvfrom()",   "close()",   "tcp_info"};
         return strings[type];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #define SOCK_TYPE_MASK 0b1111
-void tcp_sock_opened(int fd, int domain, int type, int protocol) {
+void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection was not properly closed. */
-        if (fd_con_map[fd]) tcp_sock_closed(fd, 0, 0, false);
+        if (fd_con_map[fd]) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
         TcpConnection *con = alloc_connection();
@@ -437,8 +437,7 @@ void tcp_sock_opened(int fd, int domain, int type, int protocol) {
         fd_con_map[fd] = con;
 
         /* Create event */
-        TcpEvSockOpened *ev =
-            (TcpEvSockOpened *)alloc_event(TCP_EV_SOCKET, fd, 0);
+        TcpEvSocket *ev = (TcpEvSocket *)alloc_event(TCP_EV_SOCKET, fd, 0);
         FAIL_IF_NULL(ev, TCP_EV_SOCKET);
 
         ev->domain = domain;
@@ -449,9 +448,125 @@ void tcp_sock_opened(int fd, int domain, int type, int protocol) {
         push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_info_dump(int fd) {
+void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
+                 socklen_t len) {
+        // Instantiate local vars TcpConnection *con & TcpEvBind *ev
+        TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
+
+        memcpy(&(ev->addr), addr, len);
+        con->bind_ev = ev;
+        ev->force_bind = con->force_bind;
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_connect(int fd, int return_value, int err,
+                    const struct sockaddr *addr, socklen_t len) {
+        // Instantiate local vars TcpConnection *con & TcpEvConnect *ev
+        TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
+
+        memcpy(&(ev->addr), addr, len);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
+        // Instantiate local vars TcpConnection *con & TcpEvShutdown *ev
+        TCP_EV_PRELUDE(TCP_EV_SHUTDOWN, TcpEvShutdown);
+
+        ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
+        ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
+        // Instantiate local vars TcpConnection *con & TcpEvListen *ev
+        TCP_EV_PRELUDE(TCP_EV_LISTEN, TcpEvListen);
+
+        ev->backlog = backlog;
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
+                       int optname) {
+        // Instantiate local vars TcpConnection *con & TcpEvSetsockopt
+        // *ev
+        TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
+
+        ev->level = level;
+        ev->optname = optname;
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
+        // Instantiate local vars TcpConnection *con & TcpEvSend *ev
+        TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
+
+        con->bytes_sent += bytes;
+        ev->bytes = bytes;
+        fill_send_flags(&(ev->flags), flags);
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
+        // Instantiate local vars TcpConnection *con & TcpEvRecv *ev
+        TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
+
+        con->bytes_received += bytes;
+        ev->bytes = bytes;
+        fill_recv_flags(&(ev->flags), flags);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
+                   const struct sockaddr *addr, socklen_t len) {
+        // Instantiate local vars TcpConnection *con & TcpEvSendto *ev
+        TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
+
+        con->bytes_sent += bytes;
+        ev->bytes = bytes;
+        fill_send_flags(&(ev->flags), flags);
+        memcpy(&(ev->addr), addr, len);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
+                     const struct sockaddr *addr, socklen_t len) {
+        // Instantiate local vars TcpConnection *con & TcpEvRecvfrom *ev
+        TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
+
+        con->bytes_received += bytes;
+        ev->bytes = bytes;
+        fill_recv_flags(&(ev->flags), flags);
+        memcpy(&(ev->addr), addr, len);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_close(int fd, int return_value, int err, bool detected) {
+        // Instantiate local vars TcpConnection *con & TcpEvClose
+        // *ev
+        TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvClose);
+
+        ev->detected = detected;
+        push_event(con, (TcpEvent *)ev);
+
+        if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
+        tcp_dump_json(con);
+
+        /* Cleanup */
+        free_connection(con);
+        fd_con_map[fd] = NULL;
+}
+
+void tcp_ev_tcp_info(int fd) {
         /* Get TcpConnection */
-        TcpConnection *con = get_tcp_connection(fd);
+        TcpConnection *con = get_tcp_ev_connection(fd);
         FAIL_IF_NULL(con, TCP_EV_TCP_INFO);
 
         /* Check if should dump based on byte/time lower bounds */
@@ -463,8 +578,8 @@ void tcp_info_dump(int fd) {
         int err = errno;
 
         /* Create event */
-        TcpEvInfoDump *ev =
-            (TcpEvInfoDump *)alloc_event(TCP_EV_TCP_INFO, ret, err);
+        TcpEvTcpInfo *ev =
+            (TcpEvTcpInfo *)alloc_event(TCP_EV_TCP_INFO, ret, err);
         FAIL_IF_NULL(ev, TCP_EV_TCP_INFO);
         memcpy(&(ev->info), &info, sizeof(info));
 
@@ -478,116 +593,3 @@ void tcp_info_dump(int fd) {
         push_event(con, (TcpEvent *)ev);
 }
 
-void tcp_sock_closed(int fd, int return_value, int err, bool detected) {
-        // Instantiate local vars TcpConnection *con & TcpEvSockClosed
-        // *ev
-        TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvSockClosed);
-
-        ev->detected = detected;
-        push_event(con, (TcpEvent *)ev);
-
-        if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
-        tcp_dump_json(con);
-
-        /* Cleanup */
-        free_connection(con);
-        fd_con_map[fd] = NULL;
-}
-
-void tcp_send(int fd, int return_value, int err, size_t bytes, int flags) {
-        // Instantiate local vars TcpConnection *con & TcpEvSend *ev
-        TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
-
-        con->bytes_sent += bytes;
-        ev->bytes = bytes;
-        fill_send_flags(&(ev->flags), flags);
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_sendto(int fd, int return_value, int err, size_t bytes, int flags,
-                const struct sockaddr *addr, socklen_t len) {
-        // Instantiate local vars TcpConnection *con & TcpEvSendto *ev
-        TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
-
-        con->bytes_sent += bytes;
-        ev->bytes = bytes;
-        fill_send_flags(&(ev->flags), flags);
-        memcpy(&(ev->addr), addr, len);
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_recv(int fd, int return_value, int err, size_t bytes, int flags) {
-        // Instantiate local vars TcpConnection *con & TcpEvRecv *ev
-        TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
-
-        con->bytes_received += bytes;
-        ev->bytes = bytes;
-        fill_recv_flags(&(ev->flags), flags);
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
-                  const struct sockaddr *addr, socklen_t len) {
-        // Instantiate local vars TcpConnection *con & TcpEvRecvfrom *ev
-        TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
-
-        con->bytes_received += bytes;
-        ev->bytes = bytes;
-        fill_recv_flags(&(ev->flags), flags);
-        memcpy(&(ev->addr), addr, len);
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_connect(int fd, int return_value, int err, const struct sockaddr *addr,
-                 socklen_t len) {
-        // Instantiate local vars TcpConnection *con & TcpEvConnect *ev
-        TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
-
-        memcpy(&(ev->addr), addr, len);
-
-        push_event(con, (TcpEvent *)ev);
-}
-void tcp_setsockopt(int fd, int return_value, int err, int level, int optname) {
-        // Instantiate local vars TcpConnection *con & TcpEvSetsockopt
-        // *ev
-        TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
-
-        ev->level = level;
-        ev->optname = optname;
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_shutdown(int fd, int return_value, int err, int how) {
-        // Instantiate local vars TcpConnection *con & TcpEvShutdown *ev
-        TCP_EV_PRELUDE(TCP_EV_SHUTDOWN, TcpEvShutdown);
-
-        ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
-        ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_listen(int fd, int return_value, int err, int backlog) {
-        // Instantiate local vars TcpConnection *con & TcpEvListen *ev
-        TCP_EV_PRELUDE(TCP_EV_LISTEN, TcpEvListen);
-
-        ev->backlog = backlog;
-
-        push_event(con, (TcpEvent *)ev);
-}
-
-void tcp_bind(int fd, int return_value, int err, const struct sockaddr *addr,
-              socklen_t len) {
-        // Instantiate local vars TcpConnection *con & TcpEvBind *ev
-        TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
-
-        memcpy(&(ev->addr), addr, len);
-        con->bind_ev = ev;
-        ev->force_bind = con->force_bind;
-
-        push_event(con, (TcpEvent *)ev);
-}

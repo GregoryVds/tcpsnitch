@@ -43,8 +43,8 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "init.h"
 #include "lib.h"
+#include "init.h"
 #include "logger.h"
 #include "string_helpers.h"
 #include "tcp_spy.h"
@@ -62,8 +62,8 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), bind(), connect(), shutdown(), listen(),
- setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
+ functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(), 
+ send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
 
 */
 
@@ -74,52 +74,52 @@
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
 
 int socket(int __domain, int __type, int __protocol) {
-	init_netspy();
+        init_netspy();
 
-	orig_socket_type orig_socket;
-	orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
+        orig_socket_type orig_socket;
+        orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
 
-	/* Translate domain to str */
-	char *domain = alloc_sock_domain_str(__domain);
-	LOG(INFO, "socket() called (domain %s)", domain);
-	free(domain);
+        /* Translate domain to str */
+        char *domain = alloc_sock_domain_str(__domain);
+        LOG(INFO, "socket() called (domain %s)", domain);
+        free(domain);
 
-	int fd = orig_socket(__domain, __type, __protocol);
-	if (fd == -1) {
-		LOG(INFO, "socket() failed. %s.", strerror(errno));
-		return -1;
-	}
+        int fd = orig_socket(__domain, __type, __protocol);
+        if (fd == -1) {
+                LOG(INFO, "socket() failed. %s.", strerror(errno));
+                return -1;
+        }
 
-	if (is_tcp_socket(fd)) {
-		tcp_sock_opened(fd, __domain, __type, __protocol);
-		tcp_info_dump(fd);
-	}
+        if (is_tcp_socket(fd)) {
+                tcp_ev_socket(fd, __domain, __type, __protocol);
+                tcp_ev_tcp_info(fd);
+        }
 
-	return fd;
+        return fd;
 }
 
 /* Give the socket FD the local address ADDR (which is LEN bytes long).  */
 
 typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
-			      socklen_t __len);
+                              socklen_t __len);
 
 int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-	init_netspy();
+        init_netspy();
 
-	orig_bind_type orig_bind;
-	orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
+        orig_bind_type orig_bind;
+        orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
-	LOG(INFO, "bind() called on socket %d", __fd);
+        LOG(INFO, "bind() called on socket %d", __fd);
 
-	int ret = orig_bind(__fd, __addr, __len);
-	int err = errno;
+        int ret = orig_bind(__fd, __addr, __len);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_bind(__fd, ret, err, __addr, __len);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_bind(__fd, ret, err, __addr, __len);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Open a connection on socket FD to peer at ADDR (which LEN bytes long).
@@ -128,29 +128,29 @@ int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
    Return 0 on success, -1 for errors. */
 
 typedef int (*orig_connect_type)(int __fd, const struct sockaddr *__addr,
-				 socklen_t __len);
+                                 socklen_t __len);
 
 int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-	init_netspy();
+        init_netspy();
 
-	orig_connect_type orig_connect;
-	orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
-	LOG(INFO, "connect() called on socket %d.", __fd);
+        orig_connect_type orig_connect;
+        orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
+        LOG(INFO, "connect() called on socket %d.", __fd);
 
-	if (is_tcp_socket(__fd)) {
-		tcp_start_packet_capture(
-		    __fd, (const struct sockaddr_storage *)__addr);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_start_packet_capture(
+                    __fd, (const struct sockaddr_storage *)__addr);
+        }
 
-	int ret = orig_connect(__fd, __addr, __len);
-	int err = errno;
+        int ret = orig_connect(__fd, __addr, __len);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_connect(__fd, ret, err, __addr, __len);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_connect(__fd, ret, err, __addr, __len);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Shut down all or part of the connection open on socket FD.
@@ -163,21 +163,21 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 typedef int (*orig_shutdown_type)(int __fd, int __how);
 
 int shutdown(int __fd, int __how) {
-	init_netspy();
+        init_netspy();
 
-	orig_shutdown_type orig_shutdown;
-	orig_shutdown = (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
-	LOG(INFO, "shutdown() called on socket %d.", __fd);
+        orig_shutdown_type orig_shutdown;
+        orig_shutdown = (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
+        LOG(INFO, "shutdown() called on socket %d.", __fd);
 
-	int ret = orig_shutdown(__fd, __how);
-	int err = errno;
+        int ret = orig_shutdown(__fd, __how);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_shutdown(__fd, ret, err, __how);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_shutdown(__fd, ret, err, __how);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Prepare to accept connections on socket FD.
@@ -187,121 +187,121 @@ int shutdown(int __fd, int __how) {
 typedef int (*orig_listen_type)(int __fd, int __n);
 
 int listen(int __fd, int __n) {
-	init_netspy();
+        init_netspy();
 
-	orig_listen_type orig_listen;
-	orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
-	LOG(INFO, "listen() called on socket %d.", __fd);
+        orig_listen_type orig_listen;
+        orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
+        LOG(INFO, "listen() called on socket %d.", __fd);
 
-	int ret = orig_listen(__fd, __n);
-	int err = errno;
+        int ret = orig_listen(__fd, __n);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_listen(__fd, ret, err, __n);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_listen(__fd, ret, err, __n);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Set socket FD's option OPTNAME at protocol level LEVEL
    to *OPTVAL (which is OPTLEN bytes long).
    Returns 0 on success, -1 for errors.  */
 typedef int (*orig_setsockopt_type)(int __fd, int __level, int __optname,
-				    const void *__optval, socklen_t __optlen);
+                                    const void *__optval, socklen_t __optlen);
 
 int setsockopt(int __fd, int __level, int __optname, const void *__optval,
-	       socklen_t __optlen) {
-	init_netspy();
+               socklen_t __optlen) {
+        init_netspy();
 
-	orig_setsockopt_type orig_setsockopt;
-	orig_setsockopt = (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
-	LOG(INFO, "setsockopt() called on socket %d.", __fd);
+        orig_setsockopt_type orig_setsockopt;
+        orig_setsockopt = (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
+        LOG(INFO, "setsockopt() called on socket %d.", __fd);
 
-	int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
-	int err = errno;
+        int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_setsockopt(__fd, ret, err, __level, __optname);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_setsockopt(__fd, ret, err, __level, __optname);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Send N bytes of BUF to socket FD.  Returns the number sent or -1. */
 
 typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
-				  int __flags);
+                                  int __flags);
 
 ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
-	init_netspy();
+        init_netspy();
 
-	orig_send_type orig_send;
-	orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
-	LOG(INFO, "send() called on socket %d.", __fd);
+        orig_send_type orig_send;
+        orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
+        LOG(INFO, "send() called on socket %d.", __fd);
 
-	ssize_t ret = orig_send(__fd, __buf, __n, __flags);
-	int err = errno;
+        ssize_t ret = orig_send(__fd, __buf, __n, __flags);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_send(__fd, (int)ret, err, __n, __flags);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_send(__fd, (int)ret, err, __n, __flags);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Read N bytes into BUF from socket FD.
    Returns the number read or -1 for errors. */
 
 typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
-				  int __flags);
+                                  int __flags);
 
 ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
-	init_netspy();
+        init_netspy();
 
-	orig_recv_type orig_recv;
-	orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
-	LOG(INFO, "recv() called on socket %d.", __fd);
+        orig_recv_type orig_recv;
+        orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
+        LOG(INFO, "recv() called on socket %d.", __fd);
 
-	ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
-	int err = errno;
+        ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_recv(__fd, ret, err, __n, __flags);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_recv(__fd, ret, err, __n, __flags);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Send N bytes of BUF on socket FD to peer at address ADDR (which is
    ADDR_LEN bytes long).  Returns the number sent, or -1 for errors. */
 
 typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
-				    int __flags, const struct sockaddr *__addr,
-				    socklen_t __addr_len);
+                                    int __flags, const struct sockaddr *__addr,
+                                    socklen_t __addr_len);
 
 ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
-	       const struct sockaddr *__addr, socklen_t __addr_len) {
-	init_netspy();
+               const struct sockaddr *__addr, socklen_t __addr_len) {
+        init_netspy();
 
-	orig_sendto_type orig_sendto;
-	orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
+        orig_sendto_type orig_sendto;
+        orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
 
-	LOG(INFO, "sendto() on socket %d", __fd);
+        LOG(INFO, "sendto() on socket %d", __fd);
 
-	ssize_t ret =
-	    orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
-	int err = errno;
+        ssize_t ret =
+            orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Read N bytes into BUF through socket FD.
@@ -310,60 +310,61 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
    Returns the number of bytes read or -1 for errors. */
 
 typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
-				      size_t __n, int __flags,
-				      struct sockaddr *__addr,
-				      socklen_t *__restrict __addr_len);
+                                      size_t __n, int __flags,
+                                      struct sockaddr *__addr,
+                                      socklen_t *__restrict __addr_len);
 
 ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
-		 struct sockaddr *__addr, socklen_t *__addr_len) {
-	init_netspy();
+                 struct sockaddr *__addr, socklen_t *__addr_len) {
+        init_netspy();
 
-	orig_recvfrom_type orig_recvfrom;
-	orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
-	LOG(INFO, "recvfrom() called.");
+        orig_recvfrom_type orig_recvfrom;
+        orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
+        LOG(INFO, "recvfrom() called.");
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
-	ssize_t ret =
-	    orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
-	int err = errno;
+        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
+        /* Perform syscall */
+        ssize_t ret =
+            orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_recvfrom(__fd, ret, err, __n, __flags, __addr, *__addr_len);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_recvfrom(__fd, ret, err, __n, __flags, __addr,
+                                *__addr_len);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Send a message described MESSAGE on socket FD.
    Returns the number of bytes sent, or -1 for errors. */
 
 typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
-				     int __flags);
+                                     int __flags);
 
 ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
-	init_netspy();
+        init_netspy();
 
-	LOG(WARN, "NOT IMPLEMENTED: sendmsg() on socket %d", __fd);
-	orig_sendmsg_type orig_sendmsg;
-	orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
-	return orig_sendmsg(__fd, __message, __flags);
+        LOG(WARN, "NOT IMPLEMENTED: sendmsg() on socket %d", __fd);
+        orig_sendmsg_type orig_sendmsg;
+        orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
+        return orig_sendmsg(__fd, __message, __flags);
 }
 
 /* Receive a message as described by MESSAGE from socket FD.
    Returns the number of bytes read or -1 for errors. */
 
 typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
-				     int __flags);
+                                     int __flags);
 
 ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
-	init_netspy();
+        init_netspy();
 
-	LOG(WARN, "NOT IMPLEMENTED: recvmsg() on socket %d", __fd);
-	orig_recvmsg_type orig_recvmsg;
-	orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
-	return orig_recvmsg(__fd, __message, __flags);
+        LOG(WARN, "NOT IMPLEMENTED: recvmsg() on socket %d", __fd);
+        orig_recvmsg_type orig_recvmsg;
+        orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
+        return orig_recvmsg(__fd, __message, __flags);
 }
 
 /*
@@ -384,21 +385,21 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 typedef int (*orig_close_type)(int __fd);
 
 int close(int __fd) {
-	init_netspy();
+        init_netspy();
 
-	orig_close_type orig_close;
-	orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
+        orig_close_type orig_close;
+        orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
 
-	LOG(INFO, "close() on socket %d", __fd);
+        LOG(INFO, "close() on socket %d", __fd);
 
-	bool is_tcp = is_tcp_socket(__fd);
-	if (is_tcp) tcp_info_dump(__fd);
-	/* Perform syscall */
-	int ret = orig_close(__fd);
-	int err = errno;
-	if (is_tcp) tcp_sock_closed(__fd, ret, err, true);
+        bool is_tcp = is_tcp_socket(__fd);
+        if (is_tcp) tcp_ev_tcp_info(__fd);
+        /* Perform syscall */
+        int ret = orig_close(__fd);
+        int err = errno;
+        if (is_tcp) tcp_ev_close(__fd, ret, err, true);
 
-	return ret;
+        return ret;
 }
 
 /* Write N bytes of BUF to FD.  Return the number written, or -1. */
@@ -406,23 +407,23 @@ int close(int __fd) {
 typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
 
 ssize_t write(int __fd, const void *__buf, size_t __n) {
-	init_netspy();
+        init_netspy();
 
-	orig_write_type orig_write;
-	orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
-	if (is_inet_socket(__fd)) LOG(INFO, "write() on socket %d", __fd);
+        orig_write_type orig_write;
+        orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
+        if (is_inet_socket(__fd)) LOG(INFO, "write() on socket %d", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
-	int ret = orig_write(__fd, __buf, __n);
-	int err = errno;
+        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
+        /* Perform syscall */
+        int ret = orig_write(__fd, __buf, __n);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_send(__fd, ret, err, __n, 0);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_send(__fd, ret, err, __n, 0);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /* Read NBYTES into BUF from FD.  Return the
@@ -431,23 +432,23 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
 typedef ssize_t (*orig_read_type)(int __fd, void *__buf, size_t __nbytes);
 
 ssize_t read(int __fd, void *__buf, size_t __nbytes) {
-	init_netspy();
+        init_netspy();
 
-	orig_read_type orig_read;
-	orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
-	if (is_inet_socket(__fd)) LOG(INFO, "read() on socket %d", __fd);
+        orig_read_type orig_read;
+        orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
+        if (is_inet_socket(__fd)) LOG(INFO, "read() on socket %d", __fd);
 
-	if (is_tcp_socket(__fd)) tcp_info_dump(__fd);
-	/* Perform syscall */
-	int ret = orig_read(__fd, __buf, __nbytes);
-	int err = errno;
+        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
+        /* Perform syscall */
+        int ret = orig_read(__fd, __buf, __nbytes);
+        int err = errno;
 
-	if (is_tcp_socket(__fd)) {
-		tcp_recv(__fd, ret, err, __nbytes, 0);
-		tcp_info_dump(__fd);
-	}
+        if (is_tcp_socket(__fd)) {
+                tcp_ev_recv(__fd, ret, err, __nbytes, 0);
+                tcp_ev_tcp_info(__fd);
+        }
 
-	return ret;
+        return ret;
 }
 
 /*
@@ -470,19 +471,19 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
    are taken from IOVEC instead of a contiguous buffer. */
 
 typedef ssize_t (*orig_writev_type)(int __fd, const struct iovec *__iovec,
-				    int __count);
+                                    int __count);
 
 ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
-	init_netspy();
+        init_netspy();
 
-	orig_writev_type orig_writev;
-	orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
+        orig_writev_type orig_writev;
+        orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
 
-	if (is_inet_socket(__fd)) {
-		LOG(WARN, "NOT IMPLEMENTED: writev() on socket %d", __fd);
-	}
+        if (is_inet_socket(__fd)) {
+                LOG(WARN, "NOT IMPLEMENTED: writev() on socket %d", __fd);
+        }
 
-	return orig_writev(__fd, __iovec, __count);
+        return orig_writev(__fd, __iovec, __count);
 }
 
 /* Read data from file descriptor FD, and put the result in the
@@ -492,19 +493,19 @@ ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
    put in IOVEC instead of a contiguous buffer. */
 
 typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
-				   int __count);
+                                   int __count);
 
 ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
-	init_netspy();
+        init_netspy();
 
-	orig_readv_type orig_readv;
-	orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
+        orig_readv_type orig_readv;
+        orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
 
-	if (is_inet_socket(__fd)) {
-		LOG(WARN, "NOT IMPLEMENTED: readv() on socket %d", __fd);
-	}
+        if (is_inet_socket(__fd)) {
+                LOG(WARN, "NOT IMPLEMENTED: readv() on socket %d", __fd);
+        }
 
-	return orig_readv(__fd, __iovec, __count);
+        return orig_readv(__fd, __iovec, __count);
 }
 
 /*
@@ -526,19 +527,19 @@ ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
    case of error.  */
 
 typedef ssize_t (*orig_sendfile_type)(int __out_fd, int __in_fd,
-				      off_t *__offset, size_t __count);
+                                      off_t *__offset, size_t __count);
 
 ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
-	init_netspy();
+        init_netspy();
 
-	orig_sendfile_type orig_sendfile;
-	orig_sendfile = (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
+        orig_sendfile_type orig_sendfile;
+        orig_sendfile = (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
-	if (is_inet_socket(__out_fd)) {
-		LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", __out_fd);
-	}
+        if (is_inet_socket(__out_fd)) {
+                LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", __out_fd);
+        }
 
-	return orig_sendfile(__out_fd, __in_fd, __offset, __count);
+        return orig_sendfile(__out_fd, __in_fd, __offset, __count);
 }
 
 /*
@@ -560,35 +561,34 @@ ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
    or -1 for errors.*/
 
 typedef int (*orig_poll_type)(struct pollfd *__fds, nfds_t __nfds,
-			      int __timeout);
+                              int __timeout);
 
 int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
-	init_netspy();
+        init_netspy();
 
-	orig_poll_type orig_poll;
-	orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
+        orig_poll_type orig_poll;
+        orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
 
-	unsigned long ndfs = __nfds;
-	int i;
-	for (i = 0; (unsigned long)i < ndfs; i++) {
-		struct pollfd *pollfd = __fds + i;
+        unsigned long ndfs = __nfds;
+        int i;
+        for (i = 0; (unsigned long)i < ndfs; i++) {
+                struct pollfd *pollfd = __fds + i;
 
-		if (is_inet_socket(pollfd->fd)) {
-			short events = pollfd->events;
-			char flags[100] = "events:";
-			if (events & POLLIN) strcat(flags, " POLLIN");
-			if (events & POLLPRI) strcat(flags, " POLLPRI");
-			if (events & POLLOUT) strcat(flags, " POLLOUT");
-			if (events & POLLRDHUP) strcat(flags, " POLLRDHUP");
-			if (events & POLLERR) strcat(flags, " POLLERR");
-			if (events & POLLHUP) strcat(flags, " POLLHUP");
-			if (events & POLLNVAL) strcat(flags, " POLLNVAL");
+                if (is_inet_socket(pollfd->fd)) {
+                        short events = pollfd->events;
+                        char flags[100] = "events:";
+                        if (events & POLLIN) strcat(flags, " POLLIN");
+                        if (events & POLLPRI) strcat(flags, " POLLPRI");
+                        if (events & POLLOUT) strcat(flags, " POLLOUT");
+                        if (events & POLLRDHUP) strcat(flags, " POLLRDHUP");
+                        if (events & POLLERR) strcat(flags, " POLLERR");
+                        if (events & POLLHUP) strcat(flags, " POLLHUP");
+                        if (events & POLLNVAL) strcat(flags, " POLLNVAL");
 
-			LOG(INFO, "poll() on socket %d (%s)", pollfd->fd,
-			    flags);
-		}
-	}
+                        LOG(INFO, "poll() on socket %d (%s)", pollfd->fd,
+                            flags);
+                }
+        }
 
-	return orig_poll(__fds, __nfds, __timeout);
+        return orig_poll(__fds, __nfds, __timeout);
 }
-

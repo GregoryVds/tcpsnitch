@@ -32,8 +32,8 @@ describe "libc overrides" do
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), bind(), connect(), shutdown(), listen(), getsockopt(),
- setsockopt(), send(), sendto(), sendmsg(), recv(), recvfrom(), recvmsg(),
+ functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(), 
+ send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
 
 =end
 
