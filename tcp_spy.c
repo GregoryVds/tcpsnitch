@@ -71,6 +71,7 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 ///////////////////////////////////////////////////////////////////////////////
 
 void tcp_cleanup(void) {
+        // Close all unclosed connections.
         int i;
         for (i = 0; i < MAX_FD; i++) {
                 if (fd_con_map[i] != NULL) {
@@ -132,37 +133,13 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         ev = (TcpEvent *)malloc(sizeof(TcpEvSocket));
                         success = (return_value != 0);
                         break;
-                case TCP_EV_CLOSE:
-                        success = (return_value == 0);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvClose));
-                        break;
-                case TCP_EV_SEND:
+                case TCP_EV_BIND:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSend));
-                        break;
-                case TCP_EV_SENDTO:
-                        success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSendto));
-                        break;
-                case TCP_EV_RECV:
-                        success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecv));
-                        break;
-                case TCP_EV_RECVFROM:
-                        success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecvfrom));
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvBind));
                         break;
                 case TCP_EV_CONNECT:
                         success = (return_value != -1);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvConnect));
-                        break;
-                case TCP_EV_TCP_INFO:
-                        success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvTcpInfo));
-                        break;
-                case TCP_EV_SETSOCKOPT:
-                        success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSetsockopt));
                         break;
                 case TCP_EV_SHUTDOWN:
                         success = (return_value != -1);
@@ -172,9 +149,33 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         success = (return_value != -1);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvListen));
                         break;
-                case TCP_EV_BIND:
+                case TCP_EV_SETSOCKOPT:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvBind));
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvSetsockopt));
+                        break;
+                case TCP_EV_SEND:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvSend));
+                        break;
+                case TCP_EV_RECV:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecv));
+                        break;
+                case TCP_EV_SENDTO:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvSendto));
+                        break;
+                case TCP_EV_RECVFROM:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecvfrom));
+                        break;
+                case TCP_EV_CLOSE:
+                        success = (return_value == 0);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvClose));
+                        break;
+                case TCP_EV_TCP_INFO:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvTcpInfo));
                         break;
         }
 
@@ -592,4 +593,3 @@ void tcp_ev_tcp_info(int fd) {
 
         push_event(con, (TcpEvent *)ev);
 }
-
