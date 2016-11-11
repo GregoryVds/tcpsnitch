@@ -389,8 +389,7 @@ int close(int __fd) {
 
         orig_close_type orig_close;
         orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
-
-        LOG(INFO, "close() on socket %d", __fd);
+        if (is_inet_socket(__fd)) LOG(INFO, "close() on socket %d", __fd);
 
         bool is_tcp = is_tcp_socket(__fd);
         if (is_tcp) tcp_ev_tcp_info(__fd);
@@ -419,7 +418,7 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
         int err = errno;
 
         if (is_tcp_socket(__fd)) {
-                tcp_ev_send(__fd, ret, err, __n, 0);
+                tcp_ev_write(__fd, ret, err, __n);
                 tcp_ev_tcp_info(__fd);
         }
 
@@ -444,7 +443,7 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
         int err = errno;
 
         if (is_tcp_socket(__fd)) {
-                tcp_ev_recv(__fd, ret, err, __nbytes, 0);
+                tcp_ev_read(__fd, ret, err, __nbytes);
                 tcp_ev_tcp_info(__fd);
         }
 

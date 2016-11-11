@@ -35,6 +35,8 @@ static json_t *build_tcp_ev_recv(TcpEvRecv *ev);
 static json_t *build_tcp_ev_sendto(TcpEvSendto *ev);
 static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev);
 
+static json_t *build_tcp_ev_write(TcpEvWrite *ev);
+static json_t *build_tcp_ev_read(TcpEvRead *ev);
 static json_t *build_tvp_ev_close(TcpEvClose *ev);
 
 static json_t *build_tcp_ev_tcp_info(TcpEvTcpInfo *ev);
@@ -127,6 +129,12 @@ static json_t *build_event(TcpEvent *ev) {
                         break;
                 case TCP_EV_RECVFROM:
                         r = build_tcp_ev_recvfrom((TcpEvRecvfrom *)ev);
+                        break;
+                case TCP_EV_WRITE:
+                        r = build_tcp_ev_write((TcpEvWrite *)ev);
+                        break;
+                case TCP_EV_READ:
+                        r = build_tcp_ev_read((TcpEvRead *)ev);
                         break;
                 case TCP_EV_CLOSE:
                         r = build_tvp_ev_close((TcpEvClose *)ev);
@@ -250,6 +258,15 @@ static json_t *build_tcp_ev_send(TcpEvSend *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+        add(json_details, "flags", build_recv_flags(&(ev->flags)));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
@@ -267,14 +284,6 @@ static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-
-        add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_recv_flags(&(ev->flags)));
-
-        return json_ev;
-}
 
 static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
@@ -289,6 +298,22 @@ static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
 
         free(addr_str);
         free(port_str);
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_write(TcpEvWrite *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_read(TcpEvRead *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
 
         return json_ev;
 }

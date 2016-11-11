@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <assert.h>
 #include "config.h"
 #include "init.h"
 #include "lib.h"
@@ -168,6 +169,14 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                 case TCP_EV_RECVFROM:
                         success = (return_value != -1);
                         ev = (TcpEvent *)malloc(sizeof(TcpEvRecvfrom));
+                        break;
+                case TCP_EV_WRITE:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvWrite));
+                        break;
+                case TCP_EV_READ:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)malloc(sizeof(TcpEvRead));
                         break;
                 case TCP_EV_CLOSE:
                         success = (return_value == 0);
@@ -419,9 +428,10 @@ void tcp_stop_packet_capture(TcpConnection *con) {
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket()", "bind()",       "connect()", "shutdown()",
-            "listen()", "setsockopt()", "send()",    "recv()",
-            "sendto()", "recvfrom()",   "close()",   "tcp_info"};
+            "socket()",     "bind()", "connect()", "shutdown()", "listen()",
+            "setsockopt()", "send()", "recv()",    "sendto()",   "recvfrom()",
+            "write()",      "read()", "close()",   "tcp_info"};
+        assert(sizeof(strings)/sizeof(char *)==TCP_EV_TCP_INFO+1);
         return strings[type];
 }
 
@@ -545,6 +555,24 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         fill_recv_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
+
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
+        // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
+        TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
+        con->bytes_sent += bytes;
+        ev->bytes = bytes;
+        push_event(con, (TcpEvent *)ev);
+}
+
+void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
+        // Instantiate local vars TcpConnection *con & TcpEvRead *ev
+        TCP_EV_PRELUDE(TCP_EV_READ, TcpEvRead);
+
+        con->bytes_received += bytes;
+        ev->bytes = bytes;
 
         push_event(con, (TcpEvent *)ev);
 }

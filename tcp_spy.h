@@ -25,6 +25,8 @@ typedef enum TcpEventType {
         TCP_EV_SENDTO,
         TCP_EV_RECVFROM,
         // unistd.h
+        TCP_EV_WRITE,
+        TCP_EV_READ,
         TCP_EV_CLOSE,
         // others
         TCP_EV_TCP_INFO,
@@ -123,6 +125,18 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
+        size_t bytes;
+        TcpSendFlags flags;
+} TcpEvWrite;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+        TcpRecvFlags flags;
+} TcpEvRead;
+
+typedef struct {
+        TcpEvent super;
         bool detected;
 } TcpEvClose;
 
@@ -194,6 +208,10 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
 
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
                      const struct sockaddr *addr, socklen_t len);
+
+void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
+
+void tcp_ev_read(int fd, int return_value, int err, size_t bytes);
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected);
 
