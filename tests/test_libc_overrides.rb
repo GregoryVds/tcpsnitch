@@ -284,30 +284,9 @@ describe "libc overrides" do
 
  unistd.h - standard symbolic constants and types
 
- functions: close(), write(), read().
+ functions: write(), read(), close().
 
 =end
-
-  describe "when calling #{TCP_EV_CLOSE}" do
-    it "#{TCP_EV_CLOSE} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 close(3) = 0
-      EOT
-      assert_event_present(TCP_EV_CLOSE)
-    end
-
-    it "#{TCP_EV_CLOSE} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, 0) = 3 
-        +0 close(3) = 0
-      EOT
-    end
-
-    it "#{TCP_EV_CLOSE} should be tracked when failing" do
-      skip
-    end
-  end
 
   describe "when calling #{TCP_EV_WRITE}" do
     it "#{TCP_EV_WRITE} should be tracked with SOCK_STREAM" do
@@ -353,6 +332,28 @@ describe "libc overrides" do
       skip
     end
   end
+
+  describe "when calling #{TCP_EV_CLOSE}" do
+    it "#{TCP_EV_CLOSE} should be tracked with SOCK_STREAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+        +0 close(3) = 0
+      EOT
+      assert_event_present(TCP_EV_CLOSE)
+    end
+
+    it "#{TCP_EV_CLOSE} should not crash with SOCK_DGRAM" do
+      assert run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_DGRAM, 0) = 3 
+        +0 close(3) = 0
+      EOT
+    end
+
+    it "#{TCP_EV_CLOSE} should be tracked when failing" do
+      skip
+    end
+  end
+
 
 =begin
   _   _ ___ ___       _    ____ ___
