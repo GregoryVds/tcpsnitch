@@ -217,7 +217,7 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes);
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected);
 
-void tcp_ev_tcp_info(int fd);
+void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info);
 
 void tcp_cleanup(void);
 

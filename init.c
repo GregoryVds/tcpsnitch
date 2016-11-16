@@ -199,7 +199,6 @@ void cleanup(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void init_netspy(void) {
-        int rc;
         // Acquire mutex
         if (!(lock(&init_mutex))) return;
         if (initialized) goto exit;

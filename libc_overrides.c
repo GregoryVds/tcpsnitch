@@ -30,6 +30,7 @@
 
 #define _GNU_SOURCE
 
+#include "lib.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -43,7 +44,6 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "lib.h"
 #include "init.h"
 #include "logger.h"
 #include "string_helpers.h"
@@ -62,7 +62,7 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(), 
+ functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(),
  send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
 
 */
@@ -90,10 +90,7 @@ int socket(int __domain, int __type, int __protocol) {
                 return -1;
         }
 
-        if (is_tcp_socket(fd)) {
-                tcp_ev_socket(fd, __domain, __type, __protocol);
-                tcp_ev_tcp_info(fd);
-        }
+        if (is_tcp_socket(fd)) tcp_ev_socket(fd, __domain, __type, __protocol);
 
         return fd;
 }
@@ -114,10 +111,7 @@ int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
         int ret = orig_bind(__fd, __addr, __len);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_bind(__fd, ret, err, __addr, __len);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_bind(__fd, ret, err, __addr, __len);
 
         return ret;
 }
@@ -145,10 +139,7 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
         int ret = orig_connect(__fd, __addr, __len);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_connect(__fd, ret, err, __addr, __len);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_connect(__fd, ret, err, __addr, __len);
 
         return ret;
 }
@@ -172,10 +163,7 @@ int shutdown(int __fd, int __how) {
         int ret = orig_shutdown(__fd, __how);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_shutdown(__fd, ret, err, __how);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_shutdown(__fd, ret, err, __how);
 
         return ret;
 }
@@ -196,10 +184,7 @@ int listen(int __fd, int __n) {
         int ret = orig_listen(__fd, __n);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_listen(__fd, ret, err, __n);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_listen(__fd, ret, err, __n);
 
         return ret;
 }
@@ -221,10 +206,8 @@ int setsockopt(int __fd, int __level, int __optname, const void *__optval,
         int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
+        if (is_tcp_socket(__fd))
                 tcp_ev_setsockopt(__fd, ret, err, __level, __optname);
-                tcp_ev_tcp_info(__fd);
-        }
 
         return ret;
 }
@@ -244,10 +227,7 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
         ssize_t ret = orig_send(__fd, __buf, __n, __flags);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_send(__fd, (int)ret, err, __n, __flags);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_send(__fd, (int)ret, err, __n, __flags);
 
         return ret;
 }
@@ -268,10 +248,7 @@ ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
         ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_recv(__fd, ret, err, __n, __flags);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_recv(__fd, ret, err, __n, __flags);
 
         return ret;
 }
@@ -296,10 +273,8 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
             orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
+        if (is_tcp_socket(__fd))
                 tcp_ev_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
-                tcp_ev_tcp_info(__fd);
-        }
 
         return ret;
 }
@@ -322,17 +297,14 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
         orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
         LOG(INFO, "recvfrom() called.");
 
-        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
         /* Perform syscall */
         ssize_t ret =
             orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
+        if (is_tcp_socket(__fd))
                 tcp_ev_recvfrom(__fd, ret, err, __n, __flags, __addr,
                                 *__addr_len);
-                tcp_ev_tcp_info(__fd);
-        }
 
         return ret;
 }
@@ -392,7 +364,6 @@ int close(int __fd) {
         if (is_inet_socket(__fd)) LOG(INFO, "close() on socket %d", __fd);
 
         bool is_tcp = is_tcp_socket(__fd);
-        if (is_tcp) tcp_ev_tcp_info(__fd);
         /* Perform syscall */
         int ret = orig_close(__fd);
         int err = errno;
@@ -412,15 +383,11 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
         orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
         if (is_inet_socket(__fd)) LOG(INFO, "write() on socket %d", __fd);
 
-        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
         /* Perform syscall */
         int ret = orig_write(__fd, __buf, __n);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_write(__fd, ret, err, __n);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_write(__fd, ret, err, __n);
 
         return ret;
 }
@@ -437,15 +404,11 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
         orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
         if (is_inet_socket(__fd)) LOG(INFO, "read() on socket %d", __fd);
 
-        if (is_tcp_socket(__fd)) tcp_ev_tcp_info(__fd);
         /* Perform syscall */
         int ret = orig_read(__fd, __buf, __nbytes);
         int err = errno;
 
-        if (is_tcp_socket(__fd)) {
-                tcp_ev_read(__fd, ret, err, __nbytes);
-                tcp_ev_tcp_info(__fd);
-        }
+        if (is_tcp_socket(__fd)) tcp_ev_read(__fd, ret, err, __nbytes);
 
         return ret;
 }
