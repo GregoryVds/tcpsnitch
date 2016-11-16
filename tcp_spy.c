@@ -48,7 +48,10 @@
 
 #define MAX_FD 1024
 static TcpConnection *fd_con_map[MAX_FD];
+static pthread_mutex_t fd_con_map_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static int connections_count = 0;
+static pthread_mutex_t connections_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 ///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
@@ -61,7 +64,8 @@ static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
 /* HELPERS */
-static TcpConnection *get_tcp_ev_connection(int fd);
+static TcpConnection *get_tcp_connection(int fd);
+static TcpConnection *put_tcp_connection(int fd, TcpConnection *con);
 static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
@@ -116,13 +120,28 @@ static TcpConnection *alloc_connection(void) {
                 return NULL;
         }
 
+        int rc = pthread_mutex_init(&(con->mutex), NULL);
+        if (rc != 0) {
+                LOG(ERROR, "pthread_mutex_init() failed. %s.", strerror(rc));
+                return NULL;
+        }
+
+        if (!lock(&connections_count_mutex)) return NULL;
         con->id = connections_count;
+        unlock(&connections_count_mutex);
+
         con->cmdline = alloc_cmdline_str(&(con->app_name));
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
         con->directory = create_logs_dir(con);
 
+        if (!lock(&connections_count_mutex)) {
+                return NULL;
+                free_connection(con);
+        }
         connections_count++;
+        unlock(&connections_count_mutex);
+
         return con;
 }
 
@@ -203,6 +222,11 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 
 static void free_connection(TcpConnection *con) {
         free_events_list(con->head);
+        
+        int rc = pthread_mutex_destroy(&(con->mutex));
+        if (rc != 0)
+                LOG(ERROR, "pthread_mutex_destroy() failed. %s.", strerror(rc));
+
         free(con->app_name);
         free(con->cmdline);
         free(con->kernel);
@@ -245,13 +269,30 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static TcpConnection *get_tcp_ev_connection(int fd) {
+/* Even if at the moment a single lock per fd would be enough, we will change
+   the fd_con_map structure in a near future. When the structure will change,
+   a single lock per fd will probably not  be enough anymore (for instance if
+   the structure becomes a tree. */
+
+static TcpConnection *get_tcp_connection(int fd) {
+        if (!(lock(&fd_con_map_mutex))) return NULL;
+
         TcpConnection *con = fd_con_map[fd];
-        if (con == NULL) {
+        if (con == NULL)
                 LOG(ERROR, "Cannot find matching TcpConnection for fd %d.", fd);
-        }
+
+        unlock(&fd_con_map_mutex);
         return con;
 }
+
+static TcpConnection *put_tcp_connection(int fd, TcpConnection *con) {
+        if (!(lock(&fd_con_map_mutex))) return NULL;
+        fd_con_map[fd] = con;
+        unlock(&fd_con_map_mutex);
+        return con;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 static bool should_dump_tcp_info(TcpConnection *con) {
         /* Check if time lower bound is set, otherwise assume no lower bound */
@@ -364,50 +405,64 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
 */
 ///////////////////////////////////////////////////////////////////////////////
 
-void tcp_start_packet_capture(int fd,
-                              const struct sockaddr_storage *connect_addr) {
-        TcpConnection *con = get_tcp_ev_connection(fd);
+void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
+        TcpConnection *con = get_tcp_connection(fd);
         if (con == NULL) {
-                LOG(ERROR,
-                    "Abort packet capture. Cannot find related connection.");
-                return;
+                LOG(ERROR, "Cannot find related connection.");
+                goto error1;
         }
+
+        // Acquire lock on con
+        if (!lock(&(con->mutex))) goto error1;
 
         if (con->directory == NULL) {
-                LOG(WARN,
-                    "Do not start packet capture. con->directory is NULL.");
-                return;
+                LOG(ERROR, "con->directory is NULL.");
+                goto error2;
         }
 
-        char *pcap_file = alloc_pcap_path_str(con);
         if (con->bind_ev == NULL &&
-            force_bind(fd, con, connect_addr->ss_family == AF_INET6) == -1) {
+            force_bind(fd, con, addr->ss_family == AF_INET6) == -1) {
                 LOG(ERROR,
                     "force_bind() failed. Will only filter on dest IP"
                     " and dest PORT.");
         }
 
-        char *filter;
-        if (con->bind_ev) {
-                filter =
-                    build_capture_filter(&(con->bind_ev->addr), connect_addr);
-        } else {
-                filter = build_capture_filter(NULL, connect_addr);
+        char *pcap_file = alloc_pcap_path_str(con);
+        if (pcap_file == NULL) {
+                LOG(ERROR, "pcap_file NULL.");
+                goto error2;
         }
 
-        if (pcap_file == NULL || filter == NULL) {
-                LOG(ERROR, "Abort packet capture. NULL variable.");
-                return;
+        char *filter;
+        if (con->bind_ev)
+                filter = build_capture_filter(&(con->bind_ev->addr), addr);
+        else
+                filter = build_capture_filter(NULL, addr);
+
+        if (filter == NULL) {
+                LOG(ERROR, "filter is NULL.");
+                free(pcap_file);
+                goto error2;
         }
 
         con->capture_switch = start_capture(filter, pcap_file);
 
         free(filter);
         free(pcap_file);
+        unlock(&(con->mutex));
+
+error2:
+        unlock(&(con->mutex));
+        goto error1;
+error1:
+        LOG(ERROR, "Abort packet capture");
+        return;
 }
 
 void tcp_stop_packet_capture(TcpConnection *con) {
+        lock(&(con->mutex));
         stop_capture(con->capture_switch, con->rtt * 2);
+        unlock(&(con->mutex));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -421,10 +476,13 @@ void tcp_stop_packet_capture(TcpConnection *con) {
         }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        TcpConnection *con = get_tcp_ev_connection(fd);                        \
+        TcpConnection *con = get_tcp_connection(fd);                           \
         FAIL_IF_NULL(con, ev_type_cons);                                       \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
-        FAIL_IF_NULL(ev, ev_type_cons);
+        FAIL_IF_NULL(ev, ev_type_cons);                                        \
+        if (!lock(&(con->mutex))) FAIL_IF_NULL(NULL, ev_type_cons);
+
+#define TCP_EV_POSTLUDE unlock(&con->mutex);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
@@ -440,16 +498,17 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection was not properly closed. */
-        if (fd_con_map[fd]) tcp_ev_close(fd, 0, 0, false);
+        if (get_tcp_connection(fd)) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
-        TcpConnection *con = alloc_connection();
-        FAIL_IF_NULL(con, TCP_EV_SOCKET);
-        fd_con_map[fd] = con;
+        TcpConnection *new_con = alloc_connection();
+        FAIL_IF_NULL(new_con, TCP_EV_SOCKET);
+        FAIL_IF_NULL(put_tcp_connection(fd, new_con), TCP_EV_SOCKET);
 
         /* Create event */
-        TcpEvSocket *ev = (TcpEvSocket *)alloc_event(TCP_EV_SOCKET, fd, 0);
-        FAIL_IF_NULL(ev, TCP_EV_SOCKET);
+        int return_value = fd;
+        int err = 0;
+        TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
 
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
@@ -457,6 +516,8 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->sock_cloexec = type & SOCK_CLOEXEC;
         ev->sock_nonblock = type & SOCK_NONBLOCK;
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
@@ -467,8 +528,9 @@ void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
         memcpy(&(ev->addr), addr, len);
         con->bind_ev = ev;
         ev->force_bind = con->force_bind;
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_connect(int fd, int return_value, int err,
@@ -477,8 +539,9 @@ void tcp_ev_connect(int fd, int return_value, int err,
         TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
 
         memcpy(&(ev->addr), addr, len);
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
@@ -487,8 +550,9 @@ void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
 
         ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
         ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
@@ -496,8 +560,9 @@ void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
         TCP_EV_PRELUDE(TCP_EV_LISTEN, TcpEvListen);
 
         ev->backlog = backlog;
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
@@ -508,8 +573,9 @@ void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
 
         ev->level = level;
         ev->optname = optname;
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
@@ -520,6 +586,8 @@ void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
         ev->bytes = bytes;
         fill_send_flags(&(ev->flags), flags);
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
@@ -529,8 +597,9 @@ void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
         con->bytes_received += bytes;
         ev->bytes = bytes;
         fill_recv_flags(&(ev->flags), flags);
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
@@ -542,8 +611,9 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         fill_send_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
@@ -555,16 +625,20 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         fill_recv_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
         TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
+
         con->bytes_sent += bytes;
         ev->bytes = bytes;
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
@@ -573,8 +647,9 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
 
         con->bytes_received += bytes;
         ev->bytes = bytes;
-
         push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE
 }
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected) {
@@ -584,22 +659,28 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
 
         ev->detected = detected;
         push_event(con, (TcpEvent *)ev);
-
         if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
         tcp_dump_json(con);
 
         /* Cleanup */
+        put_tcp_connection(fd, NULL);
+        // We can unlock the mutex since the con is no longer accessible anyway.
+        TCP_EV_POSTLUDE
         free_connection(con);
-        fd_con_map[fd] = NULL;
 }
 
 void tcp_ev_tcp_info(int fd) {
         /* Get TcpConnection */
-        TcpConnection *con = get_tcp_ev_connection(fd);
+        TcpConnection *con = get_tcp_connection(fd);
         FAIL_IF_NULL(con, TCP_EV_TCP_INFO);
 
+        if (!lock(&(con->mutex))) FAIL_IF_NULL(NULL, TCP_EV_TCP_INFO);
+
         /* Check if should dump based on byte/time lower bounds */
-        if (!should_dump_tcp_info(con)) return;
+        if (!should_dump_tcp_info(con)) {
+                unlock(&(con->mutex));
+                return;
+        }
 
         /* Get TCP_INFO */
         struct tcp_info info;
@@ -620,4 +701,6 @@ void tcp_ev_tcp_info(int fd) {
         con->rtt = info.tcpi_rtt;
 
         push_event(con, (TcpEvent *)ev);
+        
+        unlock(&(con->mutex));
 }

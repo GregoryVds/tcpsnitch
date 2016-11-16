@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "logger.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,3 +142,22 @@ int get_int_len(int i) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+bool lock(pthread_mutex_t *mutex) {
+        int rc = pthread_mutex_unlock(mutex);
+        if (rc != 0) {
+                LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
+                return false;
+        }
+        return true;
+}
+
+bool unlock(pthread_mutex_t *mutex) {
+        int rc = pthread_mutex_unlock(mutex);
+        if (rc != 0) {
+                LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
+                return false;
+        }
+        return true;
+}
+

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <pthread.h>
 
 typedef enum TcpEventType {
         TCP_EV_SOCKET,
@@ -152,6 +153,7 @@ struct TcpEventNode {
 };
 
 typedef struct {
+        pthread_mutex_t mutex; 
         // To be freed
         char *app_name;      // Application name with args.
         char *cmdline;       // Cmdline (app name + args).
