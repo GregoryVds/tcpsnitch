@@ -84,8 +84,8 @@ void tcp_cleanup(void) {
 ///////////////////////////////////////////////////////////////////////////////
 
 char *create_logs_dir(TcpConnection *con) {
-        if (netspy_path == NULL) {
-                LOG(WARN, "Cannot create logs directory. netspy_path is NULL.");
+        if (log_path == NULL) {
+                LOG(WARN, "Cannot create logs directory. log_path is NULL.");
                 return NULL;
         }
 

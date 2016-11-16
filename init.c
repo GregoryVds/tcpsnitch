@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,13 +14,13 @@
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
-const char *netspy_path = NULL;  // Directory where Netspy runs are recorded.
+// Public data
 char *log_path = NULL;  // Directory in Netspy path for this run of Netspy.
-
 long tcp_info_bytes_ival = 0;
 long tcp_info_time_ival = 0;
 
 static bool initialized = false;
+static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -64,6 +65,12 @@ const char *get_netspy_path(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void log_metadata(const char *netspy_path) {
+        // TODO
+        if (netspy_path == NULL) return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /* For each Netspy run, we create a new log directory in the Netspy path. This
  * directory is named as follows: [APPLICATION]_[TIMESTAMP]_[X] where X is an
  * integer serving to differentiate names if the same application runs
@@ -92,7 +99,7 @@ char *alloc_base_log_dir_name(void) {
         return base_name;
 }
 
-char *alloc_base_log_dir_path(void) {
+char *alloc_base_log_dir_path(const char *netspy_path) {
         // Get base log dir name
         char *base_name = alloc_base_log_dir_name();
         if (base_name == NULL) {
@@ -113,9 +120,9 @@ char *alloc_base_log_dir_path(void) {
 }
 
 #define TIMESTAMP_WIDTH 10
-static char *create_logs_dir(void) {
+static char *create_logs_dir(const char *netspy_path) {
         // Get base path
-        char *base_path = alloc_base_log_dir_path();
+        char *base_path = alloc_base_log_dir_path(netspy_path);
         if (base_path == NULL) {
                 LOG(ERROR, "alloc_base_log_dir_path() failed.");
                 return NULL;
@@ -189,26 +196,53 @@ void cleanup(void) {
         tcp_cleanup();
 }
 
-///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+bool should_initialized(void) {
+        int rc;
+        // Acquire mutex
+        if ((rc = pthread_mutex_lock(&init_mutex)) != 0) {
+                LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
+                return false;
+        }
+
+        bool ret;
+        if (initialized)
+                ret = false;
+        else {
+                initialized = true;
+                ret = true;
+        }
+        
+        // Release mutex
+        if ((rc = pthread_mutex_unlock(&init_mutex)) != 0)
+                LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
+
+        return ret;
+}
 
 void init_netspy(void) {
-        if (initialized) return;
-
+        if (!should_initialized()) return;
+        
+        // Start initialization
         LOG(INFO, "Initialization of Netspy library...");
-        initialized = true;
-        
-        atexit(cleanup);
-        
-        get_tcpinfo_ivals();
 
-        netspy_path = get_netspy_path();
+        atexit(cleanup);      // Register cleanup handler.
+        get_tcpinfo_ivals();  // Extract tcp_info intervals from ENV.
+
+        // Get directory where netpsy activity is logged.
+        const char *netspy_path = get_netspy_path();
         if (netspy_path == NULL) {
-                LOG(ERROR,
-                    "get_nestpy_path() failed. Will not log anything to file.");
+                LOG(ERROR, "get_nestpy_path() failed. No logs to file.");
                 return;
         }
 
-        log_path = create_logs_dir();
+        // Log machine metadatas. This should only be done ONCE for a given
+        // machine across multiple netspy runs.
+        log_metadata(netspy_path);
+
+        // Create log directory for this run.
+        log_path = create_logs_dir(netspy_path);
         if (log_path == NULL) {
                 LOG(INFO, "create_logs_dir() failed. Won't log to file.");
         } else {
@@ -217,8 +251,14 @@ void init_netspy(void) {
 
         // Configure log library.
         char *log_file_path = alloc_concat_path(log_path, NETSPY_LOG_FILE);
-        set_log_path(log_file_path);
-        free(log_file_path);
+        if (log_file_path == NULL) {
+                LOG(ERROR,
+                    "alloc_concat_path() failed. Logging library cannot log"
+                    " to file.");
+        } else {
+                set_log_path(log_file_path);
+                free(log_file_path);
+        }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
