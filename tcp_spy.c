@@ -123,10 +123,14 @@ static TcpConnection *alloc_connection(void) {
         int rc = pthread_mutex_init(&(con->mutex), NULL);
         if (rc != 0) {
                 LOG(ERROR, "pthread_mutex_init() failed. %s.", strerror(rc));
+                free_connection(con);
                 return NULL;
         }
 
-        if (!lock(&connections_count_mutex)) return NULL;
+        if (!lock(&connections_count_mutex)) {
+                free_connection(con);
+                return NULL;
+        }
         con->id = connections_count;
         unlock(&connections_count_mutex);
 
