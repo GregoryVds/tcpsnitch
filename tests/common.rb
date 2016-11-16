@@ -106,8 +106,8 @@ end
 
 # Not very robust but it seems that packetdrill always open another TCP connection
 # before the script. So the first connection we are interested in is at /1/
-def json_dump
-  File.read(log_dir_str+"/1/"+JSON_FILE)
+def json_dump(con_id=1)
+  File.read(log_dir_str+"/#{con_id}/"+JSON_FILE)
 end
 
 def assert_event_present(type, success=true)

@@ -42,8 +42,85 @@ describe "tcp_spy" do
       }
       assert_json_match(pattern, json_dump)
     end
+
+    it "should have the proper bytes count" do
+      run_pkt_script(<<-EOT)
+        #{connected_sock_stream}
+        +0 send(3, ..., 80, 0) = 80
+        +0 send(3, ..., 110, 0) = 110
+        +0 < P. 1:101(100) ack 1 win 1000
+        +0 recv(3, ..., 100, 0) = 100
+        +0 < P. 101:211(110) ack 1 win 110
+        +0 recv(3, ..., 110, 0) = 110
+      EOT
+      pattern = {
+        bytes_received: 210,
+        bytes_sent: 190,
+      }.ignore_extra_keys!
+      assert_json_match(pattern, json_dump)
+    end
   end
- 
+
+  describe "2 TCP connections" do
+    it "should properly handle 2 subsequent connections" do
+      run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+        +0 listen(3, 1) = 0
+        +0 close(3) = 0
+        +0 socket(..., SOCK_STREAM, 0) = 3 
+        +0 setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+        +0 close(3) = 0
+      EOT
+      pattern1 = {
+        id: 1, # id 0 is taken by a Packetdrill connection.
+        events: [
+          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+          {type: TCP_EV_LISTEN}.ignore_extra_keys!,
+          {type: TCP_EV_CLOSE}.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      pattern2 = {
+        id: 2,
+        events: [
+          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+          {type: TCP_EV_SETSOCKOPT}.ignore_extra_keys!,
+          {type: TCP_EV_CLOSE}.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern1, json_dump(1))
+      assert_json_match(pattern2, json_dump(2))
+    end
+
+    it "should properly handle 2 interleaved connections" do
+      run_pkt_script(<<-EOT)
+        0 socket(..., SOCK_STREAM, 0) = 3 
+        +0 socket(..., SOCK_STREAM, 0) = 4 
+        +0 listen(3, 1) = 0
+        +0 setsockopt(4, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+        +0 close(3) = 0
+        +0 close(4) = 0
+     EOT
+      pattern1 = {
+        id: 1, # id 0 is taken by a Packetdrill connection.
+        events: [
+          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+          {type: TCP_EV_LISTEN}.ignore_extra_keys!,
+          {type: TCP_EV_CLOSE}.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      pattern2 = {
+        id: 2,
+        events: [
+          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+          {type: TCP_EV_SETSOCKOPT}.ignore_extra_keys!,
+          {type: TCP_EV_CLOSE}.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern1, json_dump(1))
+      assert_json_match(pattern2, json_dump(2))
+    end
+  end
+
   describe "an event" do
     it "should have the correct shared fields" do
       run_pkt_script(<<-EOT)
