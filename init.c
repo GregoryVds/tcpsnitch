@@ -201,10 +201,7 @@ void cleanup(void) {
 void init_netspy(void) {
         int rc;
         // Acquire mutex
-        if ((rc = pthread_mutex_lock(&init_mutex)) != 0) {
-                LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
-                return;
-        }
+        if (!(lock(&init_mutex))) return;
         if (initialized) goto exit;
 
         // Start initialization
@@ -250,9 +247,7 @@ void init_netspy(void) {
         goto exit;
 exit:
         // Release mutex
-        if ((rc = pthread_mutex_unlock(&init_mutex)) != 0)
-                LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
-
+        unlock(&init_mutex);
         return;
 }
 
