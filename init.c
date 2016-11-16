@@ -198,32 +198,15 @@ void cleanup(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool should_initialized(void) {
+void init_netspy(void) {
         int rc;
         // Acquire mutex
         if ((rc = pthread_mutex_lock(&init_mutex)) != 0) {
                 LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
-                return false;
+                return;
         }
+        if (initialized) goto exit;
 
-        bool ret;
-        if (initialized)
-                ret = false;
-        else {
-                initialized = true;
-                ret = true;
-        }
-        
-        // Release mutex
-        if ((rc = pthread_mutex_unlock(&init_mutex)) != 0)
-                LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
-
-        return ret;
-}
-
-void init_netspy(void) {
-        if (!should_initialized()) return;
-        
         // Start initialization
         LOG(INFO, "Initialization of Netspy library...");
 
@@ -234,7 +217,8 @@ void init_netspy(void) {
         const char *netspy_path = get_netspy_path();
         if (netspy_path == NULL) {
                 LOG(ERROR, "get_nestpy_path() failed. No logs to file.");
-                return;
+                initialized = true;
+                goto exit;
         }
 
         // Log machine metadatas. This should only be done ONCE for a given
@@ -245,6 +229,8 @@ void init_netspy(void) {
         log_path = create_logs_dir(netspy_path);
         if (log_path == NULL) {
                 LOG(INFO, "create_logs_dir() failed. Won't log to file.");
+                initialized = true;
+                goto exit;
         } else {
                 LOG(INFO, "Logs directory created at %s.", log_path);
         }
@@ -259,6 +245,15 @@ void init_netspy(void) {
                 set_log_path(log_file_path);
                 free(log_file_path);
         }
+        
+        initialized = true;
+        goto exit;
+exit:
+        // Release mutex
+        if ((rc = pthread_mutex_unlock(&init_mutex)) != 0)
+                LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
+
+        return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

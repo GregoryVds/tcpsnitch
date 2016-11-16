@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include "tcp_spy.h"
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <netdb.h>
@@ -12,7 +13,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <assert.h>
 #include "config.h"
 #include "init.h"
 #include "lib.h"
@@ -431,7 +431,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
             "socket()",     "bind()", "connect()", "shutdown()", "listen()",
             "setsockopt()", "send()", "recv()",    "sendto()",   "recvfrom()",
             "write()",      "read()", "close()",   "tcp_info"};
-        assert(sizeof(strings)/sizeof(char *)==TCP_EV_TCP_INFO+1);
+        assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
 
