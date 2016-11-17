@@ -19,12 +19,21 @@ char *log_path = NULL;  // Directory in Netspy path for this run of Netspy.
 long tcp_info_bytes_ival = 0;
 long tcp_info_time_ival = 0;
 
+///////////////////////////////////////////////////////////////////////////////
+/*
+  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
+ |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
+  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
+  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
+ |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
+
+*/
+///////////////////////////////////////////////////////////////////////////////
+
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-///////////////////////////////////////////////////////////////////////////////
-
-const char *get_netspy_path(void) {
+static const char *get_netspy_path(void) {
         // Check NETSPY path in ENV
         const char *path = getenv(ENV_PATH);
         if (path == NULL) {
@@ -65,7 +74,7 @@ const char *get_netspy_path(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void log_metadata(const char *netspy_path) {
+static void log_metadata(const char *netspy_path) {
         // TODO
         if (netspy_path == NULL) return;
 }
@@ -80,7 +89,7 @@ void log_metadata(const char *netspy_path) {
  */
 
 #define TIMESTAMP_WIDTH 10
-char *alloc_base_log_dir_name(void) {
+static char *alloc_base_log_dir_name(void) {
         char *app_name = program_invocation_name;  // Not portable?
         int app_name_length = strlen(app_name);
         int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
@@ -99,7 +108,7 @@ char *alloc_base_log_dir_name(void) {
         return base_name;
 }
 
-char *alloc_base_log_dir_path(const char *netspy_path) {
+static char *alloc_base_log_dir_path(const char *netspy_path) {
         // Get base log dir name
         char *base_name = alloc_base_log_dir_name();
         if (base_name == NULL) {
@@ -191,12 +200,21 @@ static void get_tcpinfo_ivals(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void cleanup(void) {
+static void cleanup(void) {
         LOG(INFO, "Performing cleanup.");
         tcp_cleanup();
 }
 
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+/*
+  ____  _   _ ____  _     ___ ____      _    ____ ___
+ |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
+ | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
+ |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
+ |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
+
+*/
+///////////////////////////////////////////////////////////////////////////////
 
 void init_netspy(void) {
         // Acquire mutex

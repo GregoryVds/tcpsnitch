@@ -8,9 +8,10 @@
 
 #define FILTER_SIZE 200
 
-bool *start_capture(char *filters, char *path);
 char *build_capture_filter(const struct sockaddr_storage *bound_addr,
 			   const struct sockaddr_storage *connect_addr);
+
+bool *start_capture(char *filters, char *path);
 int stop_capture(bool *switch_flag, int delay_ms);
 
 #endif

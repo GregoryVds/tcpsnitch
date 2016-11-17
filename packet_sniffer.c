@@ -9,15 +9,27 @@
 #include "logger.h"
 #include "string_helpers.h"
 
-void *capture_thread(void *params);
-void *delayed_stop_thread(void *params);
+///////////////////////////////////////////////////////////////////////////////
+/*
+  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
+ |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
+  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
+  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
+ |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
+
+*/
+///////////////////////////////////////////////////////////////////////////////
+
+static pcap_t *get_capture_handle(void);
+static void *capture_thread(void *params);
+static void *delayed_stop_thread(void *params);
 
 /* Return handle to capture handle. If env var NETSPY_DEV is not specified,
  * then return the default device obtained with pcap_lookupdev().
  *
  * Returns a pcap_t * on success, or NULL in case of error. */
 
-pcap_t *get_capture_handle(void) {
+static pcap_t *get_capture_handle(void) {
 	char *dev = getenv(ENV_DEV);
 	char err_buf[PCAP_ERRBUF_SIZE];
 
@@ -38,15 +50,108 @@ pcap_t *get_capture_handle(void) {
 	return handle;
 }
 
-/* Start a capture with the given filters & save raw data to file at path.
- *
- * Return a pcap_t * on success, on NULL on error. */
+///////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
 	pcap_t *handle;
 	pcap_dumper_t *dump;
 	bool *switch_flag;
 } CaptureThreadArgs;
+
+static void *capture_thread(void *params) {
+	LOG(INFO, "Capture thread started.");
+	CaptureThreadArgs *args = (CaptureThreadArgs *)params;
+
+	bool *should_capture = args->switch_flag;
+	while (*should_capture) {
+		if (pcap_dispatch(args->handle, -1, &pcap_dump,
+				  (u_char *)args->dump) == -1) {
+			LOG(ERROR, "pcap_dispatch() failed. %s.",
+			    pcap_geterr(args->handle));
+		}
+	}
+
+	LOG(INFO, "Capture ended.");
+	pcap_close(args->handle);
+	pcap_dump_close(args->dump);
+	free(should_capture);
+	free(args);
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+	bool *switch_flag;
+	int delay_ms;
+} DelayStopThreadArgs;
+
+static void *delayed_stop_thread(void *params) {
+	LOG(INFO, "Delayed stop thread started.");
+	DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
+	struct timespec ns = {0, args->delay_ms*1000000};
+	nanosleep(&ns, NULL);
+	*(args->switch_flag) = false;
+	LOG(INFO, "Turned off capture switch.");
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/*
+  ____  _   _ ____  _     ___ ____      _    ____ ___
+ |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
+ | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
+ |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
+ |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
+
+*/
+///////////////////////////////////////////////////////////////////////////////
+
+
+char *build_capture_filter(const struct sockaddr_storage *bound_addr,
+			   const struct sockaddr_storage *connect_addr) {
+	char *bound_port = NULL, *connect_port = NULL, *connect_host = NULL,
+	     *filter = NULL;
+
+	if (bound_addr)
+		if (!(bound_port = alloc_port_str(bound_addr))) return NULL;
+
+	if (!(connect_host = alloc_host_str(connect_addr))) goto error1;
+	if (!(connect_port = alloc_port_str(connect_addr))) goto error2;
+
+	if (!(filter = (char *)malloc(sizeof(char) * FILTER_SIZE)))
+		goto error3;
+
+	snprintf(filter, FILTER_SIZE, "host %s and port %s", connect_host,
+		 connect_port);
+
+	// If bound_addr, then we apport additionnal filter on source port.
+	if (bound_addr) {
+		int n = strlen(filter);
+		snprintf(filter + n, FILTER_SIZE - n, " and port %s",
+			 bound_port);
+	}
+
+	LOG(INFO, "Starting capture with filter: '%s'", filter);
+	free(bound_port);
+	free(connect_host);
+	free(connect_port);
+
+	return filter;
+error3:
+	free(connect_port);
+	goto error2;
+error2:
+	free(connect_host);
+	goto error1;
+error1:
+	free(bound_port);
+	return NULL;
+}
+
+/* Start a capture with the given filters & save raw data to file at path.
+ *
+ * Return a pcap_t * on success, on NULL on error. */
 
 bool *start_capture(char *filter_str, char *path) {
 	// Get handle
@@ -126,34 +231,6 @@ error1:
 	return NULL;
 }
 
-void *capture_thread(void *params) {
-	LOG(INFO, "Capture thread started.");
-	CaptureThreadArgs *args = (CaptureThreadArgs *)params;
-
-	bool *should_capture = args->switch_flag;
-	while (*should_capture) {
-		if (pcap_dispatch(args->handle, -1, &pcap_dump,
-				  (u_char *)args->dump) == -1) {
-			LOG(ERROR, "pcap_dispatch() failed. %s.",
-			    pcap_geterr(args->handle));
-		}
-	}
-
-	LOG(INFO, "Capture ended.");
-	pcap_close(args->handle);
-	pcap_dump_close(args->dump);
-	free(should_capture);
-	free(args);
-	return NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-	bool *switch_flag;
-	int delay_ms;
-} DelayStopThreadArgs;
-
 int stop_capture(bool *switch_flag, int delay_ms) {
 	DelayStopThreadArgs *args =
 	    (DelayStopThreadArgs *)malloc(sizeof(DelayStopThreadArgs));
@@ -181,55 +258,4 @@ error:
 	return -1;
 }
 
-void *delayed_stop_thread(void *params) {
-	LOG(INFO, "Delayed stop thread started.");
-	DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
-	struct timespec ns = {0, args->delay_ms*1000000};
-	nanosleep(&ns, NULL);
-	*(args->switch_flag) = false;
-	LOG(INFO, "Turned off capture switch.");
-	return NULL;
-}
 
-///////////////////////////////////////////////////////////////////////////////
-
-char *build_capture_filter(const struct sockaddr_storage *bound_addr,
-			   const struct sockaddr_storage *connect_addr) {
-	char *bound_port = NULL, *connect_port = NULL, *connect_host = NULL,
-	     *filter = NULL;
-
-	if (bound_addr)
-		if (!(bound_port = alloc_port_str(bound_addr))) return NULL;
-
-	if (!(connect_host = alloc_host_str(connect_addr))) goto error1;
-	if (!(connect_port = alloc_port_str(connect_addr))) goto error2;
-
-	if (!(filter = (char *)malloc(sizeof(char) * FILTER_SIZE)))
-		goto error3;
-
-	snprintf(filter, FILTER_SIZE, "host %s and port %s", connect_host,
-		 connect_port);
-
-	// If bound_addr, then we apport additionnal filter on source port.
-	if (bound_addr) {
-		int n = strlen(filter);
-		snprintf(filter + n, FILTER_SIZE - n, " and port %s",
-			 bound_port);
-	}
-
-	LOG(INFO, "Starting capture with filter: '%s'", filter);
-	free(bound_port);
-	free(connect_host);
-	free(connect_port);
-
-	return filter;
-error3:
-	free(connect_port);
-	goto error2;
-error2:
-	free(connect_host);
-	goto error1;
-error1:
-	free(bound_port);
-	return NULL;
-}
