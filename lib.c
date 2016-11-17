@@ -144,7 +144,7 @@ int get_int_len(int i) {
 ////////////////////////////////////////////////////////////////////////////////
 
 bool lock(pthread_mutex_t *mutex) {
-        int rc = pthread_mutex_unlock(mutex);
+        int rc = pthread_mutex_lock(mutex);
         if (rc != 0) {
                 LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
                 return false;
@@ -158,6 +158,27 @@ bool unlock(pthread_mutex_t *mutex) {
                 LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
                 return false;
         }
+        return true;
+}
+
+bool init_errorcheck_mutex(pthread_mutex_t *mutex) {
+        pthread_mutexattr_t attr;
+        if (pthread_mutexattr_init(&attr) != 0) {
+                LOG(ERROR, "pthread_mutexattr_init() failed.");
+                return false;
+        }
+
+        if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK) != 0) {
+                LOG(ERROR, "pthread_mutexattr_settype() failed.");
+                return false;
+        }
+
+        int rc = pthread_mutex_init(mutex, &attr);
+        if (rc != 0) {
+                LOG(ERROR, "pthread_mutex_init() failed. %s.", strerror(rc));
+                return false;
+        }
+
         return true;
 }
 

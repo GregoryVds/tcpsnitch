@@ -46,12 +46,13 @@
  * or binary tree.
  */
 
+#define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 #define MAX_FD 1024
 static TcpConnection *fd_con_map[MAX_FD];
-static pthread_mutex_t fd_con_map_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t fd_con_map_mutex = MUTEX_ERRORCHECK;
 
 static int connections_count = 0;
-static pthread_mutex_t connections_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 ///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
@@ -120,33 +121,22 @@ static TcpConnection *alloc_connection(void) {
                 return NULL;
         }
 
-        int rc = pthread_mutex_init(&(con->mutex), NULL);
-        if (rc != 0) {
-                LOG(ERROR, "pthread_mutex_init() failed. %s.", strerror(rc));
-                free_connection(con);
-                return NULL;
-        }
-
-        if (!lock(&connections_count_mutex)) {
-                free_connection(con);
-                return NULL;
-        }
-        con->id = connections_count;
-        unlock(&connections_count_mutex);
-
+        if (!init_errorcheck_mutex(&con->mutex)) goto error;
         con->cmdline = alloc_cmdline_str(&(con->app_name));
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
         con->directory = create_logs_dir(con);
-
-        if (!lock(&connections_count_mutex)) {
-                return NULL;
-                free_connection(con);
-        }
+        
+        // Increment connections_count
+        if (!lock(&connections_count_mutex)) goto error;
+        con->id = connections_count;
         connections_count++;
         unlock(&connections_count_mutex);
 
         return con;
+error: 
+        free_connection(con);
+        return NULL;
 }
 
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
@@ -394,7 +384,7 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
                 // Error is expected address in use. Try next port.
         }
 
-        return 1;  // Could not bind.
+        return -1;  // Could not bind.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -415,21 +405,24 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
                 goto error1;
         }
 
-        // Acquire lock on con
+        // Lock
         if (!lock(&(con->mutex))) goto error1;
-
         if (con->directory == NULL) {
                 LOG(ERROR, "con->directory is NULL.");
                 goto error2;
         }
 
-        if (con->bind_ev == NULL &&
+        TcpEvBind *bind_ev = con->bind_ev;
+        // Unlock (we unlock to avoid recusive mutexes for the moment).
+        if (!unlock(&(con->mutex))) goto error1;
+
+        if (bind_ev == NULL &&
             force_bind(fd, con, addr->ss_family == AF_INET6) == -1) {
-                LOG(ERROR,
-                    "force_bind() failed. Will only filter on dest IP"
-                    " and dest PORT.");
+                LOG(ERROR, "force_bind() failed. Filter DEST IP/PORT only.");
         }
 
+        // Lock
+        if (!lock(&(con->mutex))) goto error1;
         char *pcap_file = alloc_pcap_path_str(con);
         if (pcap_file == NULL) {
                 LOG(ERROR, "pcap_file NULL.");

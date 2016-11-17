@@ -31,5 +31,6 @@ int get_int_len(int i);
 
 bool lock(pthread_mutex_t *mutex);
 bool unlock(pthread_mutex_t *mutex);
+bool init_errorcheck_mutex(pthread_mutex_t *mutex);
 
 #endif

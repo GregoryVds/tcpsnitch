@@ -31,7 +31,7 @@ long tcp_info_time_ival = 0;
 ///////////////////////////////////////////////////////////////////////////////
 
 static bool initialized = false;
-static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 static const char *get_netspy_path(void) {
         // Check NETSPY path in ENV

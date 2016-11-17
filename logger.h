@@ -1,7 +1,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-typedef enum LogLevel { INFO, WARN, ERROR } LogLevel;
+typedef enum LogLevel { INFO, WARN, ERROR, DEBUG } LogLevel;
 
 void logger(LogLevel lvl, const char *formated_str, const char *file, int line);
 void set_log_path(const char *path);
@@ -13,5 +13,7 @@ void set_log_path(const char *path);
 			 ##args);                                          \
 		logger(lvl, formated_string, __FILE__, __LINE__);          \
 	}
+
+#define D(format, args...) LOG(DEBUG, format, ##args)
 
 #endif
