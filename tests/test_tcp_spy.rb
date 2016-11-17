@@ -14,7 +14,7 @@ describe "tcp_spy" do
 
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
-      run_pkt_script(PKT_SOCKET_CALL_STREAM)
+      run_pkt_script(PKT_SOCKET_STREAM)
       pattern = {
         app_name: String,
         bytes_received: Fixnum,
@@ -111,9 +111,7 @@ describe "tcp_spy" do
 
   describe "an event" do
     it "should have the correct shared fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-      EOT
+      run_pkt_script(PKT_SOCKET_STREAM)
       pattern = {
         events: [
           {
@@ -134,9 +132,7 @@ describe "tcp_spy" do
  
   describe "a #{TCP_EV_SOCKET} event" do
     it "#{TCP_EV_SOCKET}should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-      EOT
+      run_pkt_script(PKT_SOCKET_STREAM)
       pattern = {
         events: [
           {
@@ -157,10 +153,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_BIND} event" do
     it "#{TCP_EV_BIND} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        +0 bind(3, ..., ...) = 0
-      EOT
+      run_pkt_script(PKT_BIND_STREAM)
       pattern = {
         events: [
           {
@@ -179,7 +172,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_CONNECT} event" do
     it "#{TCP_EV_CONNECT} should have the correct JSON fields" do
-      run_pkt_script(PKT_CONNECTED_SOCK_STREAM)
+      run_pkt_script(PKT_CONNECT_STREAM)
       pattern = {
         events: [
           {
@@ -197,10 +190,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_SHUTDOWN} event" do
     it "#{TCP_EV_SHUTDOWN} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM}
-        +0 shutdown(3, SHUT_RD) = 0
-      EOT
+      run_pkt_script(PKT_SHUTDOWN_STREAM)
       pattern = {
         events: [
           {
@@ -218,10 +208,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_LISTEN} event" do
     it "#{TCP_EV_LISTEN} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        +0 listen(3, 1) = 0
-      EOT
+      run_pkt_script(PKT_LISTEN_STREAM)
       pattern = {
         events: [
           {
@@ -238,10 +225,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_SETSOCKOPT} event" do
     it "#{TCP_EV_SETSOCKOPT} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        +0 setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
-      EOT
+      run_pkt_script(PKT_SETSOCKOPT_STREAM)
       pattern = {
         events: [
           {
@@ -259,10 +243,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_SEND} event" do
     it "#{TCP_EV_SEND} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 send(3, ..., 100, 0) = 100
-      EOT
+      run_pkt_script(PKT_SEND_STREAM)
       pattern = {
         events: [
           {
@@ -288,11 +269,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_RECV} event" do
     it "#{TCP_EV_RECV} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-         #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 recv(3, ..., 1000, 0) = 1000
-      EOT
+      run_pkt_script(PKT_RECV_STREAM)
       pattern = {
         events: [
           {
@@ -318,18 +295,13 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_SENDTO} event" do
     it "#{TCP_EV_SENDTO} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 sendto(3, ..., 100, 0, ..., ...) = 100
-      EOT
+      run_pkt_script(PKT_SENDTO_STREAM)
       pattern = {
         events: [
           {
             type: TCP_EV_SENDTO,
             details: {
-              addr: String,
               bytes: Fixnum,
-              port: String,
               flags: {
                 msg_confirm: Boolean,
                 msg_dontroute: Boolean,
@@ -350,11 +322,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_RECVFROM} event" do
     it "#{TCP_EV_RECVFROM} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 recvfrom(3, ..., 1000, 0, ..., ...) = 1000
-      EOT
+      run_pkt_script(PKT_RECVFROM_STREAM)
       pattern = {
         events: [
           {
@@ -381,10 +349,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_WRITE} event" do
     it "#{TCP_EV_WRITE} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 write(3, ..., 100) = 100
-      EOT
+      run_pkt_script(PKT_WRITE_STREAM)
       pattern = {
         events: [
           {
@@ -402,11 +367,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_READ} event" do
     it "#{TCP_EV_READ} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 read(3, ..., 1000) = 1000
-      EOT
+      run_pkt_script(PKT_READ_STREAM)
       pattern = {
         events: [
           {
@@ -423,10 +384,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_CLOSE} event" do
     it "#{TCP_EV_CLOSE} should have the correct JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 close(3) = 0
-      EOT
+      run_pkt_script(PKT_CLOSE_STREAM)
       pattern = {
         events: [
           {
