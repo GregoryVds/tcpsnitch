@@ -1,58 +1,9 @@
 require 'json_expressions/minitest'
 require 'tempfile'
+require './constants.rb'
+require './pkt_scripts.rb'
 
-NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
-
-LD_PRELOAD="LD_PRELOAD=../libnetspy.so"
-PACKET_DRILL="packetdrill --tolerance_usecs=10000000"
-
-# packetdrill scripts
-PKT_SCRIPTS_PATH="./pkt_scripts"
-
-DEFAULT_PATH="/tmp/netspy"
-JSON_FILE="dump.json"
-PCAP_FILE="dump.pcap"
-LOG_FILE="log.txt"
-
-# Env variables
-ENV_PATH="NETSPY_PATH"
-ENV_BYTES_IVAL="NETSPY_BYTES_IVAL"
-ENV_MICROS_IVAL="NETSPY_MICROS_IVAL"
-
-# EVENTS
-
-# sys/socket.h
-TCP_EV_SOCKET="socket()"
-TCP_EV_BIND="bind()"
-TCP_EV_CONNECT="connect()"
-TCP_EV_SHUTDOWN="shutdown()"
-TCP_EV_LISTEN="listen()"
-TCP_EV_SETSOCKOPT="setsockopt()"
-TCP_EV_SEND="send()"
-TCP_EV_RECV="recv()"
-TCP_EV_SENDTO="sendto()"
-TCP_EV_RECVFROM="recvfrom()"
-TCP_EV_SENDMSG="sendmsg()"
-TCP_EV_RECVMSG="recvmsg()"
-
-# unistd.h
-TCP_EV_CLOSE="close()"
-TCP_EV_WRITE="write()"
-TCP_EV_READ="read()"
-
-# sys/uio.h
-TCP_EV_WRITEV="writev()"
-TCP_EV_READV="readv()"
-
-# sys/sendfile.h
-TCP_EV_SENDFILE="sendfile()"
-
-# pool.h
-TCP_EV_POLL="poll()"
-
-TCP_EV_TCP_INFO="tcp_info"
-
-# As suggested by Jansson library.
+# Create Boolean module as suggested by Jansson library.
 # http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean#answer-3028378
 module Boolean; end
 class TrueClass; include Boolean; end
@@ -120,5 +71,13 @@ def assert_event_present(type, success=true)
     ].ignore_extra_values!
   }.ignore_extra_keys!
   assert_json_match(pattern, json_dump)
+end
+
+def log_file_str
+  log_dir_str+"/"+LOG_FILE
+end
+
+def no_error_log
+  !system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str}")
 end
 

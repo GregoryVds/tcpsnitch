@@ -8,25 +8,13 @@ require './common.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 describe "tcp_spy" do
-  let(:connected_sock_stream) {
-    <<-EOT
-        0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3 
-        0.0...0.1 connect(3, ..., ...) = 0
-        *  > S  0:0(0) <...>
-        +0 < S. 0:0(0) ack 1 win 1000
-        *  > .  1:1(0) ack 1
-    EOT
-  }
-
   before do
     reset_dir(DEFAULT_PATH) 
   end
 
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-      EOT
+      run_pkt_script(PKT_SOCKET_CALL_STREAM)
       pattern = {
         app_name: String,
         bytes_received: Fixnum,
@@ -45,7 +33,7 @@ describe "tcp_spy" do
 
     it "should have the proper bytes count" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream}
+        #{PKT_CONNECTED_SOCK_STREAM}
         +0 send(3, ..., 80, 0) = 80
         +0 send(3, ..., 110, 0) = 110
         +0 < P. 1:101(100) ack 1 win 1000
@@ -191,7 +179,7 @@ describe "tcp_spy" do
 
   describe "a #{TCP_EV_CONNECT} event" do
     it "#{TCP_EV_CONNECT} should have the correct JSON fields" do
-      run_pkt_script(connected_sock_stream)
+      run_pkt_script(PKT_CONNECTED_SOCK_STREAM)
       pattern = {
         events: [
           {
@@ -210,7 +198,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_SHUTDOWN} event" do
     it "#{TCP_EV_SHUTDOWN} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream}
+        #{PKT_CONNECTED_SOCK_STREAM}
         +0 shutdown(3, SHUT_RD) = 0
       EOT
       pattern = {
@@ -272,7 +260,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_SEND} event" do
     it "#{TCP_EV_SEND} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream} 
+        #{PKT_CONNECTED_SOCK_STREAM} 
         +0 send(3, ..., 100, 0) = 100
       EOT
       pattern = {
@@ -301,7 +289,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_RECV} event" do
     it "#{TCP_EV_RECV} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-         #{connected_sock_stream} 
+         #{PKT_CONNECTED_SOCK_STREAM} 
         +0 < P. 1:1001(1000) ack 1 win 1000
         +0 recv(3, ..., 1000, 0) = 1000
       EOT
@@ -331,7 +319,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_SENDTO} event" do
     it "#{TCP_EV_SENDTO} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream} 
+        #{PKT_CONNECTED_SOCK_STREAM} 
         +0 sendto(3, ..., 100, 0, ..., ...) = 100
       EOT
       pattern = {
@@ -363,7 +351,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_RECVFROM} event" do
     it "#{TCP_EV_RECVFROM} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream} 
+        #{PKT_CONNECTED_SOCK_STREAM} 
         +0 < P. 1:1001(1000) ack 1 win 1000
         +0 recvfrom(3, ..., 1000, 0, ..., ...) = 1000
       EOT
@@ -394,7 +382,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_WRITE} event" do
     it "#{TCP_EV_WRITE} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream} 
+        #{PKT_CONNECTED_SOCK_STREAM} 
         +0 write(3, ..., 100) = 100
       EOT
       pattern = {
@@ -415,7 +403,7 @@ describe "tcp_spy" do
   describe "a #{TCP_EV_READ} event" do
     it "#{TCP_EV_READ} should have the correct JSON fields" do
       run_pkt_script(<<-EOT)
-        #{connected_sock_stream} 
+        #{PKT_CONNECTED_SOCK_STREAM} 
         +0 < P. 1:1001(1000) ack 1 win 1000
         +0 read(3, ..., 1000) = 1000
       EOT
