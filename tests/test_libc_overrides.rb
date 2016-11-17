@@ -193,118 +193,117 @@ describe "libc overrides" do
   end
 
   describe "when calling #{TCP_EV_SEND}" do
+    it "#{TCP_EV_SEND} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_SEND_STREAM)
+    end
+    
+    it "#{TCP_EV_SEND} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_SEND_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_SEND} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 send(3, ..., 100, 0) = 100
-      EOT
+      run_pkt_script(PKT_SEND_STREAM)
       assert_event_present(TCP_EV_SEND)
     end
 
     it "#{TCP_EV_SEND} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 connect(3, ..., ...) = 0
-        +0 send(3, ..., 100, 0) = 100
-      EOT
+      assert run_pkt_script(PKT_SEND_DGRAM)
     end
 
-    it "#{TCP_EV_SEND} should be tracked when failing" do
+    it "#{TCP_EV_SEND} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_SEND_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_SEND} should not crash when failing" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_RECV}" do
+    it "#{TCP_EV_RECV} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_RECV_STREAM)
+    end
+    
+    it "#{TCP_EV_RECV} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_RECV_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_RECV} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 recv(3, ..., 1000, 0) = 1000
-      EOT
+      run_pkt_script(PKT_RECV_STREAM)
       assert_event_present(TCP_EV_RECV)
     end
 
     it "#{TCP_EV_RECV} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
-        +0 recv(3, ..., 1000, 0) = -1
-      EOT
+      assert run_pkt_script(PKT_RECV_DGRAM)
     end
 
-    it "#{TCP_EV_RECV} should be tracked when failing" do
+    it "#{TCP_EV_RECV} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_RECV_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_RECV} should not crash when failing" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_SENDTO}" do
+    it "#{TCP_EV_SENDTO} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_SENDTO_STREAM)
+    end
+    
+    it "#{TCP_EV_SENDTO} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_SENDTO_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_SENDTO} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 sendto(3, ..., 100, 0, ..., ...) = 100
-      EOT
+      run_pkt_script(PKT_SENDTO_STREAM)
       assert_event_present(TCP_EV_SENDTO)
     end
 
     it "#{TCP_EV_SENDTO} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 sendto(3, ..., 100, 0, ..., ...) = 100
-      EOT
+      assert run_pkt_script(PKT_SENDTO_DGRAM)
     end
 
-    it "#{TCP_EV_SENDTO} should be tracked when failing" do
+    it "#{TCP_EV_SENDTO} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_SENDTO_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_SENDTO} should not crash when failing" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_RECVFROM}" do
+    it "#{TCP_EV_RECVFROM} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_RECVFROM_STREAM)
+    end
+    
+    it "#{TCP_EV_RECVFROM} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_RECVFROM_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_RECVFROM} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 recvfrom(3, ..., 1000, 0, ..., ...) = 1000
-      EOT
+      run_pkt_script(PKT_RECVFROM_STREAM)
       assert_event_present(TCP_EV_RECVFROM)
     end
 
     it "#{TCP_EV_RECVFROM} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
-        +0 recvfrom(3, ..., 100, 0, ..., ...) = -1
-      EOT
+      assert run_pkt_script(PKT_RECVFROM_DGRAM)
     end
 
-    it "#{TCP_EV_RECVFROM} should be tracked when failing" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_SENDMSG}" do
-    it "#{TCP_EV_SENDMSG} should be tracked with SOCK_STREAM" do
-      skip
+    it "#{TCP_EV_RECVFROM} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_RECVFROM_DGRAM)
+      assert no_error_log
     end
 
-    it "#{TCP_EV_SENDMSG} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_SENDMSG} should be tracked when failing" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_RECVMSG}" do
-    it "#{TCP_EV_RECVMSG} should be tracked with SOCK_STREAM" do
-      skip
-    end
-
-    it "#{TCP_EV_RECVMSG} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_RECVMSG} should be tracked when failing" do
+    it "#{TCP_EV_RECVFROM} should not crash when failing" do
       skip
     end
   end
@@ -323,71 +322,91 @@ describe "libc overrides" do
 =end
 
   describe "when calling #{TCP_EV_WRITE}" do
+    it "#{TCP_EV_WRITE} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_WRITE_STREAM)
+    end
+    
+    it "#{TCP_EV_WRITE} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_WRITE_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_WRITE} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 write(3, ..., 100) = 100
-      EOT
+      run_pkt_script(PKT_WRITE_STREAM)
       assert_event_present(TCP_EV_WRITE)
     end
 
     it "#{TCP_EV_WRITE} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 connect(3, ..., ...) = 0
-        +0 write(3, ..., 100) = 100
-      EOT
+      assert run_pkt_script(PKT_WRITE_DGRAM)
     end
 
-    it "#{TCP_EV_WRITE} should be tracked when failing" do
+    it "#{TCP_EV_WRITE} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_WRITE_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_WRITE} should not crash when failing" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_READ}" do
+    it "#{TCP_EV_READ} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_READ_STREAM)
+    end
+    
+    it "#{TCP_EV_READ} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_READ_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_READ} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM} 
-        +0 < P. 1:1001(1000) ack 1 win 1000
-        +0 read(3, ..., 1000) = 1000
-      EOT
+      run_pkt_script(PKT_READ_STREAM)
       assert_event_present(TCP_EV_READ)
     end
 
     it "#{TCP_EV_READ} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, IPPROTO_UDP) = 3 
-        +0 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK) = 0
-        +0 read(3, ..., 1000) = -1
-      EOT
+      assert run_pkt_script(PKT_READ_DGRAM)
     end
 
-    it "#{TCP_EV_READ} should be tracked when failing" do
+    it "#{TCP_EV_READ} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_READ_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_READ} should not crash when failing" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_CLOSE}" do
+    it "#{TCP_EV_CLOSE} should not crash with SOCK_STREAM" do
+      assert run_pkt_script(PKT_CLOSE_STREAM)
+    end
+    
+    it "#{TCP_EV_CLOSE} should give no ERROR log with SOCK_STREAM" do
+      run_pkt_script(PKT_CLOSE_STREAM)
+      assert no_error_log
+    end
+
     it "#{TCP_EV_CLOSE} should be tracked with SOCK_STREAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 close(3) = 0
-      EOT
+      run_pkt_script(PKT_CLOSE_STREAM)
       assert_event_present(TCP_EV_CLOSE)
     end
 
     it "#{TCP_EV_CLOSE} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_DGRAM, 0) = 3 
-        +0 close(3) = 0
-      EOT
+      assert run_pkt_script(PKT_CLOSE_DGRAM)
     end
 
-    it "#{TCP_EV_CLOSE} should be tracked when failing" do
+    it "#{TCP_EV_CLOSE} should give no ERROR log with SOCK_DGRAM" do
+      run_pkt_script(PKT_CLOSE_DGRAM)
+      assert no_error_log
+    end
+
+    it "#{TCP_EV_CLOSE} should not crash when failing" do
       skip
     end
   end
-
 
 =begin
   _   _ ___ ___       _    ____ ___
@@ -402,34 +421,6 @@ describe "libc overrides" do
 
 =end
 
-  describe "when calling #{TCP_EV_WRITEV}" do
-    it "#{TCP_EV_WRITEV} should be tracked with SOCK_STREAM" do
-      skip
-    end
-
-    it "#{TCP_EV_WRITEV} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_WRITEV} should be tracked when failing" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_READV}" do
-    it "#{TCP_EV_READV} should be tracked with SOCK_STREAM" do
-      skip
-    end
-
-    it "#{TCP_EV_READV} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_READV} should be tracked when failing" do
-      skip
-    end
-  end
-
 =begin
   ____  _____ _   _ ____  _____ ___ _     _____      _    ____ ___
  / ___|| ____| \ | |  _ \|  ___|_ _| |   | ____|    / \  |  _ \_ _|
@@ -442,20 +433,6 @@ describe "libc overrides" do
  functions: sendfile()
 
 =end
-
-  describe "when calling #{TCP_EV_SENDFILE}" do
-    it "#{TCP_EV_SENDFILE} should be tracked with SOCK_STREAM" do
-      skip
-    end
-
-    it "#{TCP_EV_SENDFILE} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_SENDFILE} should be tracked when failing" do
-      skip
-    end
-  end
 
 =begin
   ____   ___  _     _          _    ____ ___
@@ -470,18 +447,5 @@ describe "libc overrides" do
 
 =end
 
-  describe "when calling #{TCP_EV_POLL}" do
-    it "#{TCP_EV_POLL} should be tracked with SOCK_STREAM" do
-      skip
-    end
-
-    it "#{TCP_EV_POLL} should not crash with SOCK_DGRAM" do
-      skip
-    end
-
-    it "#{TCP_EV_POLL} should be tracked when failing" do
-      skip
-    end
-  end
-
 end
+

@@ -269,35 +269,38 @@ static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
 
 static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        
+        // This is essentially useles info with TCP and causes troubles with
+        // packetdrill tests.
+        // char *addr_str = alloc_host_str(&(ev->addr));
+        // char *port_str = alloc_port_str(&(ev->addr));
 
-        char *addr_str = alloc_host_str(&(ev->addr));
-        char *port_str = alloc_port_str(&(ev->addr));
-
-        add(json_details, "addr", json_string(addr_str));
-        add(json_details, "port", json_string(port_str));
+        // add(json_details, "addr", json_string(addr_str));
+        // add(json_details, "port", json_string(port_str));
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(&(ev->flags)));
 
-        free(addr_str);
-        free(port_str);
+        // free(addr_str);
+        // free(port_str);
 
         return json_ev;
 }
 
-
 static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        
+        // This is essentially useles info with TCP and causes troubles with
+        // packetdrill tests.
+        // char *addr_str = alloc_host_str(&(ev->addr));
+        // char *port_str = alloc_port_str(&(ev->addr));
 
-        char *addr_str = alloc_host_str(&(ev->addr));
-        char *port_str = alloc_port_str(&(ev->addr));
-
-        add(json_details, "addr", json_string(addr_str));
-        add(json_details, "port", json_string(port_str));
+        // add(json_details, "addr", json_string(addr_str));
+        // add(json_details, "port", json_string(port_str));
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(&(ev->flags)));
 
-        free(addr_str);
-        free(port_str);
+        // free(addr_str);
+        // free(port_str);
 
         return json_ev;
 }

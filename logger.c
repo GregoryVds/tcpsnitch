@@ -53,7 +53,7 @@ static void log_to_file(LogLevel log_lvl, const char *formated_str,
 //////////////////////////////////////////////////////////////////////////////
 
 static const char *log_level_str(LogLevel lvl) {
-        static const char *strings[] = {"INFO", "WARN", "ERROR"};
+        static const char *strings[] = {"INFO", "WARN", "ERROR", "DEBUG"};
         return strings[lvl];
 }
 
