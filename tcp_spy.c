@@ -56,7 +56,7 @@ static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 ///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
-static char *create_logs_dir(TcpConnection *con);
+static char *create_logs_dir(int con_id);
 static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_connection(TcpConnection *con);
@@ -88,16 +88,16 @@ void tcp_cleanup(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char *create_logs_dir(TcpConnection *con) {
+char *create_logs_dir(int con_id) {
         if (log_path == NULL) {
                 LOG(WARN, "Cannot create logs directory. log_path is NULL.");
                 return NULL;
         }
 
         // Log dir is [LOG_DIR]/[ID]
-        int n = get_int_len(con->id) + 1;
+        int n = get_int_len(con_id) + 1;
         char dirname[n];
-        snprintf(dirname, n, "%d", con->id);
+        snprintf(dirname, n, "%d", con_id);
 
         char *dir_path = alloc_concat_path(log_path, dirname);
         if (dir_path == NULL) {
@@ -108,6 +108,7 @@ char *create_logs_dir(TcpConnection *con) {
         int ret = mkdir(dir_path, 0777);
         if (ret == -1) {
                 LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
+                D("%s", dir_path);
                 return NULL;
         }
 
@@ -125,16 +126,16 @@ static TcpConnection *alloc_connection(void) {
         con->cmdline = alloc_cmdline_str(&(con->app_name));
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
-        con->directory = create_logs_dir(con);
-        
+
         // Increment connections_count
         if (!lock(&connections_count_mutex)) goto error;
         con->id = connections_count;
         connections_count++;
         unlock(&connections_count_mutex);
 
+        con->directory = create_logs_dir(con->id);
         return con;
-error: 
+error:
         free_connection(con);
         return NULL;
 }
@@ -476,14 +477,15 @@ void tcp_stop_packet_capture(TcpConnection *con) {
         FAIL_IF_NULL(ev, ev_type_cons);                                        \
         if (!lock(&(con->mutex))) FAIL_IF_NULL(NULL, ev_type_cons);
 
-#define TCP_EV_POSTLUDE(ev_type_cons)                                       \
-        if (ev_type_cons != TCP_EV_TCP_INFO && should_dump_tcp_info(con)) { \
-                struct tcp_info i;                                          \
-                int r = fill_tcpinfo(fd, &i);                               \
-                int e = errno;                                              \
-                unlock(&con->mutex);                                        \
-                tcp_ev_tcp_info(fd, r, e, &i);                              \
-        } else                                                              \
+#define TCP_EV_POSTLUDE(ev_type_cons)                                          \
+        if (ev_type_cons != TCP_EV_TCP_INFO && ev_type_cons != TCP_EV_CLOSE && \
+            should_dump_tcp_info(con)) {                                       \
+                struct tcp_info i;                                             \
+                int r = fill_tcpinfo(fd, &i);                                  \
+                int e = errno;                                                 \
+                unlock(&con->mutex);                                           \
+                tcp_ev_tcp_info(fd, r, e, &i);                                 \
+        } else                                                                 \
                 unlock(&con->mutex);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
