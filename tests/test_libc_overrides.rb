@@ -7,8 +7,11 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-describe "libc overrides" do
+def no_error_log
+  !system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str("packetdrill")}")
+end
 
+describe "libc overrides" do
   before do
     reset_dir(DEFAULT_PATH) 
   end

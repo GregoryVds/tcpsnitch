@@ -7,6 +7,24 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
+def json_dump(con_id=1)
+  File.read(json_file_str("packetdrill", con_id))
+end
+
+# Not very robust but it seems that packetdrill always open another TCP connection
+# before the script. So the first connection we are interested in is at /1/
+def assert_event_present(type, success=true)
+  pattern = {
+    events: [
+      {
+        type: type,
+        success: success
+      }.ignore_extra_keys!
+    ].ignore_extra_values!
+  }.ignore_extra_keys!
+  assert_json_match(pattern, json_dump)
+end
+
 describe "tcp_spy" do
   before do
     reset_dir(DEFAULT_PATH) 

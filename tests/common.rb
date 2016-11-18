@@ -1,5 +1,6 @@
 require 'json_expressions/minitest'
 require 'tempfile'
+require 'packetfu'
 require './constants.rb'
 require './pkt_scripts.rb'
 
@@ -8,6 +9,10 @@ require './pkt_scripts.rb'
 module Boolean; end
 class TrueClass; include Boolean; end
 class FalseClass; include Boolean; end
+
+###########################
+# Directory manipulations #
+###########################
 
 def mkdir(path)
   system("test -d #{path} || mkdir #{path}")
@@ -34,50 +39,46 @@ def reset_dir(path)
   mkdir(path)
 end
 
-def run_pkt_cmd_str(path, env='')
-  cmd = "#{LD_PRELOAD} #{PACKET_DRILL} #{path} 2>/dev/null" 
-  if env then env+' '+cmd else cmd end
+###########################
+# Log files manipulations #
+###########################
+
+# Assumes the DEFAULT_PATH was cleared before running the prog.
+def log_dir_str(prog)
+  Dir[DEFAULT_PATH+"/#{prog}_*"].last
 end
+
+def log_file_str(prog)
+  log_dir_str(prog)+"/"+LOG_FILE
+end
+
+def con_dir_str(prog, con_id)
+  log_dir_str(prog)+"/#{con_id}/"
+end
+
+def json_file_str(prog, con_id)
+  con_dir_str(prog, con_id)+JSON_FILE
+end
+
+def pcap_file_str(prog, con_id)
+  con_dir_str(prog, con_id)+PCAP_FILE
+end
+
+##################
+# Others helpers #
+##################
 
 def run_pkt_script(script, env='')
   file = Tempfile.new("foo")
   file.write(script)
   file.close
-  rc = system(run_pkt_cmd_str(file.path, env)) 
+  cmd = env + " #{LD_PRELOAD} #{PACKET_DRILL} #{file.path} 2>/dev/null" 
+  rc = system(cmd) 
   file.unlink
   rc
 end
 
-# Packetdrill forks a bunch of programs such as ip, sh, etc. Assuming the 
-# DEFAULT_PATH was emptied before executing the test, then our log should be
-# in the ONLY directory starting with packetdrill_*. In case it was not emptied, we should NOT expect last to be the last created directory.
-def log_dir_str
-  Dir[DEFAULT_PATH+"/packetdrill_*"].last
-end
-
-# Not very robust but it seems that packetdrill always open another TCP connection
-# before the script. So the first connection we are interested in is at /1/
-def json_dump(con_id=1)
-  File.read(log_dir_str+"/#{con_id}/"+JSON_FILE)
-end
-
-def assert_event_present(type, success=true)
-  pattern = {
-    events: [
-      {
-        type: type,
-        success: success
-      }.ignore_extra_keys!
-    ].ignore_extra_values!
-  }.ignore_extra_keys!
-  assert_json_match(pattern, json_dump)
-end
-
-def log_file_str
-  log_dir_str+"/"+LOG_FILE
-end
-
-def no_error_log
-  !system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str}")
+def run_curl
+  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
 end
 

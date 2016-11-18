@@ -38,7 +38,7 @@ static pcap_t *get_capture_handle(void) {
 		    "Env variable %s was not set. Capture on all interfaces.",
 		    ENV_DEV);
 	}
-
+        
 	// Set err_buf to empty string to get warnings.
 	err_buf[0] = 0;
 	pcap_t *handle = pcap_open_live(dev, BUFSIZ, 0, 0, err_buf);
