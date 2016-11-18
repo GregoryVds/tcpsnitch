@@ -33,4 +33,6 @@ bool lock(pthread_mutex_t *mutex);
 bool unlock(pthread_mutex_t *mutex);
 bool init_errorcheck_mutex(pthread_mutex_t *mutex);
 
+const char *get_app_name(void);
+
 #endif

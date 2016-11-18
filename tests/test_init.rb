@@ -89,4 +89,29 @@ describe "Init" do
     end
   end
 
+  describe "when running an executable by its absolute path" do
+    it "should not crash" do
+      assert run_exec("/usr/bin/curl -s google.com")
+    end
+
+    it "a should give no ERROR log" do
+      reset_dir(DEFAULT_PATH)
+      run_exec("/usr/bin/curl -s google.com")
+      puts log_file_str("curl")
+      assert !errors_in_log?(log_file_str("curl"))
+    end
+  end
+
+  describe "when running an executable by its name" do
+    it "should not crash" do
+      assert run_exec("curl -s google.com")
+    end
+
+    it "should give no ERROR log" do
+      reset_dir(DEFAULT_PATH)
+      run_exec("curl -s google.com")
+      assert !errors_in_log?(log_file_str("curl"))
+    end
+  end
+
 end

@@ -64,9 +64,17 @@ def pcap_file_str(prog, con_id)
   con_dir_str(prog, con_id)+PCAP_FILE
 end
 
+def read_json(prog, con_id)
+  File.read(json_file_str(prog, con_id))
+end
+
 ##################
 # Others helpers #
 ##################
+
+def run_exec(exec, env='')
+  system("#{env} #{LD_PRELOAD} #{exec} > /dev/null 2>&1") 
+end
 
 def run_pkt_script(script, env='')
   file = Tempfile.new("foo")
@@ -79,6 +87,11 @@ def run_pkt_script(script, env='')
 end
 
 def run_curl
-  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
+  run_exec("curl -s google.com", "NETSPY_DEV=enp0s3")
+#  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
+end
+
+def errors_in_log?(log_path)
+  system("grep \"#{LOG_LVL_ERROR}\" #{log_path}")
 end
 

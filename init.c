@@ -90,7 +90,8 @@ static void log_metadata(const char *netspy_path) {
 
 #define TIMESTAMP_WIDTH 10
 static char *alloc_base_log_dir_name(void) {
-        char *app_name = program_invocation_name;  // Not portable?
+        const char *app_name = get_app_name();
+
         int app_name_length = strlen(app_name);
         int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
 
@@ -163,7 +164,8 @@ static char *create_logs_dir(const char *netspy_path) {
         // Finally, create dir at actual_path.
         int ret = mkdir(actual_path, 0777);
         if (ret == -1) {
-                LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
+                LOG(ERROR, "mkdir() failed for %s. %s.", actual_path,
+                    strerror(errno));
                 return NULL;
         }
 
@@ -259,7 +261,7 @@ void init_netspy(void) {
                 set_log_path(log_file_path);
                 free(log_file_path);
         }
-        
+
         initialized = true;
         goto exit;
 exit:

@@ -136,13 +136,6 @@ PKT_CLOSE_DGRAM = <<-EOT
   +0 close(3) = 0
 EOT
 
-
-
-
-
-
-
-
 PKT_CONNECTED_SOCK_STREAM = PKT_CONNECT_STREAM
 
 

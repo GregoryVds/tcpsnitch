@@ -1,3 +1,5 @@
+#define _GNU_SOURCE  // For program_invocation_name
+
 #include "lib.h"
 #include <errno.h>
 #include <limits.h>
@@ -180,5 +182,15 @@ bool init_errorcheck_mutex(pthread_mutex_t *mutex) {
         }
 
         return true;
+}
+
+const char *get_app_name(void) {
+        char *app_name, *last = strrchr(program_invocation_name, '/');
+        if (last == NULL)
+                app_name = program_invocation_name;
+        else 
+                app_name = last+1;
+
+        return app_name;
 }
 

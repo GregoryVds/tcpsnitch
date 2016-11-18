@@ -8,8 +8,23 @@ require './common.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 def no_error_log
-  !system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str("packetdrill")}")
+  !errors_in_log?(log_file_str("packetdrill"))
 end
+
+# Not very robust but it seems that packetdrill always open another TCP connection
+# before the script. So the first connection we are interested in is at /1/
+def assert_event_present(type, success=true)
+  pattern = {
+    events: [
+      {
+        type: type,
+        success: success
+      }.ignore_extra_keys!
+    ].ignore_extra_values!
+  }.ignore_extra_keys!
+  assert_json_match(pattern, read_json("packetdrill", 1))
+end
+
 
 describe "libc overrides" do
   before do

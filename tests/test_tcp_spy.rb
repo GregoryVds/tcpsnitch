@@ -7,22 +7,8 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-def json_dump(con_id=1)
-  File.read(json_file_str("packetdrill", con_id))
-end
-
-# Not very robust but it seems that packetdrill always open another TCP connection
-# before the script. So the first connection we are interested in is at /1/
-def assert_event_present(type, success=true)
-  pattern = {
-    events: [
-      {
-        type: type,
-        success: success
-      }.ignore_extra_keys!
-    ].ignore_extra_values!
-  }.ignore_extra_keys!
-  assert_json_match(pattern, json_dump)
+def json(con_id=1)
+  read_json("packetdrill", con_id)
 end
 
 describe "tcp_spy" do
@@ -46,7 +32,7 @@ describe "tcp_spy" do
         successful_pcap: Boolean,
         timestamp: Fixnum,
       }
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
 
     it "should have the proper bytes count" do
@@ -63,7 +49,7 @@ describe "tcp_spy" do
         bytes_received: 210,
         bytes_sent: 190,
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -93,8 +79,8 @@ describe "tcp_spy" do
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern1, json_dump(1))
-      assert_json_match(pattern2, json_dump(2))
+      assert_json_match(pattern1, json(1))
+      assert_json_match(pattern2, json(2))
     end
 
     it "should properly handle 2 interleaved connections" do
@@ -122,8 +108,8 @@ describe "tcp_spy" do
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern1, json_dump(1))
-      assert_json_match(pattern2, json_dump(2))
+      assert_json_match(pattern1, json(1))
+      assert_json_match(pattern2, json(2))
     end
   end
 
@@ -144,7 +130,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
  
@@ -165,7 +151,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -184,7 +170,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -202,7 +188,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -220,7 +206,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -237,7 +223,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -255,7 +241,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -281,7 +267,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -307,7 +293,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -333,7 +319,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
  
     end
   end
@@ -360,7 +346,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
  
     end
   end
@@ -378,7 +364,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
  
     end
   end
@@ -396,7 +382,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
@@ -413,7 +399,7 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json_dump)
+      assert_json_match(pattern, json)
     end
   end
 
