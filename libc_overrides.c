@@ -267,7 +267,7 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
         orig_sendto_type orig_sendto;
         orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
 
-        LOG(INFO, "sendto() on socket %d", __fd);
+        LOG(INFO, "sendto() on socket %d.", __fd);
 
         ssize_t ret =
             orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -295,7 +295,7 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 
         orig_recvfrom_type orig_recvfrom;
         orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
-        LOG(INFO, "recvfrom() called.");
+        LOG(INFO, "recvfrom() on socket %d.", __fd);
 
         /* Perform syscall */
         ssize_t ret =
@@ -318,10 +318,18 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
 ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
         init_netspy();
 
-        LOG(WARN, "NOT IMPLEMENTED: sendmsg() on socket %d", __fd);
         orig_sendmsg_type orig_sendmsg;
         orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
-        return orig_sendmsg(__fd, __message, __flags);
+        LOG(INFO, "sendmsg() called on %d.", __fd);
+
+        /* Perform syscall */
+        ssize_t ret = orig_sendmsg(__fd, __message, __flags);
+        int err = errno;
+
+        if (is_tcp_socket(__fd))
+                tcp_ev_sendmsg(__fd, ret, err, __message, __flags);
+
+        return ret;
 }
 
 /* Receive a message as described by MESSAGE from socket FD.
@@ -333,10 +341,18 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
 ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
         init_netspy();
 
-        LOG(WARN, "NOT IMPLEMENTED: recvmsg() on socket %d", __fd);
         orig_recvmsg_type orig_recvmsg;
         orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
-        return orig_recvmsg(__fd, __message, __flags);
+        LOG(INFO, "recvmsg() called on %d.", __fd);
+
+        /* Perform syscall */
+        ssize_t ret = orig_recvmsg(__fd, __message, __flags);
+        int err = errno;
+
+        if (is_tcp_socket(__fd))
+                tcp_ev_recvmsg(__fd, ret, err, __message, __flags);
+
+        return ret;
 }
 
 /*

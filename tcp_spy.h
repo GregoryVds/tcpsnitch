@@ -8,11 +8,11 @@
 
 #include <netinet/tcp.h>
 #include <pcap/pcap.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <time.h>
-#include <pthread.h>
 
 typedef enum TcpEventType {
         TCP_EV_SOCKET,
@@ -25,6 +25,8 @@ typedef enum TcpEventType {
         TCP_EV_RECV,
         TCP_EV_SENDTO,
         TCP_EV_RECVFROM,
+        TCP_EV_SENDMSG,
+        TCP_EV_RECVMSG,
         // unistd.h
         TCP_EV_WRITE,
         TCP_EV_READ,
@@ -125,15 +127,34 @@ typedef struct {
 } TcpEvRecvfrom;
 
 typedef struct {
+        int iovec_count;
+        size_t *iovec_sizes;
+        bool control_data;
+        struct sockaddr_storage addr;
+} TcpMsghdr;
+
+typedef struct {
         TcpEvent super;
         size_t bytes;
         TcpSendFlags flags;
-} TcpEvWrite;
+        TcpMsghdr msghdr;
+} TcpEvSendmsg;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
         TcpRecvFlags flags;
+        TcpMsghdr msghdr;
+} TcpEvRecvmsg;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+} TcpEvWrite;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
 } TcpEvRead;
 
 typedef struct {
@@ -153,7 +174,7 @@ struct TcpEventNode {
 };
 
 typedef struct {
-        pthread_mutex_t mutex; 
+        pthread_mutex_t mutex;
         // To be freed
         char *app_name;      // Application name with args.
         char *cmdline;       // Cmdline (app name + args).
@@ -211,7 +232,14 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
                      const struct sockaddr *addr, socklen_t len);
 
+void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
+                    int flags);
+
+void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
+                    int flags);
+
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
+
 
 void tcp_ev_read(int fd, int return_value, int err, size_t bytes);
 

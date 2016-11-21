@@ -70,6 +70,7 @@ static TcpConnection *put_tcp_connection(int fd, TcpConnection *con);
 static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
+static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
 
 void tcp_dump_json(TcpConnection *con);
 int force_bind(int fd, TcpConnection *con, bool IPV6);
@@ -145,60 +146,68 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         TcpEvent *ev;
         switch (type) {
                 case TCP_EV_SOCKET:
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSocket));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvSocket), 1);
                         success = (return_value != 0);
                         break;
                 case TCP_EV_BIND:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvBind));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvBind), 1);
                         break;
                 case TCP_EV_CONNECT:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvConnect));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvConnect), 1);
                         break;
                 case TCP_EV_SHUTDOWN:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvShutdown));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvShutdown), 1);
                         break;
                 case TCP_EV_LISTEN:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvListen));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvListen), 1);
                         break;
                 case TCP_EV_SETSOCKOPT:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSetsockopt));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvSetsockopt), 1);
                         break;
                 case TCP_EV_SEND:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSend));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvSend), 1);
                         break;
                 case TCP_EV_RECV:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecv));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecv), 1);
                         break;
                 case TCP_EV_SENDTO:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvSendto));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvSendto), 1);
                         break;
                 case TCP_EV_RECVFROM:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvRecvfrom));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecvfrom), 1);
+                        break;
+                case TCP_EV_SENDMSG:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvSendmsg), 1);
+                        break;
+                case TCP_EV_RECVMSG:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecvmsg), 1);
                         break;
                 case TCP_EV_WRITE:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvWrite));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvWrite), 1);
                         break;
                 case TCP_EV_READ:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvRead));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvRead), 1);
                         break;
                 case TCP_EV_CLOSE:
                         success = (return_value == 0);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvClose));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvClose), 1);
                         break;
                 case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)malloc(sizeof(TcpEvTcpInfo));
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvTcpInfo), 1);
                         break;
         }
 
@@ -324,6 +333,29 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
         if (flags & MSG_PEEK) s->msg_peek = true;
         if (flags & MSG_TRUNC) s->msg_trunc = true;
         if (flags & MSG_WAITALL) s->msg_waitall = true;
+}
+
+static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
+        memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
+        m1->control_data = (m2->msg_control != NULL);
+
+        // Loop over iovecs
+        m1->iovec_count = m2->msg_iovlen;
+        size_t *iovec_sizes = (size_t *)malloc(sizeof(size_t *) * m2->msg_iovlen);
+        if (iovec_sizes == NULL) {
+                LOG(ERROR, "malloc() failed.");
+                return -1;
+        }
+
+        m1->iovec_sizes = iovec_sizes;
+        unsigned int i;
+        socklen_t bytes = 0;
+        for (i = 0; i < m2->msg_iovlen; i++) {
+                iovec_sizes[i] = m2->msg_iov[i].iov_len;
+                bytes += m2->msg_iov[i].iov_len;
+        }
+
+        return bytes;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -477,19 +509,20 @@ void tcp_stop_packet_capture(TcpConnection *con) {
 #define TCP_EV_POSTLUDE(ev_type_cons)                                          \
         if (ev_type_cons != TCP_EV_TCP_INFO && ev_type_cons != TCP_EV_CLOSE && \
             should_dump_tcp_info(con)) {                                       \
-                struct tcp_info i;                                             \
-                int r = fill_tcpinfo(fd, &i);                                  \
-                int e = errno;                                                 \
+                struct tcp_info _i;                                            \
+                int _r = fill_tcpinfo(fd, &_i);                                \
+                int _e = errno;                                                \
                 unlock(&con->mutex);                                           \
-                tcp_ev_tcp_info(fd, r, e, &i);                                 \
+                tcp_ev_tcp_info(fd, _r, _e, &_i);                              \
         } else                                                                 \
                 unlock(&con->mutex);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket()",     "bind()", "connect()", "shutdown()", "listen()",
-            "setsockopt()", "send()", "recv()",    "sendto()",   "recvfrom()",
-            "write()",      "read()", "close()",   "tcp_info"};
+            "socket()", "bind()",       "connect()", "shutdown()",
+            "listen()", "setsockopt()", "send()",    "recv()",
+            "sendto()", "recvfrom()",   "sendmsg()", "recvmsg()",
+            "write()",  "read()",       "close()",   "tcp_info"};
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
@@ -629,6 +662,32 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_RECVFROM)
+}
+
+void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
+                    int flags) {
+        // Instantiate local vars TcpConnection *con & TcpEvSendmsg *ev
+        TCP_EV_PRELUDE(TCP_EV_SENDMSG, TcpEvSendmsg);
+
+        fill_send_flags(&(ev->flags), flags);
+        ev->bytes = fill_msghdr(&ev->msghdr, msg);
+
+        push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE(TCP_EV_SENDMSG)
+}
+
+void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
+                    int flags) {
+        // Instantiate local vars TcpConnection *con & TcpEvRecvmsg *ev
+        TCP_EV_PRELUDE(TCP_EV_RECVMSG, TcpEvRecvmsg);
+
+        fill_recv_flags(&(ev->flags), flags);
+        ev->bytes = fill_msghdr(&ev->msghdr, msg);
+
+        push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
 }
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {

@@ -34,6 +34,8 @@ static json_t *build_tcp_ev_send(TcpEvSend *ev);
 static json_t *build_tcp_ev_recv(TcpEvRecv *ev);
 static json_t *build_tcp_ev_sendto(TcpEvSendto *ev);
 static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev);
+static json_t *build_tcp_ev_sendmsg(TcpEvSendmsg *ev);
+static json_t *build_tcp_ev_recvmsg(TcpEvRecvmsg *ev);
 
 static json_t *build_tcp_ev_write(TcpEvWrite *ev);
 static json_t *build_tcp_ev_read(TcpEvRead *ev);
@@ -43,6 +45,7 @@ static json_t *build_tcp_ev_tcp_info(TcpEvTcpInfo *ev);
 
 static json_t *build_send_flags(TcpSendFlags *flags);
 static json_t *build_recv_flags(TcpRecvFlags *flags);
+static json_t *build_msghdr(TcpMsghdr *msg);
 
 #define EV_FAILURE "json_object() failed. Cannot build TCP event."
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
@@ -129,6 +132,12 @@ static json_t *build_event(TcpEvent *ev) {
                         break;
                 case TCP_EV_RECVFROM:
                         r = build_tcp_ev_recvfrom((TcpEvRecvfrom *)ev);
+                        break;
+                case TCP_EV_SENDMSG:
+                        r = build_tcp_ev_sendmsg((TcpEvSendmsg *)ev);
+                        break;
+                case TCP_EV_RECVMSG:
+                        r = build_tcp_ev_recvmsg((TcpEvRecvmsg *)ev);
                         break;
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((TcpEvWrite *)ev);
@@ -269,7 +278,7 @@ static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
 
 static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-        
+
         // This is essentially useles info with TCP and causes troubles with
         // packetdrill tests.
         // char *addr_str = alloc_host_str(&(ev->addr));
@@ -288,7 +297,7 @@ static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
 
 static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-        
+
         // This is essentially useles info with TCP and causes troubles with
         // packetdrill tests.
         // char *addr_str = alloc_host_str(&(ev->addr));
@@ -302,6 +311,26 @@ static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
         // free(addr_str);
         // free(port_str);
 
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_sendmsg(TcpEvSendmsg *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+        add(json_details, "flags", build_send_flags(&(ev->flags)));
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr))); 
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_recvmsg(TcpEvRecvmsg *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+        add(json_details, "flags", build_recv_flags(&(ev->flags)));
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr))); 
+        
         return json_ev;
 }
 
@@ -417,6 +446,29 @@ static json_t *build_recv_flags(TcpRecvFlags *flags) {
         add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
 
         return json_flags;
+}
+
+static json_t *build_msghdr(TcpMsghdr *msg) {
+        json_t *json_msghdr = json_object();
+        if (json_msghdr == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build msghdr.");
+                return NULL;
+        }
+
+        add(json_msghdr, "iovec_count", json_integer(msg->iovec_count));
+        add(json_msghdr, "control_data", json_boolean(msg->control_data));
+
+        json_t *iovec_sizes = json_array();
+        if (iovec_sizes) {
+                int i;
+                for (i = 0; i < msg->iovec_count; i++) {
+                        json_array_append_new(
+                            iovec_sizes, json_integer(msg->iovec_sizes[i]));
+                }
+        }
+        add(json_msghdr, "iovec_sizes", iovec_sizes);
+
+        return json_msghdr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
