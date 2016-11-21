@@ -31,8 +31,11 @@ typedef enum TcpEventType {
         TCP_EV_WRITE,
         TCP_EV_READ,
         TCP_EV_CLOSE,
+        // sys/uio.h
+        TCP_EV_WRITEV,
+        TCP_EV_READV,
         // others
-        TCP_EV_TCP_INFO,
+        TCP_EV_TCP_INFO
 } TcpEventType;
 
 typedef struct {
@@ -129,6 +132,10 @@ typedef struct {
 typedef struct {
         int iovec_count;
         size_t *iovec_sizes;
+} TcpIovec;
+
+typedef struct {
+        TcpIovec iovec;
         bool control_data;
         struct sockaddr_storage addr;
 } TcpMsghdr;
@@ -161,6 +168,18 @@ typedef struct {
         TcpEvent super;
         bool detected;
 } TcpEvClose;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+        TcpIovec iovec;
+} TcpEvWritev;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+        TcpIovec iovec;
+} TcpEvReadv;
 
 typedef struct {
         TcpEvent super;
@@ -240,10 +259,15 @@ void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
 
-
 void tcp_ev_read(int fd, int return_value, int err, size_t bytes);
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected);
+
+void tcp_ev_writev(int fd, int return_value, int err, const struct iovec *iovec,
+                   int iovec_count);
+
+void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
+                  int iovec_count);
 
 void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info);
 

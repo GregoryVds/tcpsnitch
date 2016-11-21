@@ -20,55 +20,60 @@
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
 static add_type add = &json_object_set_new;
 
-static json_t *build_tcp_ev_connection(TcpConnection *con);
-static json_t *build_event(TcpEvent *ev);
-static void build_shared_fields(json_t *json_ev, TcpEvent *ev);
+static json_t *build_tcp_ev_connection(const TcpConnection *con);
+static json_t *build_event(const TcpEvent *ev);
+static void build_shared_fields(json_t *json_ev, const TcpEvent *ev);
 
-static json_t *build_tcp_ev_socket(TcpEvSocket *ev);
-static json_t *build_tcp_ev_bind(TcpEvBind *ev);
-static json_t *build_tcp_ev_connect(TcpEvConnect *ev);
-static json_t *build_tcp_ev_shutdown(TcpEvShutdown *ev);
-static json_t *build_tcp_ev_listen(TcpEvListen *ev);
-static json_t *build_tcp_ev_setsockopt(TcpEvSetsockopt *ev);
-static json_t *build_tcp_ev_send(TcpEvSend *ev);
-static json_t *build_tcp_ev_recv(TcpEvRecv *ev);
-static json_t *build_tcp_ev_sendto(TcpEvSendto *ev);
-static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev);
-static json_t *build_tcp_ev_sendmsg(TcpEvSendmsg *ev);
-static json_t *build_tcp_ev_recvmsg(TcpEvRecvmsg *ev);
+static json_t *build_tcp_ev_socket(const TcpEvSocket *ev);
+static json_t *build_tcp_ev_bind(const TcpEvBind *ev);
+static json_t *build_tcp_ev_connect(const TcpEvConnect *ev);
+static json_t *build_tcp_ev_shutdown(const TcpEvShutdown *ev);
+static json_t *build_tcp_ev_listen(const TcpEvListen *ev);
+static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev);
+static json_t *build_tcp_ev_send(const TcpEvSend *ev);
+static json_t *build_tcp_ev_recv(const TcpEvRecv *ev);
+static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev);
+static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev);
+static json_t *build_tcp_ev_sendmsg(const TcpEvSendmsg *ev);
+static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev);
 
-static json_t *build_tcp_ev_write(TcpEvWrite *ev);
-static json_t *build_tcp_ev_read(TcpEvRead *ev);
-static json_t *build_tvp_ev_close(TcpEvClose *ev);
+static json_t *build_tcp_ev_write(const TcpEvWrite *ev);
+static json_t *build_tcp_ev_read(const TcpEvRead *ev);
+static json_t *build_tcp_ev_close(const TcpEvClose *ev);
 
-static json_t *build_tcp_ev_tcp_info(TcpEvTcpInfo *ev);
+static json_t *build_tcp_ev_writev(const TcpEvWritev *ev);
+static json_t *build_tcp_ev_readv(const TcpEvReadv *ev);
 
-static json_t *build_send_flags(TcpSendFlags *flags);
-static json_t *build_recv_flags(TcpRecvFlags *flags);
-static json_t *build_msghdr(TcpMsghdr *msg);
+static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev);
+
+static json_t *build_send_flags(const TcpSendFlags *flags);
+static json_t *build_recv_flags(const TcpRecvFlags *flags);
+
+static json_t *build_iovec(const TcpIovec *iovec);
+static json_t *build_msghdr(const TcpMsghdr *msg);
 
 #define EV_FAILURE "json_object() failed. Cannot build TCP event."
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
 #define CON_FAILURE "json_object() failed. Cannot build TCP connection."
 #define SHARED_FAILURE "json_object() failed. Cannot build shared fields."
 
-#define BUILD_EV_PRELUDE()                            \
-        json_t *json_ev = json_object();              \
-        if (json_ev == NULL) {                        \
-                LOG(ERROR, EV_FAILURE);               \
-                return NULL;                          \
-        }                                             \
-        build_shared_fields(json_ev, (TcpEvent *)ev); \
-        json_t *json_details = json_object();         \
-        if (json_details == NULL) {                   \
-                LOG(ERROR, DETAILS_FAILURE);          \
-                return json_ev;                       \
-        }                                             \
+#define BUILD_EV_PRELUDE()                                  \
+        json_t *json_ev = json_object();                    \
+        if (json_ev == NULL) {                              \
+                LOG(ERROR, EV_FAILURE);                     \
+                return NULL;                                \
+        }                                                   \
+        build_shared_fields(json_ev, (const TcpEvent *)ev); \
+        json_t *json_details = json_object();               \
+        if (json_details == NULL) {                         \
+                LOG(ERROR, DETAILS_FAILURE);                \
+                return json_ev;                             \
+        }                                                   \
         add(json_ev, "details", json_details);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static json_t *build_tcp_ev_connection(TcpConnection *con) {
+static json_t *build_tcp_ev_connection(const TcpConnection *con) {
         json_t *json_con = json_object();
         json_t *events = json_array();
         if (json_con == NULL || events == NULL) {
@@ -100,62 +105,69 @@ static json_t *build_tcp_ev_connection(TcpConnection *con) {
         return json_con;
 }
 
-static json_t *build_event(TcpEvent *ev) {
+static json_t *build_event(const TcpEvent *ev) {
         json_t *r;
         switch (ev->type) {
                 case TCP_EV_SOCKET:
-                        r = build_tcp_ev_socket((TcpEvSocket *)ev);
+                        r = build_tcp_ev_socket((const TcpEvSocket *)ev);
                         break;
                 case TCP_EV_BIND:
-                        r = build_tcp_ev_bind((TcpEvBind *)ev);
+                        r = build_tcp_ev_bind((const TcpEvBind *)ev);
                         break;
                 case TCP_EV_CONNECT:
-                        r = build_tcp_ev_connect((TcpEvConnect *)ev);
+                        r = build_tcp_ev_connect((const TcpEvConnect *)ev);
                         break;
                 case TCP_EV_SHUTDOWN:
-                        r = build_tcp_ev_shutdown((TcpEvShutdown *)ev);
+                        r = build_tcp_ev_shutdown((const TcpEvShutdown *)ev);
                         break;
                 case TCP_EV_LISTEN:
-                        r = build_tcp_ev_listen((TcpEvListen *)ev);
+                        r = build_tcp_ev_listen((const TcpEvListen *)ev);
                         break;
                 case TCP_EV_SETSOCKOPT:
-                        r = build_tcp_ev_setsockopt((TcpEvSetsockopt *)ev);
+                        r = build_tcp_ev_setsockopt(
+                            (const TcpEvSetsockopt *)ev);
                         break;
                 case TCP_EV_SEND:
-                        r = build_tcp_ev_send((TcpEvSend *)ev);
+                        r = build_tcp_ev_send((const TcpEvSend *)ev);
                         break;
                 case TCP_EV_RECV:
-                        r = build_tcp_ev_recv((TcpEvRecv *)ev);
+                        r = build_tcp_ev_recv((const TcpEvRecv *)ev);
                         break;
                 case TCP_EV_SENDTO:
-                        r = build_tcp_ev_sendto((TcpEvSendto *)ev);
+                        r = build_tcp_ev_sendto((const TcpEvSendto *)ev);
                         break;
                 case TCP_EV_RECVFROM:
-                        r = build_tcp_ev_recvfrom((TcpEvRecvfrom *)ev);
+                        r = build_tcp_ev_recvfrom((const TcpEvRecvfrom *)ev);
                         break;
                 case TCP_EV_SENDMSG:
-                        r = build_tcp_ev_sendmsg((TcpEvSendmsg *)ev);
+                        r = build_tcp_ev_sendmsg((const TcpEvSendmsg *)ev);
                         break;
                 case TCP_EV_RECVMSG:
-                        r = build_tcp_ev_recvmsg((TcpEvRecvmsg *)ev);
+                        r = build_tcp_ev_recvmsg((const TcpEvRecvmsg *)ev);
                         break;
                 case TCP_EV_WRITE:
-                        r = build_tcp_ev_write((TcpEvWrite *)ev);
+                        r = build_tcp_ev_write((const TcpEvWrite *)ev);
                         break;
                 case TCP_EV_READ:
-                        r = build_tcp_ev_read((TcpEvRead *)ev);
+                        r = build_tcp_ev_read((const TcpEvRead *)ev);
                         break;
                 case TCP_EV_CLOSE:
-                        r = build_tvp_ev_close((TcpEvClose *)ev);
+                        r = build_tcp_ev_close((const TcpEvClose *)ev);
+                        break;
+                case TCP_EV_WRITEV:
+                        r = build_tcp_ev_writev((const TcpEvWritev *)ev);
+                        break;
+                case TCP_EV_READV:
+                        r = build_tcp_ev_readv((const TcpEvReadv *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
-                        r = build_tcp_ev_tcp_info((TcpEvTcpInfo *)ev);
+                        r = build_tcp_ev_tcp_info((const TcpEvTcpInfo *)ev);
                         break;
         }
         return r;
 }
 
-static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
+static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         const char *type_str = string_from_tcp_event_type(ev->type);
         add(json_ev, "type", json_string(type_str));
 
@@ -178,7 +190,7 @@ static void build_shared_fields(json_t *json_ev, TcpEvent *ev) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static json_t *build_tcp_ev_socket(TcpEvSocket *ev) {
+static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         char *dom_str = alloc_sock_domain_str(ev->domain);
@@ -196,7 +208,7 @@ static json_t *build_tcp_ev_socket(TcpEvSocket *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_bind(TcpEvBind *ev) {
+static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         char *addr_str = alloc_host_str(&(ev->addr));
@@ -212,7 +224,7 @@ static json_t *build_tcp_ev_bind(TcpEvBind *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_connect(TcpEvConnect *ev) {
+static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         char *addr_str = alloc_host_str(&(ev->addr));
@@ -227,7 +239,7 @@ static json_t *build_tcp_ev_connect(TcpEvConnect *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_shutdown(TcpEvShutdown *ev) {
+static json_t *build_tcp_ev_shutdown(const TcpEvShutdown *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "shut_rd", json_boolean(ev->shut_rd));
@@ -236,7 +248,7 @@ static json_t *build_tcp_ev_shutdown(TcpEvShutdown *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_listen(TcpEvListen *ev) {
+static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "backlog", json_integer(ev->backlog));
@@ -244,7 +256,7 @@ static json_t *build_tcp_ev_listen(TcpEvListen *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_setsockopt(TcpEvSetsockopt *ev) {
+static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         struct protoent *protocol = getprotobynumber(ev->level);
@@ -258,7 +270,7 @@ static json_t *build_tcp_ev_setsockopt(TcpEvSetsockopt *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_send(TcpEvSend *ev) {
+static json_t *build_tcp_ev_send(const TcpEvSend *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
@@ -267,7 +279,7 @@ static json_t *build_tcp_ev_send(TcpEvSend *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
+static json_t *build_tcp_ev_recv(const TcpEvRecv *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
@@ -276,7 +288,7 @@ static json_t *build_tcp_ev_recv(TcpEvRecv *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
+static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         // This is essentially useles info with TCP and causes troubles with
@@ -295,7 +307,7 @@ static json_t *build_tcp_ev_sendto(TcpEvSendto *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
+static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         // This is essentially useles info with TCP and causes troubles with
@@ -314,27 +326,27 @@ static json_t *build_tcp_ev_recvfrom(TcpEvRecvfrom *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_sendmsg(TcpEvSendmsg *ev) {
+static json_t *build_tcp_ev_sendmsg(const TcpEvSendmsg *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(&(ev->flags)));
-        add(json_details, "msghdr", build_msghdr(&(ev->msghdr))); 
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
 
         return json_ev;
 }
 
-static json_t *build_tcp_ev_recvmsg(TcpEvRecvmsg *ev) {
+static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(&(ev->flags)));
-        add(json_details, "msghdr", build_msghdr(&(ev->msghdr))); 
-        
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
+
         return json_ev;
 }
 
-static json_t *build_tcp_ev_write(TcpEvWrite *ev) {
+static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
@@ -342,7 +354,7 @@ static json_t *build_tcp_ev_write(TcpEvWrite *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_read(TcpEvRead *ev) {
+static json_t *build_tcp_ev_read(const TcpEvRead *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
@@ -350,7 +362,7 @@ static json_t *build_tcp_ev_read(TcpEvRead *ev) {
         return json_ev;
 }
 
-static json_t *build_tvp_ev_close(TcpEvClose *ev) {
+static json_t *build_tcp_ev_close(const TcpEvClose *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         add(json_details, "detected", json_boolean(ev->detected));
@@ -358,7 +370,25 @@ static json_t *build_tvp_ev_close(TcpEvClose *ev) {
         return json_ev;
 }
 
-static json_t *build_tcp_ev_tcp_info(TcpEvTcpInfo *ev) {
+static json_t *build_tcp_ev_writev(const TcpEvWritev *ev) { 
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+        add(json_details, "iovec", build_iovec(&ev->iovec));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_readv(const TcpEvReadv *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+        add(json_details, "iovec", build_iovec(&ev->iovec));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
         struct tcp_info i = ev->info;
@@ -411,7 +441,7 @@ static json_t *build_tcp_ev_tcp_info(TcpEvTcpInfo *ev) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static json_t *build_send_flags(TcpSendFlags *flags) {
+static json_t *build_send_flags(const TcpSendFlags *flags) {
         json_t *json_flags = json_object();
         if (json_flags == NULL) {
                 LOG(ERROR, "json_object() failed. Could not build send flags.");
@@ -429,7 +459,7 @@ static json_t *build_send_flags(TcpSendFlags *flags) {
         return json_flags;
 }
 
-static json_t *build_recv_flags(TcpRecvFlags *flags) {
+static json_t *build_recv_flags(const TcpRecvFlags *flags) {
         json_t *json_flags = json_object();
         if (json_flags == NULL) {
                 LOG(ERROR, "json_object() failed. Could not build recv flags.");
@@ -448,25 +478,37 @@ static json_t *build_recv_flags(TcpRecvFlags *flags) {
         return json_flags;
 }
 
-static json_t *build_msghdr(TcpMsghdr *msg) {
+static json_t *build_iovec(const TcpIovec *iovec) {
+        json_t *json_iovec = json_object();
+        if (json_iovec == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build iovec.");
+                return NULL;
+        }
+
+        add(json_iovec, "iovec_count", json_integer(iovec->iovec_count));
+
+        json_t *iovec_sizes = json_array();
+        if (iovec_sizes) {
+                int i;
+                for (i = 0; i < iovec->iovec_count; i++) {
+                        json_array_append_new(
+                            iovec_sizes, json_integer(iovec->iovec_sizes[i]));
+                }
+        }
+        add(json_iovec, "iovec_sizes", iovec_sizes);
+
+        return json_iovec;
+}
+
+static json_t *build_msghdr(const TcpMsghdr *msg) {
         json_t *json_msghdr = json_object();
         if (json_msghdr == NULL) {
                 LOG(ERROR, "json_object() failed. Could not build msghdr.");
                 return NULL;
         }
 
-        add(json_msghdr, "iovec_count", json_integer(msg->iovec_count));
         add(json_msghdr, "control_data", json_boolean(msg->control_data));
-
-        json_t *iovec_sizes = json_array();
-        if (iovec_sizes) {
-                int i;
-                for (i = 0; i < msg->iovec_count; i++) {
-                        json_array_append_new(
-                            iovec_sizes, json_integer(msg->iovec_sizes[i]));
-                }
-        }
-        add(json_msghdr, "iovec_sizes", iovec_sizes);
+        add(json_msghdr, "iovec", build_iovec(&msg->iovec));
 
         return json_msghdr;
 }
@@ -480,7 +522,7 @@ static json_t *build_msghdr(TcpMsghdr *msg) {
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 */
 
-char *build_tcp_ev_connection_json(TcpConnection *con) {
+char *build_tcp_ev_connection_json(const TcpConnection *con) {
         json_t *json_con = build_tcp_ev_connection(con);
         if (json_con == NULL) {
                 LOG(ERROR,

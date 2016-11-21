@@ -368,26 +368,6 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 
 */
 
-/* Close the file descriptor FD. */
-
-typedef int (*orig_close_type)(int __fd);
-
-int close(int __fd) {
-        init_netspy();
-
-        orig_close_type orig_close;
-        orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
-        if (is_inet_socket(__fd)) LOG(INFO, "close() on socket %d", __fd);
-
-        bool is_tcp = is_tcp_socket(__fd);
-        /* Perform syscall */
-        int ret = orig_close(__fd);
-        int err = errno;
-        if (is_tcp) tcp_ev_close(__fd, ret, err, true);
-
-        return ret;
-}
-
 /* Write N bytes of BUF to FD.  Return the number written, or -1. */
 
 typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
@@ -429,6 +409,27 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
         return ret;
 }
 
+/* Close the file descriptor FD. */
+
+typedef int (*orig_close_type)(int __fd);
+
+int close(int __fd) {
+        init_netspy();
+
+        orig_close_type orig_close;
+        orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
+        if (is_inet_socket(__fd)) LOG(INFO, "close() on socket %d", __fd);
+
+        bool is_tcp = is_tcp_socket(__fd);
+        /* Perform syscall */
+        int ret = orig_close(__fd);
+        int err = errno;
+        if (is_tcp) tcp_ev_close(__fd, ret, err, true);
+
+        return ret;
+}
+
+
 /*
   _   _ ___ ___       _    ____ ___
  | | | |_ _/ _ \     / \  |  _ \_ _|
@@ -456,12 +457,15 @@ ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
 
         orig_writev_type orig_writev;
         orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
+        if (is_inet_socket(__fd)) LOG(INFO, "writev() on socket %d", __fd);
 
-        if (is_inet_socket(__fd)) {
-                LOG(WARN, "NOT IMPLEMENTED: writev() on socket %d", __fd);
-        }
+        bool is_tcp = is_tcp_socket(__fd);
+        /* Perform syscall */
+        int ret = orig_writev(__fd, __iovec, __count);
+        int err = errno;
+        if (is_tcp) tcp_ev_writev(__fd, ret, err, __iovec, __count);
 
-        return orig_writev(__fd, __iovec, __count);
+        return ret;
 }
 
 /* Read data from file descriptor FD, and put the result in the
@@ -478,12 +482,15 @@ ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
 
         orig_readv_type orig_readv;
         orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
+        if (is_inet_socket(__fd)) LOG(INFO, "readv() on socket %d", __fd);
 
-        if (is_inet_socket(__fd)) {
-                LOG(WARN, "NOT IMPLEMENTED: readv() on socket %d", __fd);
-        }
+        bool is_tcp = is_tcp_socket(__fd);
+        /* Perform syscall */
+        int ret = orig_readv(__fd, __iovec, __count);
+        int err = errno;
+        if (is_tcp) tcp_ev_readv(__fd, ret, err, __iovec, __count);
 
-        return orig_readv(__fd, __iovec, __count);
+        return ret;
 }
 
 /*

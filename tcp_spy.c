@@ -71,6 +71,8 @@ static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
+static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
+                            int iovec_count);
 
 void tcp_dump_json(TcpConnection *con);
 int force_bind(int fd, TcpConnection *con, bool IPV6);
@@ -205,6 +207,14 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         success = (return_value == 0);
                         ev = (TcpEvent *)calloc(sizeof(TcpEvClose), 1);
                         break;
+                case TCP_EV_WRITEV:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvWritev), 1);
+                        break;
+                case TCP_EV_READV:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)calloc(sizeof(TcpEvReadv), 1);
+                        break;
                 case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
                         ev = (TcpEvent *)calloc(sizeof(TcpEvTcpInfo), 1);
@@ -338,21 +348,21 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
         m1->control_data = (m2->msg_control != NULL);
+        return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen); 
+}
 
-        // Loop over iovecs
-        m1->iovec_count = m2->msg_iovlen;
-        size_t *iovec_sizes = (size_t *)malloc(sizeof(size_t *) * m2->msg_iovlen);
-        if (iovec_sizes == NULL) {
-                LOG(ERROR, "malloc() failed.");
-                return -1;
-        }
+static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
+                            int iovec_count) {
+        iov1->iovec_count = iovec_count;
 
-        m1->iovec_sizes = iovec_sizes;
-        unsigned int i;
+        iov1->iovec_sizes = (size_t *)malloc(sizeof(size_t *) * iovec_count);
+        if (iov1->iovec_sizes == NULL) LOG(ERROR, "malloc() failed.");
+
+        int i;
         socklen_t bytes = 0;
-        for (i = 0; i < m2->msg_iovlen; i++) {
-                iovec_sizes[i] = m2->msg_iov[i].iov_len;
-                bytes += m2->msg_iov[i].iov_len;
+        for (i = 0; i < iovec_count; i++) {
+                if (iov1->iovec_sizes) iov1->iovec_sizes[i] = iov2[i].iov_len;
+                bytes += iov2[i].iov_len;
         }
 
         return bytes;
@@ -522,7 +532,8 @@ const char *string_from_tcp_event_type(TcpEventType type) {
             "socket()", "bind()",       "connect()", "shutdown()",
             "listen()", "setsockopt()", "send()",    "recv()",
             "sendto()", "recvfrom()",   "sendmsg()", "recvmsg()",
-            "write()",  "read()",       "close()",   "tcp_info"};
+            "write()",  "read()",       "close()",   "writev()",
+            "readv()",  "tcp_info"};
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
@@ -671,6 +682,7 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
 
         fill_send_flags(&(ev->flags), flags);
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
+        con->bytes_sent += ev->bytes;
 
         push_event(con, (TcpEvent *)ev);
 
@@ -684,6 +696,7 @@ void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
 
         fill_recv_flags(&(ev->flags), flags);
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
+        con->bytes_received += ev->bytes;
 
         push_event(con, (TcpEvent *)ev);
 
@@ -727,6 +740,32 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         // We can unlock the mutex since the con is no longer accessible anyway.
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
         free_connection(con);
+}
+
+void tcp_ev_writev(int fd, int return_value, int err, const struct iovec *iovec,
+                   int iovec_count) {
+        // Instantiate local vars TcpConnection *con & TcpEvWritev *ev
+        TCP_EV_PRELUDE(TCP_EV_WRITEV, TcpEvWritev);
+
+        ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
+        con->bytes_sent += ev->bytes;
+
+        push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE(TCP_EV_WRITEV)
+}
+
+void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
+                  int iovec_count) {
+        // Instantiate local vars TcpConnection *con & TcpEvReadv *ev
+        TCP_EV_PRELUDE(TCP_EV_READV, TcpEvReadv);
+
+        ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
+        con->bytes_received += ev->bytes;
+
+        push_event(con, (TcpEvent *)ev);
+
+        TCP_EV_POSTLUDE(TCP_EV_READV)
 }
 
 void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
