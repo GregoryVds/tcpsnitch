@@ -1,15 +1,6 @@
 #include "logger.h"
-#include <errno.h>
 #include <slog.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include "tcp_spy.h"
 
 void logger(LogLevel lvl, const char *str, const char *file, int line) {
         int pid = getpid();
