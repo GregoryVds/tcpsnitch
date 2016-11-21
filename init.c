@@ -209,7 +209,7 @@ static void get_tcpinfo_ivals(void) {
 
 static void cleanup(void) {
         LOG(INFO, "Performing cleanup.");
-        mutex_destroy(&init_mutex);
+        // TODO: mutex_destroy(&init_mutex);
         free(log_file_path);
         tcp_cleanup();
 }
