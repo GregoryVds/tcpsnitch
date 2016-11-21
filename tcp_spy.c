@@ -217,10 +217,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 
 static void free_connection(TcpConnection *con) {
         free_events_list(con->head);
-        int rc = pthread_mutex_destroy(&(con->mutex));
-        if (rc != 0)
-                LOG(ERROR, "pthread_mutex_destroy() failed. %s.", strerror(rc));
-
+        mutex_destroy(&con->mutex);
         free(con->app_name);
         free(con->cmdline);
         free(con->kernel);

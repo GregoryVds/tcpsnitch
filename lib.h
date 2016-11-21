@@ -29,6 +29,7 @@ unsigned long get_time_micros(void);
 long get_env_as_long(const char *env_var);
 int get_int_len(int i);
 
+bool mutex_destroy(pthread_mutex_t *mutex);
 bool lock(pthread_mutex_t *mutex);
 bool unlock(pthread_mutex_t *mutex);
 bool init_errorcheck_mutex(pthread_mutex_t *mutex);

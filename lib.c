@@ -163,6 +163,13 @@ bool unlock(pthread_mutex_t *mutex) {
         return true;
 }
 
+bool mutex_destroy(pthread_mutex_t *mutex) {
+        int rc = pthread_mutex_destroy(mutex);
+        if (rc != 0)
+                LOG(ERROR, "pthread_mutex_destroy() failed. %s.", strerror(rc));
+        return rc == 0;
+}
+
 bool init_errorcheck_mutex(pthread_mutex_t *mutex) {
         pthread_mutexattr_t attr;
         if (pthread_mutexattr_init(&attr) != 0) {

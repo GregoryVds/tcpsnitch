@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <slog.h>
 #include "config.h"
 #include "lib.h"
 #include "logger.h"
@@ -30,6 +31,7 @@ long tcp_info_time_ival = 0;
 */
 ///////////////////////////////////////////////////////////////////////////////
 
+static char *log_file_path;
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
@@ -91,9 +93,11 @@ static void log_metadata(const char *netspy_path) {
 #define TIMESTAMP_WIDTH 10
 static char *alloc_base_log_dir_name(void) {
         const char *app_name = get_app_name();
+        int pid = getpid();
+        int pid_len = get_int_len(pid);
 
         int app_name_length = strlen(app_name);
-        int n = app_name_length + TIMESTAMP_WIDTH + 2;  // APP_TIMESTAMP\0
+        int n = app_name_length + TIMESTAMP_WIDTH + pid_len +3;  // APP_TIMESTAMP\0
 
         char *base_name = (char *)calloc(sizeof(char), n);
         if (base_name == NULL) {
@@ -103,9 +107,10 @@ static char *alloc_base_log_dir_name(void) {
 
         strncat(base_name, app_name, app_name_length);
         strncat(base_name, "_", 1);
-        snprintf(base_name + strlen(base_name), TIMESTAMP_WIDTH, "%lu",
+        snprintf(base_name + strlen(base_name), TIMESTAMP_WIDTH+1, "%lu",
                  get_time_sec());
-
+        strncat(base_name, "_", 1);
+        snprintf(base_name + strlen(base_name), pid_len+1, "%d", pid);
         return base_name;
 }
 
@@ -204,6 +209,8 @@ static void get_tcpinfo_ivals(void) {
 
 static void cleanup(void) {
         LOG(INFO, "Performing cleanup.");
+        mutex_destroy(&init_mutex);
+        free(log_file_path);
         tcp_cleanup();
 }
 
@@ -252,14 +259,13 @@ void init_netspy(void) {
         }
 
         // Configure log library.
-        char *log_file_path = alloc_concat_path(log_path, NETSPY_LOG_FILE);
+        log_file_path = alloc_concat_path(log_path, NETSPY_LOG_FILE);
         if (log_file_path == NULL) {
                 LOG(ERROR,
                     "alloc_concat_path() failed. Logging library cannot log"
                     " to file.");
         } else {
-                set_log_path(log_file_path);
-                free(log_file_path);
+                slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
         }
 
         initialized = true;

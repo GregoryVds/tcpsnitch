@@ -1,18 +1,16 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-typedef enum LogLevel { INFO, WARN, ERROR, DEBUG } LogLevel;
+typedef enum LogLevel { ALWAYS, ERROR, WARN, INFO, DEBUG } LogLevel;
 
-void logger(LogLevel lvl, const char *formated_str, const char *file, int line);
-void set_log_path(const char *path);
+void logger(LogLevel lvl, const char *str, const char *file, int line);
 
-#define LOG(lvl, format, args...)                                          \
-	{                                                                  \
-		char formated_string[1024];                                \
-		snprintf(formated_string, sizeof(formated_string), format, \
-			 ##args);                                          \
-		logger(lvl, formated_string, __FILE__, __LINE__);          \
-	}
+#define LOG(lvl, format, args...)                           \
+        {                                                   \
+                char buf[1024];                             \
+                snprintf(buf, sizeof(buf), format, ##args); \
+                logger(lvl, buf, __FILE__, __LINE__);       \
+        }
 
 #define D(format, args...) LOG(DEBUG, format, ##args)
 

@@ -1,5 +1,5 @@
 CC=gcc
-DEPS=-ljansson -ldl -lpthread -lpcap 
+DEPS=-ljansson -ldl -lpthread -lpcap -lslog
 HEADERS=lib.h tcp_spy.h string_helpers.h tcp_spy_json.h packet_sniffer.h \
 	logger.h init.h
 SOURCES=libc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_spy_json.c \
@@ -39,10 +39,10 @@ clean:
 	rm -f tests/.*.s*
 
 curl: netspy
-	$(ENV) /usr/bin/curl -s google.com > /dev/null
+	$(ENV) /usr/bin/curl -s google.com
 
 angular: netspy
-	$(ENV) curl -s $(ANGULAR) > /dev/null
+	$(ENV) curl -s $(ANGULAR)
 
 firefox: netspy
 	$(ENV) firefox

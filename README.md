@@ -1,22 +1,18 @@
 ## netspy
 
-First prototype aiming at basic gathering of TCP information on client applications using system calls interception with `LD_PRELOAD`.
-
-For a given process, we want to:
-- Record all TCP connections established.
-- For each TCP connection, record all calls to send/recv (& equivalent functions).
-- For each TCP connection, gather TCP infos using getsockopt() everytime our library is invoked.
+Shared library to intercept network related syscalls made via libc (using `LD_PRELOAD`) and analyse the TCP stack.
+Syscalls for each TCP connection are recorded (along with the parameters) and save along a packet trace. At regular interval the state of TCP\_INFO is captured.
 
 # Intallation
 
-## Shared libraries
+## Static librairies
+- Requies slog library (-lslog), see https://github.com/kala13x/slog
+
+## Shared librairies
 - Requires jansson library (-ljansson)
 - Requires dynamic linking library (-ldl)
 - Requires poxix threads library (-lpthread)
 - Requires pcap library (-lpcap)
 
 In Linux, for example, pcap needs the `CAP_NET_RAW` capability to be available to the user. What about `CAP_NET_ADMIN`?
-
-
-
 
