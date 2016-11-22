@@ -256,6 +256,16 @@ static void free_events_list(TcpEventNode *head) {
 
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
+        switch(ev->type) {
+                case TCP_EV_READV:
+                        free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
+                        break;
+                case TCP_EV_WRITEV:
+                        free(((TcpEvWritev *)ev)->iovec.iovec_sizes);
+                        break;
+                default:
+                        break;
+        }
         free(ev);
 }
 

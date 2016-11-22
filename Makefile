@@ -26,7 +26,7 @@ default: netspy
 netspy: $(HEADERS) $(SOURCES)
 	$(CC) -g -Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -fPIC \
 		-Wpointer-arith -Wcast-align -Wstrict-prototypes \
-		-Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-enum \
+		-Wwrite-strings -Waggregate-return -Wcast-qual \
 		-Wunreachable-code -shared -Wl,-Bsymbolic \
 		-Wl,-soname,$(SONAME) -o $(REAL_NAME) $(SOURCES) $(DEPS) 
 	ln -sf $(REAL_NAME) $(SONAME)
