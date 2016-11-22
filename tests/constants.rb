@@ -11,7 +11,7 @@ JSON_FILE="dump.json"
 PCAP_FILE="dump.pcap"
 
 # LOGS
-LOG_FILE="log.txt"
+LOG_FILE="*.log"
 LOG_LVL_ERROR="ERROR"
 LOG_LVL_WARN="WARN"
 LOG_LVL_INFO="INFO"

@@ -259,7 +259,7 @@ void init_netspy(void) {
         }
 
         // Configure log library.
-        log_file_path = alloc_concat_path(log_path, NETSPY_LOG_FILE);
+        log_file_path = alloc_concat_path(log_path, get_app_name());
         if (log_file_path == NULL) {
                 LOG(ERROR,
                     "alloc_concat_path() failed. Logging library cannot log"

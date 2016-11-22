@@ -73,14 +73,14 @@ end
 ##################
 
 def run_exec(exec, env='')
-  system("#{env} #{LD_PRELOAD} #{exec} > /dev/null 2>&1") 
+  system("#{env} #{LD_PRELOAD} #{exec} >/dev/null 2>&1") 
 end
 
 def run_pkt_script(script, env='')
   file = Tempfile.new("foo")
   file.write(script)
   file.close
-  cmd = env + " #{LD_PRELOAD} #{PACKET_DRILL} #{file.path} 2>/dev/null" 
+  cmd = env + " #{LD_PRELOAD} #{PACKET_DRILL} #{file.path} >/dev/null 2>&1" 
   rc = system(cmd) 
   file.unlink
   rc

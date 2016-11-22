@@ -4,7 +4,7 @@
 #define NETSPY_DEFAULT_PATH "/tmp/netspy" // Default path for log filee
 #define NETSPY_JSON_FILE "dump.json" // Name of tcp_spy capture file
 #define NETSPY_PCAP_FILE "dump.pcap" // Name of PCAP capture file
-#define NETSPY_LOG_FILE "log.txt"
+#define NETSPY_LOG_FILE "logs"
 
 /* Env variables */
 #define ENV_PATH "NETSPY_PATH"
