@@ -33,10 +33,7 @@ netspy: $(HEADERS) $(SOURCES)
 	ln -sf $(REAL_NAME) $(LINKER_NAME)
 
 clean:
-	rm -f *.o
-	rm -f .*.s*
-	rm -f *.so*
-	rm -f tests/.*.s*
+	rm -f *.o .*.s* *.so* tests/.*.s*
 
 curl: netspy
 	$(ENV) /usr/bin/curl -s google.com

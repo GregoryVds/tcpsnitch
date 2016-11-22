@@ -3,12 +3,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
-#include <stdbool.h>
+#include <slog.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <slog.h>
 #include "config.h"
 #include "lib.h"
 #include "logger.h"
@@ -97,7 +96,8 @@ static char *alloc_base_log_dir_name(void) {
         int pid_len = get_int_len(pid);
 
         int app_name_length = strlen(app_name);
-        int n = app_name_length + TIMESTAMP_WIDTH + pid_len +3;  // APP_TIMESTAMP\0
+        int n =
+            app_name_length + TIMESTAMP_WIDTH + pid_len + 3;  // APP_TIMESTAMP\0
 
         char *base_name = (char *)calloc(sizeof(char), n);
         if (base_name == NULL) {
@@ -107,10 +107,10 @@ static char *alloc_base_log_dir_name(void) {
 
         strncat(base_name, app_name, app_name_length);
         strncat(base_name, "_", 1);
-        snprintf(base_name + strlen(base_name), TIMESTAMP_WIDTH+1, "%lu",
+        snprintf(base_name + strlen(base_name), TIMESTAMP_WIDTH + 1, "%lu",
                  get_time_sec());
         strncat(base_name, "_", 1);
-        snprintf(base_name + strlen(base_name), pid_len+1, "%d", pid);
+        snprintf(base_name + strlen(base_name), pid_len + 1, "%d", pid);
         return base_name;
 }
 
@@ -210,7 +210,7 @@ static void get_tcpinfo_ivals(void) {
 static void cleanup(void) {
         LOG(INFO, "Performing cleanup.");
         // TODO: mutex_destroy(&init_mutex);
-        free(log_file_path);
+        // TODO: THIS CRASHES =-> free(log_file_path);
         tcp_cleanup();
 }
 
@@ -225,6 +225,43 @@ static void cleanup(void) {
 */
 ///////////////////////////////////////////////////////////////////////////////
 
+/*  This function is used to reset the library after a fork() call. If a fork()
+ *  is not followed by exec(), the global variables are not reinitialized.
+ *  This means that 2 processes with differents PID would use the same log_path,
+ *  but more importantly, the child would inherit all the states from the
+ *  fd_con_map of its parents. This leads to many issues:
+ *     - The 2 processes will mix their logs in the same file.
+ *     - If both the parent/child open a connection on the same FD, the last
+ *     one the close it will overwrite the logs of the first to close.
+ *     - ...
+ *
+ *  Our solution is to always reset the state of the library on fork(). One
+ *  known issue of this solution is when both the child and the parent
+ *  write/read on the SAME TCP connection opened by the parent. In that case,
+ *  we will not have a complete view of the connection. Each process will have
+ *  its own partial view. This is a known limitation.
+ *
+ *  Normally this function is called directly after fork() in the child process
+ *  before it returns. There are normally no reasons to lock the mutex since at
+ *  that moment, there should be a single thread of execution in the new child
+ *  process. It thus better to still reset the library if we fail to acquire the
+ *  mutex. Not resetting could have much more drastic consequences such as those
+ *  explained above. */
+
+void reset_netspy(void) {
+        if (!initialized) return;  // Nothing to do.
+        slog_init(NULL, NULL, 0, 0, 0);
+        LOG(INFO, "Netspy reset...");
+        log_path = NULL;
+        tcp_info_time_ival = 0;
+        tcp_info_time_ival = 0;
+        log_file_path = NULL;
+        init_errorcheck_mutex(&init_mutex);
+        initialized = false;
+
+        tcp_reset();
+}
+
 void init_netspy(void) {
         // Acquire mutex
         if (!(lock(&init_mutex))) return;
@@ -233,7 +270,7 @@ void init_netspy(void) {
         // Start initialization
         LOG(INFO, "Initialization of Netspy library...");
 
-        atexit(cleanup);      // Register cleanup handler.
+        atexit(cleanup);      // Register cleanup handler
         get_tcpinfo_ivals();  // Extract tcp_info intervals from ENV.
 
         // Get directory where netpsy activity is logged.
@@ -265,7 +302,7 @@ void init_netspy(void) {
                     "alloc_concat_path() failed. Logging library cannot log"
                     " to file.");
         } else {
-                slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
+                //slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
         }
 
         initialized = true;

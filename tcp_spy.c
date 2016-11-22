@@ -79,14 +79,29 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Close all unclosed connections & deallocate any ressource.
 void tcp_cleanup(void) {
-        // Close all unclosed connections.
         int i;
         for (i = 0; i < MAX_FD; i++) {
-                if (fd_con_map[i] != NULL) {
+                if (get_tcp_connection(i) != NULL) {
                         tcp_ev_close(i, 0, 0, false);
                 }
         }
+}
+
+// This function is called after fork() in the child process right before fork()
+// returns control the the newly created process. Therefore, there is at most
+// 1 thread of execution, no need for mutexes.
+// Reset all state to 0.
+void tcp_reset(void) {
+        int i;
+        for (i = 0; i < MAX_FD; i++) {
+                free_connection(fd_con_map[i]);
+                fd_con_map[i] = NULL;
+        }
+        connections_count = 0;
+        init_errorcheck_mutex(&fd_con_map_mutex);
+        init_errorcheck_mutex(&connections_count_mutex);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -235,12 +250,13 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
 }
 
 static void free_connection(TcpConnection *con) {
+        if (!con) return;  // NULL
         free_events_list(con->head);
-        mutex_destroy(&con->mutex);
         free(con->app_name);
         free(con->cmdline);
         free(con->kernel);
         free(con->directory);
+        mutex_destroy(&con->mutex);
         free(con);
 }
 
@@ -256,7 +272,7 @@ static void free_events_list(TcpEventNode *head) {
 
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
-        switch(ev->type) {
+        switch (ev->type) {
                 case TCP_EV_READV:
                         free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
                         break;
@@ -296,11 +312,7 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 
 static TcpConnection *get_tcp_connection(int fd) {
         if (!(lock(&fd_con_map_mutex))) return NULL;
-
         TcpConnection *con = fd_con_map[fd];
-        if (con == NULL)
-                LOG(INFO, "Cannot find matching TcpConnection for fd %d.", fd);
-
         unlock(&fd_con_map_mutex);
         return con;
 }
@@ -358,7 +370,7 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
         m1->control_data = (m2->msg_control != NULL);
-        return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen); 
+        return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
@@ -747,6 +759,7 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
 
         /* Cleanup */
         put_tcp_connection(fd, NULL);
+        // TODO: the following sentence is WRONG.
         // We can unlock the mutex since the con is no longer accessible anyway.
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
         free_connection(con);

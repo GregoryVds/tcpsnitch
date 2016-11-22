@@ -364,7 +364,7 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 
  unistd.h - standard symbolic constants and types
 
- functions: close(), write(), read().
+ functions: close(), write(), read(), fork().
 
 */
 
@@ -429,6 +429,22 @@ int close(int __fd) {
         return ret;
 }
 
+/* Clone the calling process, creating an exact copy.
+   Return -1 for errors, 0 to the new process,
+   and the process ID of the new process to the old process.  */
+
+typedef pid_t (*orig_fork_type)(void);
+
+pid_t fork(void) {
+        orig_fork_type orig_fork;
+        orig_fork = (orig_fork_type)dlsym(RTLD_NEXT, "fork");
+        LOG(INFO, "fork() called.");
+
+        pid_t ret = orig_fork();
+        if (ret == 0) reset_netspy();  // Child
+
+        return ret;
+}
 
 /*
   _   _ ___ ___       _    ____ ___
