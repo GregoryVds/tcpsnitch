@@ -24,97 +24,105 @@ bool is_fd(int fd) {
 bool is_socket(int fd) {
         if (!is_fd(fd)) return false;
         struct stat statbuf;
-        int ret = fstat(fd, &statbuf);
-        if (ret == -1) {
-                LOG(ERROR, "fstat() failed. %s.", strerror(errno));
-                LOG(ERROR, "Assume fd is not a socket.");
-                return false;
-        }
+        if (fstat(fd, &statbuf)) goto error;
         return S_ISSOCK(statbuf.st_mode);
+error:
+        LOG(ERROR, "fstat() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL;
+        LOG(ERROR, "Assume fd is not a socket.");
+        return false;
 }
 
 bool is_inet_socket(int fd) {
         if (!is_socket(fd)) return false;
         int optval;
         socklen_t optlen = sizeof(optval);
-        if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen) == -1) {
-                LOG(ERROR,
-                    "getsockopt() failed. Assume socket is not a INET socket. "
-                    "%s.",
-                    strerror(errno));
-                return false;
-        }
+        if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen)) goto error;
         return (optval == AF_INET || optval == AF_INET6);
+error:
+        LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL; 
+        LOG(ERROR, "Assume socket is not a INET socket.");
+        return false;
 }
 
 bool is_tcp_socket(int fd) {
         if (!is_inet_socket(fd)) return false;
         int optval;
         socklen_t optlen = sizeof(optval);
-        if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == -1) {
-                LOG(ERROR,
-                    "getsockopt() failed. Assume INET socket is not a TCP "
-                    "socket. %s.",
-                    strerror(errno));
-                return false;
-        }
+        if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &optval, &optlen)) goto error;
         return optval == SOCK_STREAM;
+error:
+        LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL; 
+        LOG(ERROR, "Assume INRY socket is not a TCP socket.");
+        return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int append_string_to_file(const char *str, const char *path) {
         FILE *fp = fopen(path, "a");
-        if (fp == NULL) {
-                LOG(ERROR, "fopen() failed. Not appending to file. %s.",
-                    strerror(errno));
-                return -1;
-        }
-
-        if (fputs(str, fp) == EOF) {
-                LOG(ERROR, "fputs() failed. Not appending to file.");
-                fclose(fp);
-                return -2;
-        }
-
-        if (fclose(fp) == EOF) {
-                LOG(ERROR, "fclose() failed. %s.", strerror(errno));
-                return -3;
-        }
-
+        if (!fp) goto error1; 
+        if (fputs(str, fp) == EOF) goto error2;
+        if (fclose(fp) == EOF) goto error3;
         return 0;
+error3:
+        LOG(ERROR, "fclose() failed. %s.", strerror(errno));
+        goto error_out;
+error2:
+        fclose(fp);
+        LOG(ERROR, "fputs() failed.");
+        goto error_out;
+error1:
+        LOG(ERROR, "fopen() failed. %s.", strerror(errno));
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
+        return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 int fill_timeval(struct timeval *timeval) {
-        int ret = gettimeofday(timeval, NULL);
-        if (ret == -1)
-                LOG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
-        return ret;
+        if (gettimeofday(timeval, NULL)) goto error;
+        return 0;
+error:
+        LOG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL;
+        return -1;
 }
 
 int fill_tcpinfo(int fd, struct tcp_info *info) {
         socklen_t n = sizeof(struct tcp_info);
-        int ret = getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info, &n);
-        if (ret == -1) LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
-        return ret;
+        if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info, &n)) goto error;
+        return 0;
+error:
+        LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL;
+        return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 time_t get_time_sec() {
         struct timeval tv;
-        fill_timeval(&tv);
+        if (fill_timeval(&tv)) goto error;
         return tv.tv_sec;
+error:
+        LOG_FUNC_FAIL;
+        return 0;
 }
 
 unsigned long get_time_micros() {
         struct timeval tv;
-        fill_timeval(&tv);
+        if (fill_timeval(&tv)) goto error;
         unsigned long time_micros;
         time_micros = tv.tv_sec * (unsigned long)1000000 + tv.tv_usec;
         return time_micros;
+error:
+        LOG_FUNC_FAIL;
+        return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
