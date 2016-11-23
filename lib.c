@@ -12,11 +12,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "logger.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool is_fd(int fd) {
+        return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
+
 bool is_socket(int fd) {
+        if (!is_fd(fd)) return false;
         struct stat statbuf;
         int ret = fstat(fd, &statbuf);
         if (ret == -1) {

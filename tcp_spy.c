@@ -81,8 +81,7 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 
 // Close all unclosed connections & deallocate any ressource.
 void tcp_cleanup(void) {
-        int i;
-        for (i = 0; i < MAX_FD; i++) {
+        for (int i = 0; i < MAX_FD; i++) {
                 if (get_tcp_connection(i) != NULL) {
                         tcp_ev_close(i, 0, 0, false);
                 }
@@ -94,8 +93,7 @@ void tcp_cleanup(void) {
 // 1 thread of execution, no need for mutexes.
 // Reset all state to 0.
 void tcp_reset(void) {
-        int i;
-        for (i = 0; i < MAX_FD; i++) {
+        for (int i = 0; i < MAX_FD; i++) {
                 free_connection(fd_con_map[i]);
                 fd_con_map[i] = NULL;
         }
@@ -348,23 +346,23 @@ static bool should_dump_tcp_info(TcpConnection *con) {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
-        if (flags & MSG_CONFIRM) s->msg_confirm = true;
-        if (flags & MSG_DONTROUTE) s->msg_dontroute = true;
-        if (flags & MSG_DONTWAIT) s->msg_dontwait = true;
-        if (flags & MSG_EOR) s->msg_eor = true;
-        if (flags & MSG_MORE) s->msg_more = true;
-        if (flags & MSG_NOSIGNAL) s->msg_nosignal = true;
-        if (flags & MSG_OOB) s->msg_oob = true;
+        s->msg_confirm = (flags & MSG_CONFIRM);
+        s->msg_dontroute = (flags & MSG_DONTROUTE);
+        s->msg_dontwait = (flags & MSG_DONTWAIT);
+        s->msg_eor = (flags & MSG_EOR);
+        s->msg_more = (flags & MSG_MORE);
+        s->msg_nosignal = (flags & MSG_NOSIGNAL);
+        s->msg_oob = (flags & MSG_OOB);
 }
 
 static void fill_recv_flags(TcpRecvFlags *s, int flags) {
-        if (flags & MSG_CMSG_CLOEXEC) s->msg_cmsg_cloexec = true;
-        if (flags & MSG_DONTWAIT) s->msg_dontwait = true;
-        if (flags & MSG_ERRQUEUE) s->msg_errqueue = true;
-        if (flags & MSG_OOB) s->msg_oob = true;
-        if (flags & MSG_PEEK) s->msg_peek = true;
-        if (flags & MSG_TRUNC) s->msg_trunc = true;
-        if (flags & MSG_WAITALL) s->msg_waitall = true;
+        s->msg_cmsg_cloexec = (flags & MSG_CMSG_CLOEXEC);
+        s->msg_dontwait = (flags & MSG_DONTWAIT);
+        s->msg_errqueue = (flags & MSG_ERRQUEUE);
+        s->msg_oob = (flags & MSG_OOB);
+        s->msg_peek = (flags & MSG_PEEK);
+        s->msg_trunc = (flags & MSG_TRUNC);
+        s->msg_waitall = (flags & MSG_WAITALL);
 }
 
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
@@ -380,9 +378,8 @@ static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
         iov1->iovec_sizes = (size_t *)malloc(sizeof(size_t *) * iovec_count);
         if (iov1->iovec_sizes == NULL) LOG(ERROR, "malloc() failed.");
 
-        int i;
         socklen_t bytes = 0;
-        for (i = 0; i < iovec_count; i++) {
+        for (int i = 0; i < iovec_count; i++) {
                 if (iov1->iovec_sizes) iov1->iovec_sizes[i] = iov2[i].iov_len;
                 bytes += iov2[i].iov_len;
         }
@@ -420,8 +417,7 @@ void tcp_dump_json(TcpConnection *con) {
 int force_bind(int fd, TcpConnection *con, bool IPV6) {
         con->force_bind = true;
 
-        int port;
-        for (port = MIN_PORT; port <= MAX_PORT; port++) {
+        for (int port = MIN_PORT; port <= MAX_PORT; port++) {
                 int rc;
                 if (IPV6) {
                         struct sockaddr_in6 a;
@@ -539,6 +535,7 @@ void tcp_stop_packet_capture(TcpConnection *con) {
         if (!lock(&(con->mutex))) FAIL_IF_NULL(NULL, ev_type_cons);
 
 #define TCP_EV_POSTLUDE(ev_type_cons)                                          \
+        push_event(con, (TcpEvent *)ev);                                       \
         if (ev_type_cons != TCP_EV_TCP_INFO && ev_type_cons != TCP_EV_CLOSE && \
             should_dump_tcp_info(con)) {                                       \
                 struct tcp_info _i;                                            \
@@ -582,7 +579,6 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->protocol = protocol;
         ev->sock_cloexec = type & SOCK_CLOEXEC;
         ev->sock_nonblock = type & SOCK_NONBLOCK;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_SOCKET)
 }
@@ -595,7 +591,6 @@ void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
         memcpy(&(ev->addr), addr, len);
         con->bind_ev = ev;
         ev->force_bind = con->force_bind;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_BIND)
 }
@@ -606,7 +601,6 @@ void tcp_ev_connect(int fd, int return_value, int err,
         TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
 
         memcpy(&(ev->addr), addr, len);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_CONNECT)
 }
@@ -617,7 +611,6 @@ void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
 
         ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
         ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_SHUTDOWN)
 }
@@ -627,7 +620,6 @@ void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
         TCP_EV_PRELUDE(TCP_EV_LISTEN, TcpEvListen);
 
         ev->backlog = backlog;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_LISTEN)
 }
@@ -640,7 +632,6 @@ void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
 
         ev->level = level;
         ev->optname = optname;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT)
 }
@@ -652,7 +643,6 @@ void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
         con->bytes_sent += bytes;
         ev->bytes = bytes;
         fill_send_flags(&(ev->flags), flags);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_SEND)
 }
@@ -664,7 +654,6 @@ void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
         con->bytes_received += bytes;
         ev->bytes = bytes;
         fill_recv_flags(&(ev->flags), flags);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_RECV)
 }
@@ -678,7 +667,6 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         fill_send_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_SENDTO)
 }
@@ -692,7 +680,6 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         fill_recv_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_RECVFROM)
 }
@@ -706,8 +693,6 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
         con->bytes_sent += ev->bytes;
 
-        push_event(con, (TcpEvent *)ev);
-
         TCP_EV_POSTLUDE(TCP_EV_SENDMSG)
 }
 
@@ -720,8 +705,6 @@ void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
         con->bytes_received += ev->bytes;
 
-        push_event(con, (TcpEvent *)ev);
-
         TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
 }
 
@@ -731,7 +714,6 @@ void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
 
         con->bytes_sent += bytes;
         ev->bytes = bytes;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_WRITE)
 }
@@ -742,7 +724,6 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
 
         con->bytes_received += bytes;
         ev->bytes = bytes;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_READ)
 }
@@ -753,15 +734,15 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvClose);
 
         ev->detected = detected;
-        push_event(con, (TcpEvent *)ev);
         if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
-        tcp_dump_json(con);
 
         /* Cleanup */
         put_tcp_connection(fd, NULL);
         // TODO: the following sentence is WRONG.
         // We can unlock the mutex since the con is no longer accessible anyway.
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
+        
+        tcp_dump_json(con);
         free_connection(con);
 }
 
@@ -773,8 +754,6 @@ void tcp_ev_writev(int fd, int return_value, int err, const struct iovec *iovec,
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_sent += ev->bytes;
 
-        push_event(con, (TcpEvent *)ev);
-
         TCP_EV_POSTLUDE(TCP_EV_WRITEV)
 }
 
@@ -785,8 +764,6 @@ void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
 
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_received += ev->bytes;
-
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_READV)
 }
@@ -800,7 +777,6 @@ void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
         con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
         con->last_info_dump_micros = get_time_micros();
         con->rtt = info->tcpi_rtt;
-        push_event(con, (TcpEvent *)ev);
 
         TCP_EV_POSTLUDE(TCP_EV_TCP_INFO);
 }

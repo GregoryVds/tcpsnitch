@@ -302,7 +302,7 @@ void init_netspy(void) {
                     "alloc_concat_path() failed. Logging library cannot log"
                     " to file.");
         } else {
-                //slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
+                slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
         }
 
         initialized = true;

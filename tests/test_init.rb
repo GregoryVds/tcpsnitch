@@ -63,7 +63,7 @@ describe "Init" do
     it "should create a log file in PATH" do
       reset_dir(dir)
       assert run_pkt_script(script, "#{ENV_PATH}=#{dir}")
-      assert contains?(dir, "*/#{LOG_FILE}")
+      assert contains?(log_dir_str("packetdrill"), "#{LOG_FILE}")
     end
   end
 
