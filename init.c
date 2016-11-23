@@ -256,9 +256,8 @@ void reset_netspy(void) {
         tcp_info_time_ival = 0;
         tcp_info_time_ival = 0;
         log_file_path = NULL;
-        init_errorcheck_mutex(&init_mutex);
+        mutex_init(&init_mutex);
         initialized = false;
-
         tcp_reset();
 }
 

@@ -18,6 +18,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "packet_sniffer.h"
+#include "resizable_array.h"
 #include "string_helpers.h"
 #include "tcp_spy_json.h"
 
@@ -32,41 +33,19 @@
 
 */
 
-/* We keep a mapping from file descriptors to TCP connections structs for all
- * opened connections. This allows to easily identify to which connection a
- * given function call belongs to.
- *
- * This also allows us to identify when a new TCP connection is started with
- * the same file descriptor as en existing one (meaning we missed the close()
- * call).
- *
- * This data structure is clearly NOT optimal. It could be sparse and will
- * mostly be empty. It is however extremely easy to use and provides O(1)
- * access time. We will see later if we need something else like a hashtable
- * or binary tree.
- */
-
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
-#define MAX_FD 1024
-static TcpConnection *fd_con_map[MAX_FD];
-static pthread_mutex_t fd_con_map_mutex = MUTEX_ERRORCHECK;
-
 static int connections_count = 0;
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
-///////////////////////////////////////////////////////////////////////////////
 
 /* CREATING & FREEING OBJECTS */
 static char *create_logs_dir(int con_id);
 static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
-static void free_connection(TcpConnection *con);
 static void free_events_list(TcpEventNode *head);
 static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
 /* HELPERS */
-static TcpConnection *get_tcp_connection(int fd);
-static TcpConnection *put_tcp_connection(int fd, TcpConnection *con);
 static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
@@ -81,11 +60,10 @@ int force_bind(int fd, TcpConnection *con, bool IPV6);
 
 // Close all unclosed connections & deallocate any ressource.
 void tcp_cleanup(void) {
-        for (int i = 0; i < MAX_FD; i++) {
-                if (get_tcp_connection(i) != NULL) {
-                        tcp_ev_close(i, 0, 0, false);
-                }
-        }
+        for (long i = 0; i < ra_get_size(); i++)
+                if (ra_is_present(i)) tcp_ev_close(i, 0, 0, false);
+        ra_free();
+        mutex_destroy(&connections_count_mutex);
 }
 
 // This function is called after fork() in the child process right before fork()
@@ -93,13 +71,8 @@ void tcp_cleanup(void) {
 // 1 thread of execution, no need for mutexes.
 // Reset all state to 0.
 void tcp_reset(void) {
-        for (int i = 0; i < MAX_FD; i++) {
-                free_connection(fd_con_map[i]);
-                fd_con_map[i] = NULL;
-        }
+        ra_reset();
         connections_count = 0;
-        init_errorcheck_mutex(&fd_con_map_mutex);
-        init_errorcheck_mutex(&connections_count_mutex);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,7 +97,6 @@ char *create_logs_dir(int con_id) {
         int ret = mkdir(dir_path, 0777);
         if (ret == -1) {
                 LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-                D("%s", dir_path);
                 return NULL;
         }
 
@@ -132,27 +104,27 @@ char *create_logs_dir(int con_id) {
 }
 
 static TcpConnection *alloc_connection(void) {
-        TcpConnection *con = (TcpConnection *)calloc(sizeof(TcpConnection), 1);
-        if (con == NULL) {
-                LOG(ERROR, "calloc() failed. Cannot alloc TcpConnection.");
-                return NULL;
-        }
+        TcpConnection *con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1);
+        if (con == NULL) goto error1;
 
-        if (!init_errorcheck_mutex(&con->mutex)) goto error;
         con->cmdline = alloc_cmdline_str(&(con->app_name));
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
 
         // Increment connections_count
-        if (!lock(&connections_count_mutex)) goto error;
+        if (!lock(&connections_count_mutex)) goto error2;
         con->id = connections_count;
         connections_count++;
         unlock(&connections_count_mutex);
 
         con->directory = create_logs_dir(con->id);
         return con;
-error:
+
+error2:
         free_connection(con);
+        goto error1;
+error1:
+        LOG_FUNC_FAIL;
         return NULL;
 }
 
@@ -161,83 +133,80 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         TcpEvent *ev;
         switch (type) {
                 case TCP_EV_SOCKET:
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvSocket), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSocket), 1);
                         success = (return_value != 0);
                         break;
                 case TCP_EV_BIND:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvBind), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvBind), 1);
                         break;
                 case TCP_EV_CONNECT:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvConnect), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvConnect), 1);
                         break;
                 case TCP_EV_SHUTDOWN:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvShutdown), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvShutdown), 1);
                         break;
                 case TCP_EV_LISTEN:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvListen), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvListen), 1);
                         break;
                 case TCP_EV_SETSOCKOPT:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvSetsockopt), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSetsockopt), 1);
                         break;
                 case TCP_EV_SEND:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvSend), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSend), 1);
                         break;
                 case TCP_EV_RECV:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecv), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecv), 1);
                         break;
                 case TCP_EV_SENDTO:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvSendto), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendto), 1);
                         break;
                 case TCP_EV_RECVFROM:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecvfrom), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvfrom), 1);
                         break;
                 case TCP_EV_SENDMSG:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvSendmsg), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmsg), 1);
                         break;
                 case TCP_EV_RECVMSG:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvRecvmsg), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmsg), 1);
                         break;
                 case TCP_EV_WRITE:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvWrite), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvWrite), 1);
                         break;
                 case TCP_EV_READ:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvRead), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvRead), 1);
                         break;
                 case TCP_EV_CLOSE:
                         success = (return_value == 0);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvClose), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvClose), 1);
                         break;
                 case TCP_EV_WRITEV:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvWritev), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvWritev), 1);
                         break;
                 case TCP_EV_READV:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvReadv), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvReadv), 1);
                         break;
                 case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
-                        ev = (TcpEvent *)calloc(sizeof(TcpEvTcpInfo), 1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvTcpInfo), 1);
                         break;
         }
 
-        if (ev == NULL) {
-                LOG(ERROR, "malloc() failed. Cannot allocate TcpEvent.");
-                return NULL;
-        }
+        if (!ev) goto error;
 
         fill_timeval(&(ev->timestamp));
         ev->type = type;
@@ -245,17 +214,9 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         ev->success = success;
         ev->error_str = success ? NULL : alloc_error_str(err);
         return ev;
-}
-
-static void free_connection(TcpConnection *con) {
-        if (!con) return;  // NULL
-        free_events_list(con->head);
-        free(con->app_name);
-        free(con->cmdline);
-        free(con->kernel);
-        free(con->directory);
-        mutex_destroy(&con->mutex);
-        free(con);
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 static void free_events_list(TcpEventNode *head) {
@@ -284,11 +245,8 @@ static void free_event(TcpEvent *ev) {
 }
 
 static void push_event(TcpConnection *con, TcpEvent *ev) {
-        TcpEventNode *node = (TcpEventNode *)malloc(sizeof(TcpEventNode));
-        if (node == NULL) {
-                LOG(ERROR, "malloc() failed. Cannot allocate TcpEventNode.");
-                return;
-        }
+        TcpEventNode *node = (TcpEventNode *)my_malloc(sizeof(TcpEventNode));
+        if (!node) goto error;
 
         node->data = ev;
         node->next = NULL;
@@ -299,27 +257,10 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
 
         con->tail = node;
         con->events_count++;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-/* Even if at the moment a single lock per fd would be enough, we will change
-   the fd_con_map structure in a near future. When the structure will change,
-   a single lock per fd will probably not  be enough anymore (for instance if
-   the structure becomes a tree. */
-
-static TcpConnection *get_tcp_connection(int fd) {
-        if (!(lock(&fd_con_map_mutex))) return NULL;
-        TcpConnection *con = fd_con_map[fd];
-        unlock(&fd_con_map_mutex);
-        return con;
-}
-
-static TcpConnection *put_tcp_connection(int fd, TcpConnection *con) {
-        if (!(lock(&fd_con_map_mutex))) return NULL;
-        fd_con_map[fd] = con;
-        unlock(&fd_con_map_mutex);
-        return con;
+        return;
+error:
+        LOG_FUNC_FAIL;
+        return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -375,8 +316,8 @@ static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count) {
         iov1->iovec_count = iovec_count;
 
-        iov1->iovec_sizes = (size_t *)malloc(sizeof(size_t *) * iovec_count);
-        if (iov1->iovec_sizes == NULL) LOG(ERROR, "malloc() failed.");
+        iov1->iovec_sizes = (size_t *)my_malloc(sizeof(size_t *) * iovec_count);
+        if (iov1->iovec_sizes == NULL) goto error;
 
         socklen_t bytes = 0;
         for (int i = 0; i < iovec_count; i++) {
@@ -385,6 +326,9 @@ static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
         }
 
         return bytes;
+error:
+        LOG_FUNC_FAIL;
+        return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -456,23 +400,28 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
 */
 ///////////////////////////////////////////////////////////////////////////////
 
-void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
-        TcpConnection *con = get_tcp_connection(fd);
-        if (con == NULL) {
-                LOG(ERROR, "Cannot find related connection.");
-                goto error1;
-        }
+void free_connection(TcpConnection *con) {
+        if (!con) return;  // NULL
+        free_events_list(con->head);
+        free(con->app_name);
+        free(con->cmdline);
+        free(con->kernel);
+        free(con->directory);
+        free(con);
+}
 
-        // Lock
-        if (!lock(&(con->mutex))) goto error1;
-        if (con->directory == NULL) {
+void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
+        TcpConnection *con = ra_get_and_lock_elem(fd);
+        if (!con) goto error1;
+
+        if (!con->directory) {
                 LOG(ERROR, "con->directory is NULL.");
                 goto error2;
         }
 
         TcpEvBind *bind_ev = con->bind_ev;
-        // Unlock (we unlock to avoid recusive mutexes for the moment).
-        if (!unlock(&(con->mutex))) goto error1;
+        // Unlock (we unlock to avoid recusive mutexes).
+        if (!ra_unlock_elem(fd)) goto error1;
 
         if (bind_ev == NULL &&
             force_bind(fd, con, addr->ss_family == AF_INET6) == -1) {
@@ -480,12 +429,10 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
         }
 
         // Lock
-        if (!lock(&(con->mutex))) goto error1;
+        if (!(con = ra_get_and_lock_elem(fd))) goto error1;
+
         char *pcap_file = alloc_pcap_path_str(con);
-        if (pcap_file == NULL) {
-                LOG(ERROR, "pcap_file NULL.");
-                goto error2;
-        }
+        if (!pcap_file) goto error2;
 
         char *filter;
         if (con->bind_ev)
@@ -493,7 +440,7 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
         else
                 filter = build_capture_filter(NULL, addr);
 
-        if (filter == NULL) {
+        if (!filter) {
                 LOG(ERROR, "filter is NULL.");
                 free(pcap_file);
                 goto error2;
@@ -503,13 +450,13 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
 
         free(filter);
         free(pcap_file);
-        unlock(&(con->mutex));
+        ra_unlock_elem(fd);
         return;
 error2:
-        unlock(&(con->mutex));
+        ra_unlock_elem(fd);
         goto error1;
 error1:
-        LOG(ERROR, "Abort packet capture");
+        LOG(ERROR, "tcp_start_packet_capture() failed.");
         return;
 }
 
@@ -519,32 +466,30 @@ void tcp_stop_packet_capture(TcpConnection *con) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define FAIL_IF_NULL(var, ev_type_cons)                                     \
-        if (var == NULL) {                                                  \
-                const char *str = string_from_tcp_event_type(ev_type_cons); \
-                LOG(ERROR, "Event %s dropped for fd %d. Variable was NULL", \
-                    str, fd);                                               \
-                return;                                                     \
+#define FAIL_IF_NULL(var, ev_type_cons) \
+        if (var == NULL) {              \
+                LOG_FUNC_FAIL;          \
+                return;                 \
         }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        TcpConnection *con = get_tcp_connection(fd);                           \
+        TcpConnection *con = ra_get_and_lock_elem(fd);                         \
         FAIL_IF_NULL(con, ev_type_cons);                                       \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
-        FAIL_IF_NULL(ev, ev_type_cons);                                        \
-        if (!lock(&(con->mutex))) FAIL_IF_NULL(NULL, ev_type_cons);
+        FAIL_IF_NULL(ev, ev_type_cons);
 
-#define TCP_EV_POSTLUDE(ev_type_cons)                                          \
-        push_event(con, (TcpEvent *)ev);                                       \
-        if (ev_type_cons != TCP_EV_TCP_INFO && ev_type_cons != TCP_EV_CLOSE && \
-            should_dump_tcp_info(con)) {                                       \
-                struct tcp_info _i;                                            \
-                int _r = fill_tcpinfo(fd, &_i);                                \
-                int _e = errno;                                                \
-                unlock(&con->mutex);                                           \
-                tcp_ev_tcp_info(fd, _r, _e, &_i);                              \
-        } else                                                                 \
-                unlock(&con->mutex);
+#define TCP_EV_POSTLUDE(ev_type_cons)                         \
+        push_event(con, (TcpEvent *)ev);                      \
+        bool should_dump = should_dump_tcp_info(con) &&       \
+                           ev_type_cons != TCP_EV_TCP_INFO && \
+                           ev_type_cons != TCP_EV_CLOSE;      \
+        ra_unlock_elem(fd);                                   \
+        if (should_dump) {                                    \
+                struct tcp_info _i;                           \
+                int _r = fill_tcpinfo(fd, &_i);               \
+                int _e = errno;                               \
+                tcp_ev_tcp_info(fd, _r, _e, &_i);             \
+        }
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
@@ -561,13 +506,13 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
-        /* Check if connection was not properly closed. */
-        if (get_tcp_connection(fd)) tcp_ev_close(fd, 0, 0, false);
+        /* Check if connection already exits and was not properly closed. */
+        if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
         TcpConnection *new_con = alloc_connection();
-        FAIL_IF_NULL(new_con, TCP_EV_SOCKET);
-        FAIL_IF_NULL(put_tcp_connection(fd, new_con), TCP_EV_SOCKET);
+        if (!new_con) goto error;
+        if (!ra_put_elem(fd, new_con)) goto error;
 
         /* Create event */
         int return_value = fd;
@@ -581,6 +526,10 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->sock_nonblock = type & SOCK_NONBLOCK;
 
         TCP_EV_POSTLUDE(TCP_EV_SOCKET)
+        return;
+error:
+        LOG_FUNC_FAIL;
+        return;
 }
 
 void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
@@ -736,14 +685,19 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         ev->detected = detected;
         if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
 
-        /* Cleanup */
-        put_tcp_connection(fd, NULL);
-        // TODO: the following sentence is WRONG.
-        // We can unlock the mutex since the con is no longer accessible anyway.
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
         
-        tcp_dump_json(con);
+        // Cleanup
+        if (!(con = ra_get_and_lock_elem(fd))) goto error;
+        tcp_dump_json(con); // Must be done after POSTLUDE (which add event)
         free_connection(con);
+        ra_unlock_elem(fd);
+         
+        ra_put_elem(fd, NULL);
+        return;
+error:
+        LOG_FUNC_FAIL;
+        return;
 }
 
 void tcp_ev_writev(int fd, int return_value, int err, const struct iovec *iovec,

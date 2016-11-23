@@ -32,8 +32,10 @@ int get_int_len(int i);
 bool mutex_destroy(pthread_mutex_t *mutex);
 bool lock(pthread_mutex_t *mutex);
 bool unlock(pthread_mutex_t *mutex);
-bool init_errorcheck_mutex(pthread_mutex_t *mutex);
+bool mutex_init(pthread_mutex_t *mutex);
 
 const char *get_app_name(void);
+void *my_malloc(size_t size);
+void *my_calloc(size_t nmemb, size_t size);
 
 #endif

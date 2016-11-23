@@ -94,14 +94,14 @@ char *alloc_addr_str(const struct sockaddr *addr) {
         addr_sto = (const struct sockaddr_storage *)addr;
 
         char *full_str = (char *)calloc(sizeof(char), FULL_ADDR_WIDTH);
-        if (full_str == NULL) {
-                LOG(ERROR, "calloc() failed.");
-                return NULL;
+        if (!full_str) {
+                LOG(ERROR, "malloc() failed");
+                goto error;
         }
 
         char *addr_str = alloc_host_str(addr_sto);
         char *port_str = alloc_port_str(addr_sto);
-        if (addr_str == NULL || port_str == NULL) return NULL;
+        if (addr_str == NULL || port_str == NULL) goto error;
 
         strncat(full_str, addr_str, FULL_ADDR_WIDTH - 1);
         strncat(full_str, ":", (FULL_ADDR_WIDTH - 1) - strlen(full_str));
@@ -110,6 +110,9 @@ char *alloc_addr_str(const struct sockaddr *addr) {
         free(addr_str);
         free(port_str);
         return full_str;
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -117,12 +120,13 @@ char *alloc_addr_str(const struct sockaddr *addr) {
 char *alloc_concat_path(const char *path1, const char *path2) {
         int full_path_length = strlen(path1) + strlen(path2) + 2;
         char *full_path = (char *)malloc(sizeof(char) * full_path_length);
-        if (full_path == NULL) {
-                LOG(ERROR, "malloc() failed. Could not concat path.");
-                return NULL;
-        }
+        if (!full_path) goto error;
         snprintf(full_path, full_path_length, "%s/%s", path1, path2);
         return full_path;
+error:
+        LOG(ERROR, "malloc() failed");
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 char *alloc_append_int_to_path(const char *path1, int i) {
@@ -130,14 +134,14 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         int i_len = get_int_len(i);
         int full_path_length = path1_len + i_len + 2;  // Underscore + null byte
         char *full_path = (char *)malloc(sizeof(char) * full_path_length);
-        if (full_path == NULL) {
-                LOG(ERROR, "malloc failed.");
-                return NULL;
-        }
-
+        if (!full_path) goto error;
         strncpy(full_path, path1, path1_len);
         snprintf(full_path + path1_len, i_len + 2, "_%d", i);
         return full_path;
+error:
+        LOG(ERROR, "malloc() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 char *alloc_pcap_path_str(TcpConnection *con) {

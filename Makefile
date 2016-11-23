@@ -1,9 +1,9 @@
 CC=gcc
 DEPS=-ljansson -ldl -lpthread -lpcap -lslog
 HEADERS=lib.h tcp_spy.h string_helpers.h tcp_spy_json.h packet_sniffer.h \
-	logger.h init.h
+	logger.h init.h resizable_array.h
 SOURCES=libc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_spy_json.c \
-	packet_sniffer.c logger.c init.c 
+	packet_sniffer.c logger.c init.c resizable_array.c 
 
 MAJOR_VERSION=1
 MINOR_VERSION=0

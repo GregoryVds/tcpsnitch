@@ -176,14 +176,14 @@ bool mutex_destroy(pthread_mutex_t *mutex) {
         return rc == 0;
 }
 
-bool init_errorcheck_mutex(pthread_mutex_t *mutex) {
+bool mutex_init(pthread_mutex_t *mutex) {
         pthread_mutexattr_t attr;
         int rc;
         if ((rc = pthread_mutexattr_init(&attr)) ||
             (rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK)) ||
             (rc = pthread_mutex_init(mutex, &attr)) ||
             (rc = pthread_mutexattr_destroy(&attr))) {
-                LOG(ERROR, "init_errorcheck_mutex() failed. %s.", strerror(rc));
+                LOG(ERROR, "mutex_init() failed. %s.", strerror(rc));
                 return false;
         }
 
@@ -198,4 +198,16 @@ const char *get_app_name(void) {
                 app_name = last + 1;
 
         return app_name;
+}
+
+void *my_malloc(size_t size) {
+        void *ret = malloc(size);
+        if (!ret) LOG(ERROR, "malloc() failed.");
+        return ret;
+}
+
+void *my_calloc(size_t nmemb, size_t size) {
+        void *ret = calloc(nmemb, size);
+        if (!ret) LOG(ERROR, "malloc() failed.");
+        return ret;
 }

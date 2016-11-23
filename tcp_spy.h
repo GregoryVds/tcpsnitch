@@ -193,7 +193,6 @@ struct TcpEventNode {
 };
 
 typedef struct {
-        pthread_mutex_t mutex;
         // To be freed
         char *app_name;      // Application name with args.
         char *cmdline;       // Cmdline (app name + args).
@@ -217,6 +216,8 @@ typedef struct {
 } TcpConnection;
 
 const char *string_from_tcp_event_type(TcpEventType type);
+
+void free_connection(TcpConnection *con);
 
 // Packet capture
 
