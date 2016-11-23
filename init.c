@@ -263,7 +263,7 @@ void reset_netspy(void) {
 
 void init_netspy(void) {
         // Acquire mutex
-        if (!(lock(&init_mutex))) return;
+        if (!(mutex_lock(&init_mutex))) return;
         if (initialized) goto exit;
 
         // Start initialization
@@ -308,7 +308,7 @@ void init_netspy(void) {
         goto exit;
 exit:
         // Release mutex
-        unlock(&init_mutex);
+        mutex_unlock(&init_mutex);
         return;
 }
 

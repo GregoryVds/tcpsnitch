@@ -112,10 +112,10 @@ static TcpConnection *alloc_connection(void) {
         con->kernel = alloc_kernel_str();
 
         // Increment connections_count
-        if (!lock(&connections_count_mutex)) goto error2;
+        if (!mutex_lock(&connections_count_mutex)) goto error2;
         con->id = connections_count;
         connections_count++;
-        unlock(&connections_count_mutex);
+        mutex_unlock(&connections_count_mutex);
 
         con->directory = create_logs_dir(con->id);
         return con;

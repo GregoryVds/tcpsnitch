@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "tcp_spy.h"
 
-// Main mutex to lock the entire array.
+// Main mutex to mutex_lock the entire array.
 static pthread_mutex_t main_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 static ELEM_TYPE *array = NULL;
@@ -104,21 +104,21 @@ static bool is_index_valid(int index) {
 // PUBLIC
 
 void ra_free() {
-        lock(&main_mutex);
+        mutex_lock(&main_mutex);
         for (int i = 0; i < size; i++) {
-                lock(&mutex_array[i]);
+                mutex_lock(&mutex_array[i]);
                 FREE_ELEM(array[i]);
-                unlock(&mutex_array[i]);
+                mutex_unlock(&mutex_array[i]);
                 mutex_destroy(&mutex_array[i]);
         }
         free(array);
         free(mutex_array);
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         mutex_destroy(&main_mutex);
 }
 
 bool ra_put_elem(int index, ELEM_TYPE elem) {
-        if (!lock(&main_mutex)) return false;
+        if (!mutex_lock(&main_mutex)) return false;
 
         // Initialize array if NULL
         if (!array && !init(index + 1)) goto error;
@@ -126,20 +126,20 @@ bool ra_put_elem(int index, ELEM_TYPE elem) {
         // Double size if index > array.size-1
         if (index > size - 1 && !double_size(index)) goto error;
 
-        // Put elem, unlock & return success
-        lock(&mutex_array[index]);
+        // Put elem, mutex_unlock & return success
+        mutex_lock(&mutex_array[index]);
         array[index] = elem;
-        unlock(&mutex_array[index]);
-        unlock(&main_mutex);
+        mutex_unlock(&mutex_array[index]);
+        mutex_unlock(&main_mutex);
         return true;
 error:
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return false;
 }
 
 TcpConnection *ra_get_and_lock_elem(int index) {
-        if (!lock(&main_mutex)) return NULL;
+        if (!mutex_lock(&main_mutex)) return NULL;
 
         // Initialize array if NULL
         if (!array && !init(index + 1)) goto error;
@@ -147,47 +147,47 @@ TcpConnection *ra_get_and_lock_elem(int index) {
         if (!is_index_valid(index)) goto error;
 
         // Lock elements & return element
-        if (!lock(&mutex_array[index])) goto error;
+        if (!mutex_lock(&mutex_array[index])) goto error;
         TcpConnection *el = array[index];
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         return el;
 error:
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return NULL;
 }
 
 bool ra_is_present(int index) {
-        lock(&main_mutex);
+        mutex_lock(&main_mutex);
         bool ret = array && array[index];
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         return ret;
 }
 
 bool ra_unlock_elem(int index) {
-        if (!lock(&main_mutex)) return false;
+        if (!mutex_lock(&main_mutex)) return false;
         if (!is_index_valid(index)) goto error;
-        if (!unlock(&mutex_array[index])) goto error;
-        unlock(&main_mutex);
+        if (!mutex_unlock(&mutex_array[index])) goto error;
+        mutex_unlock(&main_mutex);
         return true;
 error:
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return false;
 }
 
 void ra_reset(void) {
-        lock(&main_mutex);
+        mutex_lock(&main_mutex);
         ra_free();
         array = NULL;
         mutex_array = NULL;
         size = 0;
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
 }
 
 int ra_get_size(void) {
-        lock(&main_mutex);
+        mutex_lock(&main_mutex);
         int ret = size;
-        unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         return ret;
 }
