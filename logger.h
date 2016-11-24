@@ -1,6 +1,8 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include <slog.h>
+
 typedef enum LogLevel { ALWAYS, ERROR, WARN, INFO, DEBUG } LogLevel;
 
 void logger(LogLevel lvl, const char *str, const char *file, int line);
