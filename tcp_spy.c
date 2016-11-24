@@ -45,7 +45,6 @@ static void free_events_list(TcpEventNode *head);
 static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
-
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
@@ -359,9 +358,12 @@ void free_connection(TcpConnection *con) {
         free(con);
 }
 
-void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr_to) {
+void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         TcpConnection *con = ra_get_and_lock_elem(fd);
         if (!con) goto error_out;
+
+        const struct sockaddr_storage *addr_sto =
+            (const struct sockaddr_storage *)addr_to;
 
         // We force a bind if the socket is not bound. This allows us to know
         // the source port and use a more specific filter for the capture.
@@ -370,7 +372,7 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr_to) {
         TcpEvBind *bind_ev = con->bind_ev;  // Is already bound?
         if (!ra_unlock_elem(fd)) goto error1;
         if (bind_ev == NULL &&
-            force_bind(fd, con, addr_to->ss_family == AF_INET6)) {
+            force_bind(fd, con, addr_sto->ss_family == AF_INET6)) {
                 LOG(INFO, "force_bind() failed. Filter DEST IP/PORT only.");
         }
         if (!(con = ra_get_and_lock_elem(fd))) goto error1;
@@ -381,7 +383,7 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr_to) {
 
         // Build capture filter
         char *filter = build_capture_filter(
-            ((con->bind_ev) ? &(con->bind_ev->addr) : NULL), addr_to);
+            ((con->bind_ev) ? &(con->bind_ev->addr) : NULL), addr_sto);
         if (!filter) goto error2;
 
         con->capture_switch = start_capture(filter, pcap_file_path);
@@ -399,7 +401,7 @@ error_out:
         return;
 }
 
-void tcp_stop_packet_capture(TcpConnection *con) {
+void tcp_stop_capture(TcpConnection *con) {
         stop_capture(con->capture_switch, con->rtt * 2);
 }
 
@@ -412,6 +414,8 @@ void tcp_stop_packet_capture(TcpConnection *con) {
         }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
+        const char *ev_name = string_from_tcp_event_type(ev_type_cons);        \
+        LOG(INFO, "%s on socket %d.", ev_name, fd);                            \
         TcpConnection *con = ra_get_and_lock_elem(fd);                         \
         FAIL_IF_NULL(con, ev_type_cons);                                       \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
@@ -446,6 +450,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection already exits and was not properly closed. */
+        LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
@@ -622,7 +627,7 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvClose);
 
         ev->detected = detected;
-        if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
+        if (con->capture_switch != NULL) tcp_stop_capture(con);
 
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
 

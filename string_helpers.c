@@ -138,29 +138,53 @@ error:
         return NULL;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+char *alloc_base_dirname_str(void) {
+        // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
+        // Prepare components
+        const char *app_name = get_app_name();
+        int app_name_len = strlen(app_name);
+        static int timestamp_len = 10;
+        int pid = getpid();
+        int pid_len = get_int_len(pid);
+        int n = app_name_len + timestamp_len + pid_len + 3; // 3 '_','_','\0'
+
+        char *str = (char *)my_calloc(sizeof(char), n);
+        if (!str) goto error;
+        
+        // Build string
+        strncat(str, app_name, app_name_len);
+        strncat(str, "_", 1);
+        snprintf(str + strlen(str), timestamp_len + 1, "%lu", get_time_sec());
+        strncat(str, "_", 1);
+        snprintf(str + strlen(str), pid_len + 1, "%d", pid);
+        return str;
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+char *alloc_base_dir_path(const char *netspy_path) {
+        char *name, *path;
+        if (!(name = alloc_base_dirname_str())) goto error_out;
+        if (!(path = alloc_concat_path(netspy_path, name))) goto error1;
+        free(name);
+        return path;
+error1:
+        free(name);
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 char *alloc_pcap_path_str(TcpConnection *con) {
         return alloc_concat_path(con->directory, NETSPY_PCAP_FILE);
 }
 
 char *alloc_json_path_str(TcpConnection *con) {
         return alloc_concat_path(con->directory, NETSPY_JSON_FILE);
-}
-
-char *alloc_log_path_str(TcpConnection *con) {
-        return alloc_concat_path(con->directory, NETSPY_LOG_FILE);
-}
-
-char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path) {
-        char *con_dirname, *ret;
-        if (!(con_dirname = alloc_con_dirname_str(con))) goto error_out;
-        if (!(ret = alloc_concat_path(netspy_path, con_dirname))) goto error1;
-        free(con_dirname);
-        return ret;
-error1:
-        free(con_dirname);
-error_out:
-        LOG_FUNC_FAIL;
-        return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -211,8 +235,6 @@ error_out:
         return NULL;
 
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_kernel_str(void) {
         static int kernel_width = 30;

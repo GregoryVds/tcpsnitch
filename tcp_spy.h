@@ -221,9 +221,9 @@ void free_connection(TcpConnection *con);
 
 // Packet capture
 
-void tcp_start_packet_capture(int fd,
-                              const struct sockaddr_storage *connect_addr);
-void tcp_stop_packet_capture(TcpConnection *con);
+void tcp_start_capture(int fd, const struct sockaddr *connect_addr);
+
+void tcp_stop_capture(TcpConnection *con);
 
 // Events hooks
 

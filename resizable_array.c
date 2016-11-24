@@ -29,7 +29,7 @@ static bool allocate_arrays(ELEM_TYPE **a_ptr, pthread_mutex_t **mutex_a_ptr,
                             int _size);
 static bool init(int init_size);
 static bool double_size(int index);
-static bool is_index_valid(int index);
+static bool is_index_in_bounds(int index);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -104,18 +104,8 @@ error:
         return false;
 }
 
-static bool is_index_valid(int index) {
-        if (!array) goto error1;
-        if (index > size - 1) goto error2;
-        return true;
-error1:
-        LOG(ERROR, "Array uninitialized.")
-        goto error_out;
-error2:
-        LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-error_out:
-        LOG_FUNC_FAIL;
-        return false;
+static bool is_index_in_bounds(int index) {
+        return index < size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -146,13 +136,13 @@ error:
 
 TcpConnection *ra_get_and_lock_elem(int index) {
         mutex_lock(&main_mutex);
-        if (!array && !init(index + 1)) goto error; // If NULL, initialize.
-        if (!is_index_valid(index)) goto error; // Validate index.
-        if (!mutex_lock(&mutex_array[index])) goto error;
+        if (!is_index_in_bounds(index)) goto error;
+        mutex_lock(&mutex_array[index]);
         TcpConnection *el = array[index];
         mutex_unlock(&main_mutex);
         return el;
 error:
+        LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
         mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return NULL;
@@ -160,12 +150,12 @@ error:
 
 bool ra_unlock_elem(int index) {
         mutex_lock(&main_mutex);
-        if (!array && !init(index + 1)) goto error; // If NULL, initialize.
-        if (!is_index_valid(index)) goto error;
-        if (!mutex_unlock(&mutex_array[index])) goto error;
+        if (!is_index_in_bounds(index)) goto error;
+        mutex_unlock(&mutex_array[index]);
         mutex_unlock(&main_mutex);
         return true;
 error:
+        LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
         mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return false;
@@ -173,15 +163,15 @@ error:
 
 bool ra_is_present(int index) {
         mutex_lock(&main_mutex);
-        if (!array && !init(index + 1)) goto error; // If NULL, initialize.
+        if (!array) goto out_false;
+        if (!is_index_in_bounds(index)) goto out_false;
         mutex_lock(&mutex_array[index]);
-        bool ret = array && index < size && array[index];
+        bool ret = array[index];
         mutex_unlock(&mutex_array[index]);
         mutex_unlock(&main_mutex);
         return ret;
-error:
+out_false:
         mutex_unlock(&main_mutex);
-        LOG_FUNC_FAIL;
         return false;
 }
 

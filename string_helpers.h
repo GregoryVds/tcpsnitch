@@ -13,8 +13,8 @@ char *alloc_addr_str(const struct sockaddr *addr);
 char *alloc_concat_path(const char *path1, const char *path2);
 char *alloc_append_int_to_path(const char *path1, int i);
 
-char *alloc_con_dirname_str(TcpConnection *con);
-char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path);
+char *alloc_base_dirname_str(void);
+char *alloc_base_dir_path(const char *netspy_path);
 
 char *alloc_pcap_path_str(TcpConnection *con);
 char *alloc_json_path_str(TcpConnection *con);
