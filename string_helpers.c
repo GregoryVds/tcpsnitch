@@ -120,7 +120,6 @@ error1:
 error2:
         LOG(ERROR, "path2 is NULL.");
 error_out:
-        LOG(ERROR, "malloc() failed");
         LOG_FUNC_FAIL;
         return NULL;
 }

@@ -125,7 +125,7 @@ char *build_capture_filter(const struct sockaddr_storage *addr1,
 
         // Build filter string
         static int n = 200;
-        char *filter = (char *)malloc(sizeof(char) * n);
+        char *filter = (char *)my_malloc(sizeof(char) * n);
         if (!filter) goto error4;
 
         if (addr1 && addr2)

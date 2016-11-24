@@ -36,7 +36,7 @@ static bool is_index_valid(int index);
 static bool allocate_arrays(ELEM_TYPE **a_ptr, pthread_mutex_t **mutex_a_ptr,
                             int _size) {
         // Allocate new array for elements
-        *a_ptr = (ELEM_TYPE *)calloc(1, sizeof(ELEM_TYPE) * _size);
+        *a_ptr = (ELEM_TYPE *)my_calloc(1, sizeof(ELEM_TYPE) * _size);
         if (!*a_ptr) goto error;
 
         // Allocate new array for mutexes

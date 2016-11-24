@@ -99,7 +99,7 @@ static char *alloc_base_log_dir_name(void) {
         int n =
             app_name_length + TIMESTAMP_WIDTH + pid_len + 3;  // APP_TIMESTAMP\0
 
-        char *base_name = (char *)calloc(sizeof(char), n);
+        char *base_name = (char *)my_calloc(sizeof(char), n);
         if (base_name == NULL) {
                 LOG(ERROR, "calloc() failed.");
                 return NULL;
