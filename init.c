@@ -211,7 +211,8 @@ static void cleanup(void) {
         LOG(INFO, "Performing cleanup.");
         // TODO: mutex_destroy(&init_mutex);
         // TODO: THIS CRASHES =-> free(log_file_path);
-        tcp_cleanup();
+        tcp_close_unclosed_connections();
+        tcp_free();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,6 +259,7 @@ void reset_netspy(void) {
         log_file_path = NULL;
         mutex_init(&init_mutex);
         initialized = false;
+        tcp_free();
         tcp_reset();
 }
 

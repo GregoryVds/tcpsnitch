@@ -35,93 +35,48 @@
 
 // Variables
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
-static int connections_count = 0;
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
+static int connections_count = 0;
 
 // Private functions
-static char *create_logs_dir(int con_id);
 static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_events_list(TcpEventNode *head);
 static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
-static bool should_dump_tcp_info(TcpConnection *con);
+
+
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count);
-void tcp_dump_json(TcpConnection *con);
-int force_bind(int fd, TcpConnection *con, bool IPV6);
+
+static void tcp_dump_json(TcpConnection *con);
+static int force_bind(int fd, TcpConnection *con, bool IPV6);
+static bool should_dump_tcp_info(const TcpConnection *con);
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// Close all unclosed connections & deallocate any ressource.
-void tcp_cleanup(void) {
-        for (long i = 0; i < ra_get_size(); i++)
-                if (ra_is_present(i)) tcp_ev_close(i, 0, 0, false);
-        ra_free();
-        mutex_destroy(&connections_count_mutex);
-}
-
-// This function is called after fork() in the child process right before fork()
-// returns control the the newly created process. Therefore, there is at most
-// 1 thread of execution, no need for mutexes.
-// Reset all state to 0.
-void tcp_reset(void) {
-        ra_reset();
-        connections_count = 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-char *create_logs_dir(int con_id) {
-        if (log_path == NULL) {
-                LOG(WARN, "Cannot create logs directory. log_path is NULL.");
-                return NULL;
-        }
-
-        // Log dir is [LOG_DIR]/[ID]
-        int n = get_int_len(con_id) + 1;
-        char dirname[n];
-        snprintf(dirname, n, "%d", con_id);
-
-        char *dir_path = alloc_concat_path(log_path, dirname);
-        if (dir_path == NULL) {
-                LOG(ERROR, "alloc_concat_path() failed.");
-                return NULL;
-        }
-
-        int ret = mkdir(dir_path, 0777);
-        if (ret == -1) {
-                LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-                return NULL;
-        }
-
-        return dir_path;
-}
 
 static TcpConnection *alloc_connection(void) {
-        TcpConnection *con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1);
-        if (con == NULL) goto error1;
+        TcpConnection *con;
+        if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1)))
+                goto error;
 
         con->cmdline = alloc_cmdline_str(&(con->app_name));
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
 
-        // Increment connections_count
-        if (!mutex_lock(&connections_count_mutex)) goto error2;
+        // Get & increment connections_count
+        mutex_lock(&connections_count_mutex);
         con->id = connections_count;
         connections_count++;
         mutex_unlock(&connections_count_mutex);
 
-        con->directory = create_logs_dir(con->id);
+        // Has to be done AFTER getting the con->id
+        con->directory = create_numbered_dir_in_path(log_path, con->id);
         return con;
-
-error2:
-        free_connection(con);
-        goto error1;
-error1:
+error:
         LOG_FUNC_FAIL;
         return NULL;
 }
@@ -203,9 +158,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvTcpInfo), 1);
                         break;
         }
-
         if (!ev) goto error;
-
         fill_timeval(&(ev->timestamp));
         ev->type = type;
         ev->return_value = return_value;
@@ -252,34 +205,12 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
                 con->head = node;
         else
                 con->tail->next = node;
-
         con->tail = node;
         con->events_count++;
         return;
 error:
         LOG_FUNC_FAIL;
         return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-static bool should_dump_tcp_info(TcpConnection *con) {
-        /* Check if time lower bound is set, otherwise assume no lower bound */
-        if (tcp_info_time_ival > 0) {
-                long cur_time = get_time_micros();
-                long time_elasped = cur_time - con->last_info_dump_micros;
-                if (time_elasped < tcp_info_time_ival) return false;
-        }
-
-        /* Check if bytes lower bound set, otherwise assume no lower bound */
-        if (tcp_info_bytes_ival > 0) {
-                long cur_bytes = con->bytes_sent + con->bytes_received;
-                long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
-                if (bytes_elapsed < tcp_info_bytes_ival) return false;
-        }
-
-        /* If we reach this point, no lower bound prevents from dumping */
-        return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -313,16 +244,14 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count) {
         iov1->iovec_count = iovec_count;
-
         iov1->iovec_sizes = (size_t *)my_malloc(sizeof(size_t *) * iovec_count);
-        if (iov1->iovec_sizes == NULL) goto error;
+        if (!iov1->iovec_sizes) goto error;
 
         socklen_t bytes = 0;
         for (int i = 0; i < iovec_count; i++) {
                 if (iov1->iovec_sizes) iov1->iovec_sizes[i] = iov2[i].iov_len;
                 bytes += iov2[i].iov_len;
         }
-
         return bytes;
 error:
         LOG_FUNC_FAIL;
@@ -331,32 +260,36 @@ error:
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void tcp_dump_json(TcpConnection *con) {
-        if (con->directory == NULL) {
-                LOG(WARN, "Cannot dump JSON to file. con->directory is NULL.");
-                return;
-        }
+static void tcp_dump_json(TcpConnection *con) {
+        if (con->directory == NULL) goto error1;
 
-        char *json = build_tcp_ev_connection_json(con);
-        char *json_file = alloc_json_path_str(con);
-        if (json == NULL || json_file == NULL) {
-                LOG(ERROR, "Cannot save capture to file.");
-                return;
-        }
+        char *json_str, *json_file_str;
+        if (!(json_str = build_tcp_ev_connection_json(con))) goto error_out;
+        if (!(json_file_str = alloc_json_path_str(con))) goto error2;
 
-        int ret = append_string_to_file((const char *)json, json_file);
-        if (ret != 0) {
-                LOG(ERROR, "Error when dumping TcpConnection JSON to file.");
-        }
+        if (append_string_to_file((const char *)json_str, json_file_str))
+                goto error3;
 
-        free(json_file);
+        free(json_str);
+        free(json_file_str);
+        return;
+error3:
+        free(json_file_str);
+        goto error2;
+error2:
+        free(json_str);
+        goto error_out;
+error1:
+        LOG(ERROR, "con->directory is NULL.");
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
+        return;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
 #define MAX_PORT 60999
-
-int force_bind(int fd, TcpConnection *con, bool IPV6) {
+static int force_bind(int fd, TcpConnection *con, bool IPV6) {
         con->force_bind = true;
 
         for (int port = MIN_PORT; port <= MAX_PORT; port++) {
@@ -374,17 +307,37 @@ int force_bind(int fd, TcpConnection *con, bool IPV6) {
                         a.sin_addr.s_addr = INADDR_ANY;
                         rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
                 }
-                if (rc == 0) return 0;  // Sucessfull bind. Stop.
+                if (rc == 0) return 0;                 // Sucessfull bind. Stop.
+                if (errno != EADDRINUSE) goto error1;  // Unexpected error.
+                // Expected error EADDRINUSE. Try next port.
+        }
+        // Could not bind if we reach this point.
+        goto error_out;
+error1:
+        LOG(ERROR, "bind() failed. %s.", strerror(errno));
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
+        return -1;
+}
 
-                if (errno != EADDRINUSE) {
-                        LOG(ERROR, "error code %d", errno);
-                        LOG(ERROR, "bind() failed. %s.", strerror(errno));
-                        return -1;  // Unexpected error.
-                }
-                // Error is expected address in use. Try next port.
+static bool should_dump_tcp_info(const TcpConnection *con) {
+        /* Check if time lower bound is set, otherwise assume no lower bound */
+        if (tcp_info_time_ival > 0) {
+                long cur_time = get_time_micros();
+                long time_elasped = cur_time - con->last_info_dump_micros;
+                if (time_elasped < tcp_info_time_ival) return false;
         }
 
-        return -1;  // Could not bind.
+        /* Check if bytes lower bound set, otherwise assume no lower bound */
+        if (tcp_info_bytes_ival > 0) {
+                long cur_bytes = con->bytes_sent + con->bytes_received;
+                long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
+                if (bytes_elapsed < tcp_info_bytes_ival) return false;
+        }
+
+        /* If we reach this point, no lower bound prevents from dumping */
+        return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -408,53 +361,45 @@ void free_connection(TcpConnection *con) {
         free(con);
 }
 
-void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr) {
+void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr_to) {
         TcpConnection *con = ra_get_and_lock_elem(fd);
-        if (!con) goto error1;
+        if (!con) goto error_out;
 
-        if (!con->directory) {
-                LOG(ERROR, "con->directory is NULL.");
-                goto error2;
-        }
-
-        TcpEvBind *bind_ev = con->bind_ev;
-        // Unlock (we unlock to avoid recusive mutexes).
+        // We force a bind if the socket is not bound. This allows us to know
+        // the source port and use a more specific filter for the capture.
+        // Before forcing the bind, we unlock the mutex in order to avoid
+        // having to use recusive mutexes (since it will trigger a bind()).
+        TcpEvBind *bind_ev = con->bind_ev;  // Is already bound?
         if (!ra_unlock_elem(fd)) goto error1;
-
         if (bind_ev == NULL &&
-            force_bind(fd, con, addr->ss_family == AF_INET6) == -1) {
-                LOG(ERROR, "force_bind() failed. Filter DEST IP/PORT only.");
+            force_bind(fd, con, addr_to->ss_family == AF_INET6)) {
+                LOG(INFO, "force_bind() failed. Filter DEST IP/PORT only.");
         }
-
-        // Lock
         if (!(con = ra_get_and_lock_elem(fd))) goto error1;
 
-        char *pcap_file = alloc_pcap_path_str(con);
-        if (!pcap_file) goto error2;
+        // Build pcap file path
+        char *pcap_file_path = alloc_pcap_path_str(con);
+        if (!pcap_file_path) goto error1;
 
-        char *filter;
-        if (con->bind_ev)
-                filter = build_capture_filter(&(con->bind_ev->addr), addr);
-        else
-                filter = build_capture_filter(NULL, addr);
+        // Build capture filter
+        char *filter = build_capture_filter(
+            ((con->bind_ev) ? &(con->bind_ev->addr) : NULL), addr_to);
+        if (!filter) goto error2;
 
-        if (!filter) {
-                LOG(ERROR, "filter is NULL.");
-                free(pcap_file);
-                goto error2;
-        }
-
-        con->capture_switch = start_capture(filter, pcap_file);
+        con->capture_switch = start_capture(filter, pcap_file_path);
 
         free(filter);
-        free(pcap_file);
+        free(pcap_file_path);
         ra_unlock_elem(fd);
         return;
 error2:
-        ra_unlock_elem(fd);
+        free(pcap_file_path);
         goto error1;
 error1:
-        LOG(ERROR, "tcp_start_packet_capture() failed.");
+        ra_unlock_elem(fd);
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
         return;
 }
 
@@ -465,7 +410,7 @@ void tcp_stop_packet_capture(TcpConnection *con) {
 ///////////////////////////////////////////////////////////////////////////////
 
 #define FAIL_IF_NULL(var, ev_type_cons) \
-        if (var == NULL) {              \
+        if (!var) {                     \
                 LOG_FUNC_FAIL;          \
                 return;                 \
         }
@@ -684,13 +629,13 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         if (con->capture_switch != NULL) tcp_stop_packet_capture(con);
 
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
-        
+
         // Cleanup
         if (!(con = ra_get_and_lock_elem(fd))) goto error;
-        tcp_dump_json(con); // Must be done after POSTLUDE (which add event)
+        tcp_dump_json(con);  // Must be done after POSTLUDE (which add event)
         free_connection(con);
         ra_unlock_elem(fd);
-         
+
         ra_put_elem(fd, NULL);
         return;
 error:
@@ -731,4 +676,22 @@ void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
         con->rtt = info->tcpi_rtt;
 
         TCP_EV_POSTLUDE(TCP_EV_TCP_INFO);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void tcp_close_unclosed_connections(void) {
+        for (long i = 0; i < ra_get_size(); i++)
+                if (ra_is_present(i)) tcp_ev_close(i, 0, 0, false);
+}
+
+void tcp_free(void) {
+        ra_free();
+        mutex_destroy(&connections_count_mutex);
+}
+
+void tcp_reset(void) {
+        ra_reset();
+        mutex_init(&connections_count_mutex);
+        connections_count = 0;
 }

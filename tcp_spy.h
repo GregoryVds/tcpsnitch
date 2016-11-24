@@ -272,6 +272,8 @@ void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
 
 void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info);
 
-void tcp_cleanup(void);
+void tcp_close_unclosed_connections(void);
+void tcp_free(void); // Free state.
+// Free state and restore to default state (called after fork()).
 void tcp_reset(void);
 #endif

@@ -1,5 +1,6 @@
 #include "logger.h"
 #include <slog.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 void logger(LogLevel lvl, const char *str, const char *file, int line) {
@@ -11,6 +12,7 @@ void logger(LogLevel lvl, const char *str, const char *file, int line) {
                 case ERROR:
                         slog(lvl, SLOG_ERROR, "%d (%s:%d) %s", pid, file, line,
                              str);
+                        // exit(EXIT_FAILURE);
                         break;
                 case WARN:
                         slog(lvl, SLOG_WARN, "%d (%s:%d) %s", pid, file, line,

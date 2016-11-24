@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "logger.h"
+#include "string_helpers.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -227,7 +228,7 @@ error:
 
 void *my_calloc(size_t nmemb, size_t size) {
         void *ret = calloc(nmemb, size);
-        if (!ret) goto error; 
+        if (!ret) goto error;
         return ret;
 error:
         LOG(ERROR, "calloc() failed.");
@@ -235,3 +236,31 @@ error:
         return NULL;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+char *create_numbered_dir_in_path(char *path, int dir_number) {
+        char *dirname, *dir_path;
+        int n;
+        if (!path) goto error1;
+
+        // Build string "[path]/[dir_number] in dir_path"
+        if (!(n = get_int_len(dir_number) + 2)) goto error_out;  // +"/" & "\0"
+        if (!(dirname = (char *)my_malloc(sizeof(char) * n))) goto error_out;
+        snprintf(dirname, n, "%d", dir_number);
+        if (!(dir_path = alloc_concat_path(path, dirname))) goto error3;
+
+        if (mkdir(dir_path, 0777)) goto error2;
+        return dir_path;
+error1:
+        LOG(ERROR, "path is NULL.");
+        goto error_out;
+error2:
+        LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
+        goto error3;
+error3:
+        free(dirname);
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
+}

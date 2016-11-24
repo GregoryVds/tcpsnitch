@@ -118,12 +118,20 @@ error:
 ///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_concat_path(const char *path1, const char *path2) {
+        if (!path1) goto error1;
+        if (!path2) goto error2;
         int full_path_length = strlen(path1) + strlen(path2) + 2;
         char *full_path = (char *)malloc(sizeof(char) * full_path_length);
-        if (!full_path) goto error;
+        if (!full_path) goto error_out;
         snprintf(full_path, full_path_length, "%s/%s", path1, path2);
         return full_path;
-error:
+error1:
+        LOG(ERROR, "path1 is NULL.");
+        goto error_out;
+error2:
+        LOG(ERROR, "path2 is NULL.");
+        goto error_out;
+error_out:
         LOG(ERROR, "malloc() failed");
         LOG_FUNC_FAIL;
         return NULL;

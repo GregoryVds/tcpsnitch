@@ -28,7 +28,8 @@ bool ra_is_present(int index);
 int ra_get_size(void);
 
 void ra_free(void); // Free state.
-void ra_reset(void); // Free state and restore to default state.
+// Free state and restore to default state (called after fork()).
+void ra_reset(void);
 
 #endif
 
