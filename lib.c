@@ -75,7 +75,6 @@ error2:
         goto error_out;
 error3:
         LOG(ERROR, "fclose() failed. %s.", strerror(errno));
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return -1;
@@ -141,7 +140,6 @@ error2:
         goto error_out;
 error3:
         LOG(ERROR, "strtol() failed. Overflow.");
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return -1;
@@ -256,10 +254,8 @@ error1:
         goto error_out;
 error2:
         LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-        goto error3;
 error3:
         free(dirname);
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return NULL;

@@ -3,7 +3,7 @@
 
 #include "tcp_spy.h"
 
-char *build_tcp_ev_connection_json(const TcpConnection *con);
+char *alloc_tcp_ev_connection_json(const TcpConnection *con);
 
 #endif
 

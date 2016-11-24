@@ -23,10 +23,6 @@ static add_type add = &json_object_set_new;
 static json_t *build_tcp_ev_connection(const TcpConnection *con);
 static json_t *build_event(const TcpEvent *ev);
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev);
-static json_t *build_send_flags(const TcpSendFlags *flags);
-static json_t *build_recv_flags(const TcpRecvFlags *flags);
-static json_t *build_iovec(const TcpIovec *iovec);
-static json_t *build_msghdr(const TcpMsghdr *msg);
 
 static json_t *build_tcp_ev_socket(const TcpEvSocket *ev);
 static json_t *build_tcp_ev_bind(const TcpEvBind *ev);
@@ -50,7 +46,14 @@ static json_t *build_tcp_ev_readv(const TcpEvReadv *ev);
 
 static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev);
 
+static json_t *build_send_flags(const TcpSendFlags *flags);
+static json_t *build_recv_flags(const TcpRecvFlags *flags);
+
+static json_t *build_iovec(const TcpIovec *iovec);
+static json_t *build_msghdr(const TcpMsghdr *msg);
+
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
+#define SHARED_FAILURE "json_object() failed. Cannot build shared fields."
 
 #define BUILD_EV_PRELUDE()                                  \
         json_t *json_ev = json_object();                    \
@@ -175,7 +178,9 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
 
         /* Time stamp */
         json_t *timestamp_json = json_object();
-        if (timestamp_json) {
+        if (timestamp_json == NULL) {
+                LOG(ERROR, SHARED_FAILURE);
+        } else {
                 add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
                 add(timestamp_json, "usec",
                     json_integer(ev->timestamp.tv_usec));
@@ -188,84 +193,11 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         add(json_ev, "error_str", json_string(ev->error_str));
 }
 
-static json_t *build_send_flags(const TcpSendFlags *flags) {
-        json_t *json_flags = json_object();
-        if (!json_flags) goto error;
-
-        add(json_flags, "msg_confirm", json_boolean(flags->msg_confirm));
-        add(json_flags, "msg_dontroute", json_boolean(flags->msg_dontroute));
-        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
-        add(json_flags, "msg_eor", json_boolean(flags->msg_eor));
-        add(json_flags, "msg_more", json_boolean(flags->msg_more));
-        add(json_flags, "msg_nosignal", json_boolean(flags->msg_nosignal));
-        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
-
-        return json_flags;
-error:
-        LOG(ERROR, "json_object() failed.");
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
-static json_t *build_recv_flags(const TcpRecvFlags *flags) {
-        json_t *json_flags = json_object();
-        if (!json_flags) goto error;
-
-        add(json_flags, "msg_cmsg_cloexec",
-            json_boolean(flags->msg_cmsg_cloexec));
-        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
-        add(json_flags, "msg_errqueue", json_boolean(flags->msg_errqueue));
-        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
-        add(json_flags, "msg_peek", json_boolean(flags->msg_peek));
-        add(json_flags, "msg_trunc", json_boolean(flags->msg_trunc));
-        add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
-
-        return json_flags;
-error:
-        LOG(ERROR, "json_object() failed.");
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
-static json_t *build_iovec(const TcpIovec *iovec) {
-        json_t *json_iovec = json_object();
-        if (!json_iovec) goto error;
-
-        add(json_iovec, "iovec_count", json_integer(iovec->iovec_count));
-        json_t *iovec_sizes = json_array();
-        if (iovec_sizes) {
-                for (int i = 0; i < iovec->iovec_count; i++) {
-                        json_array_append_new(
-                            iovec_sizes, json_integer(iovec->iovec_sizes[i]));
-                }
-        }
-        add(json_iovec, "iovec_sizes", iovec_sizes);
-
-        return json_iovec;
-error:
-        LOG(ERROR, "json_object() failed.");
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
-static json_t *build_msghdr(const TcpMsghdr *msg) {
-        json_t *json_msghdr = json_object();
-        if (!json_msghdr) goto error;
-
-        add(json_msghdr, "control_data", json_boolean(msg->control_data));
-        add(json_msghdr, "iovec", build_iovec(&msg->iovec));
-
-        return json_msghdr;
-error:
-        LOG(ERROR, "json_object() failed.");
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 
 static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
         char *dom_str = alloc_sock_domain_str(ev->domain);
         char *type_str = alloc_sock_type_str(ev->type);
 
@@ -277,11 +209,13 @@ static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
 
         free(dom_str);
         free(type_str);
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
         char *addr_str = alloc_host_str(&(ev->addr));
         char *port_str = alloc_port_str(&(ev->addr));
 
@@ -291,11 +225,13 @@ static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
 
         free(addr_str);
         free(port_str);
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
         char *addr_str = alloc_host_str(&(ev->addr));
         char *port_str = alloc_port_str(&(ev->addr));
 
@@ -304,6 +240,7 @@ static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
 
         free(addr_str);
         free(port_str);
+
         return json_ev;
 }
 
@@ -326,6 +263,7 @@ static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
 
 static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
         struct protoent *protocol = getprotobynumber(ev->level);
         char *optname_str = alloc_sock_optname_str(ev->optname);
 
@@ -333,6 +271,7 @@ static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         add(json_details, "optname", json_string(optname_str));
 
         free(optname_str);
+
         return json_ev;
 }
 
@@ -356,6 +295,9 @@ static json_t *build_tcp_ev_recv(const TcpEvRecv *ev) {
 
 static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        // This is essentially useles info with TCP and causes troubles with
+        // packetdrill tests.
         // char *addr_str = alloc_host_str(&(ev->addr));
         // char *port_str = alloc_port_str(&(ev->addr));
 
@@ -366,11 +308,15 @@ static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
 
         // free(addr_str);
         // free(port_str);
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        // This is essentially useles info with TCP and causes troubles with
+        // packetdrill tests.
         // char *addr_str = alloc_host_str(&(ev->addr));
         // char *port_str = alloc_port_str(&(ev->addr));
 
@@ -381,6 +327,7 @@ static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
 
         // free(addr_str);
         // free(port_str);
+
         return json_ev;
 }
 
@@ -448,6 +395,7 @@ static json_t *build_tcp_ev_readv(const TcpEvReadv *ev) {
 
 static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
         struct tcp_info i = ev->info;
 
         add(json_details, "state", json_integer(i.tcpi_state));
@@ -497,6 +445,80 @@ static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+static json_t *build_send_flags(const TcpSendFlags *flags) {
+        json_t *json_flags = json_object();
+        if (json_flags == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build send flags.");
+                return NULL;
+        }
+
+        add(json_flags, "msg_confirm", json_boolean(flags->msg_confirm));
+        add(json_flags, "msg_dontroute", json_boolean(flags->msg_dontroute));
+        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
+        add(json_flags, "msg_eor", json_boolean(flags->msg_eor));
+        add(json_flags, "msg_more", json_boolean(flags->msg_more));
+        add(json_flags, "msg_nosignal", json_boolean(flags->msg_nosignal));
+        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
+
+        return json_flags;
+}
+
+static json_t *build_recv_flags(const TcpRecvFlags *flags) {
+        json_t *json_flags = json_object();
+        if (json_flags == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build recv flags.");
+                return NULL;
+        }
+
+        add(json_flags, "msg_cmsg_cloexec",
+            json_boolean(flags->msg_cmsg_cloexec));
+        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
+        add(json_flags, "msg_errqueue", json_boolean(flags->msg_errqueue));
+        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
+        add(json_flags, "msg_peek", json_boolean(flags->msg_peek));
+        add(json_flags, "msg_trunc", json_boolean(flags->msg_trunc));
+        add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
+
+        return json_flags;
+}
+
+static json_t *build_iovec(const TcpIovec *iovec) {
+        json_t *json_iovec = json_object();
+        if (json_iovec == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build iovec.");
+                return NULL;
+        }
+
+        add(json_iovec, "iovec_count", json_integer(iovec->iovec_count));
+
+        json_t *iovec_sizes = json_array();
+        if (iovec_sizes) {
+                int i;
+                for (i = 0; i < iovec->iovec_count; i++) {
+                        json_array_append_new(
+                            iovec_sizes, json_integer(iovec->iovec_sizes[i]));
+                }
+        }
+        add(json_iovec, "iovec_sizes", iovec_sizes);
+
+        return json_iovec;
+}
+
+static json_t *build_msghdr(const TcpMsghdr *msg) {
+        json_t *json_msghdr = json_object();
+        if (json_msghdr == NULL) {
+                LOG(ERROR, "json_object() failed. Could not build msghdr.");
+                return NULL;
+        }
+
+        add(json_msghdr, "control_data", json_boolean(msg->control_data));
+        add(json_msghdr, "iovec", build_iovec(&msg->iovec));
+
+        return json_msghdr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
   ____  _   _ ____  _     ___ ____      _    ____ ___
  |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
@@ -505,15 +527,18 @@ static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
  |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
 */
 
-char *alloc_tcp_ev_connection_json(const TcpConnection *con) {
+char *build_tcp_ev_connection_json(const TcpConnection *con) {
         json_t *json_con = build_tcp_ev_connection(con);
-        if (!json_con) goto error;
+        if (json_con == NULL) {
+                LOG(ERROR,
+                    "build_tcp_ev_connection() failed. Could not generate JSON "
+                    "representation for TCP connection");
+                return NULL;
+        }
+
         char *json_string = json_dumps(json_con, JSON_PRESERVE_ORDER);
         json_decref(json_con);
         return json_string;
-error:
-        LOG(ERROR, "json_object() failed.");
-        LOG_FUNC_FAIL;
-        return NULL;
 }
 
+///////////////////////////////////////////////////////////////////////////////

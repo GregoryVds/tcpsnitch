@@ -265,7 +265,7 @@ static void tcp_dump_json(TcpConnection *con) {
         if (con->directory == NULL) goto error1;
 
         char *json_str, *json_file_str;
-        if (!(json_str = build_tcp_ev_connection_json(con))) goto error_out;
+        if (!(json_str = alloc_tcp_ev_connection_json(con))) goto error_out;
         if (!(json_file_str = alloc_json_path_str(con))) goto error2;
 
         if (append_string_to_file((const char *)json_str, json_file_str))
@@ -276,13 +276,11 @@ static void tcp_dump_json(TcpConnection *con) {
         return;
 error3:
         free(json_file_str);
-        goto error2;
 error2:
         free(json_str);
         goto error_out;
 error1:
         LOG(ERROR, "con->directory is NULL.");
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return;
@@ -394,10 +392,8 @@ void tcp_start_packet_capture(int fd, const struct sockaddr_storage *addr_to) {
         return;
 error2:
         free(pcap_file_path);
-        goto error1;
 error1:
         ra_unlock_elem(fd);
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return;

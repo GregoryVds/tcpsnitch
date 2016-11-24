@@ -113,7 +113,6 @@ error1:
         goto error_out;
 error2:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-        goto error_out;
 error_out:
         LOG_FUNC_FAIL;
         return false;
