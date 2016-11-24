@@ -33,26 +33,24 @@
 
 */
 
+// Variables
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 static int connections_count = 0;
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 
-/* CREATING & FREEING OBJECTS */
+// Private functions
 static char *create_logs_dir(int con_id);
 static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_events_list(TcpEventNode *head);
 static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
-
-/* HELPERS */
 static bool should_dump_tcp_info(TcpConnection *con);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count);
-
 void tcp_dump_json(TcpConnection *con);
 int force_bind(int fd, TcpConnection *con, bool IPV6);
 
