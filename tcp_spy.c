@@ -63,7 +63,8 @@ static TcpConnection *alloc_connection(void) {
         if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1)))
                 goto error;
 
-        con->cmdline = alloc_cmdline_str(&(con->app_name));
+        con->cmdline = alloc_cmdline_str();
+        con->app_name = get_app_name();
         con->timestamp = get_time_sec();
         con->kernel = alloc_kernel_str();
 
@@ -354,7 +355,6 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
 void free_connection(TcpConnection *con) {
         if (!con) return;  // NULL
         free_events_list(con->head);
-        free(con->app_name);
         free(con->cmdline);
         free(con->kernel);
         free(con->directory);

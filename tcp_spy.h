@@ -193,8 +193,8 @@ struct TcpEventNode {
 };
 
 typedef struct {
+        const char *app_name;      // Application name with args.
         // To be freed
-        char *app_name;      // Application name with args.
         char *cmdline;       // Cmdline (app name + args).
         char *kernel;        // Kernel version.
         char *directory;     // Directory for all logging purpose.

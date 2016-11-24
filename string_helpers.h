@@ -19,7 +19,8 @@ char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path);
 char *alloc_pcap_path_str(TcpConnection *con);
 char *alloc_json_path_str(TcpConnection *con);
 
-char *alloc_cmdline_str(char **app_name);
+char *alloc_cmdline_path(void);
+char *alloc_cmdline_str(void);
 char *alloc_kernel_str(void);
 
 char *alloc_sock_domain_str(int domain);

@@ -12,105 +12,94 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/* Extract IP address to human readable string */
 #define ADDR_WIDTH 40  // Include null byte
 char *alloc_host_str(const struct sockaddr_storage *addr) {
-        char *addr_str = (char *)calloc(sizeof(char), ADDR_WIDTH);
-        if (addr_str == NULL) {
-                LOG(ERROR, "calloc() failed.");
-                return NULL;
-        }
+        char *addr_str = (char *)my_calloc(sizeof(char), ADDR_WIDTH);
+        if (!addr_str) goto error_out;
 
+        // Convert host from network to printable
         const char *r;
         if (addr->ss_family == AF_INET) {
-                const struct sockaddr_in *ipv4;
-                ipv4 = (const struct sockaddr_in *)addr;
-                r = inet_ntop(AF_INET, &(ipv4->sin_addr), addr_str, ADDR_WIDTH);
+                const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
+                r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, ADDR_WIDTH);
         } else if (addr->ss_family == AF_INET6) {
-                const struct sockaddr_in6 *ipv6;
-                ipv6 = (const struct sockaddr_in6 *)addr;
-                r = inet_ntop(AF_INET6, &(ipv6->sin6_addr), addr_str,
-                              ADDR_WIDTH);
-        } else {
-                LOG(ERROR,
-                    "alloc_host_str() failed due to unsupported ss_family: %d.",
-                    addr->ss_family);
-                free(addr_str);
-                return NULL;
-        }
+                const struct sockaddr_in6 *v6 =
+                    (const struct sockaddr_in6 *)addr;
+                r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, ADDR_WIDTH);
+        } else
+                goto error1;
 
-        if (r == NULL) {
-                LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
-                free(addr_str);
-                return NULL;
-        }
-
+        if (!r) goto error2;
         return addr_str;
+error2:
+        LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
+        goto cleanup_out;
+error1:
+        LOG(ERROR, "Unsupported ss_family: %d.", addr->ss_family);
+cleanup_out:
+        free(addr_str);
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 #define PORT_WIDTH 6  // Include null byte
 char *alloc_port_str(const struct sockaddr_storage *addr) {
-        char *port_str = (char *)calloc(sizeof(char), PORT_WIDTH);
-        if (port_str == NULL) {
-                LOG(ERROR, "calloc() failed.");
-                return NULL;
-        }
+        char *port_str = (char *)my_calloc(sizeof(char), PORT_WIDTH);
+        if (!port_str) goto error_out;
 
+        // Convert port to string
         int n;
         if (addr->ss_family == AF_INET) {
-                const struct sockaddr_in *ipv4;
-                ipv4 = (const struct sockaddr_in *)addr;
-                n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(ipv4->sin_port));
+                const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
+                n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v4->sin_port));
         } else if (addr->ss_family == AF_INET6) {
-                const struct sockaddr_in6 *ipv6;
-                ipv6 = (const struct sockaddr_in6 *)addr;
-                n = snprintf(port_str, PORT_WIDTH, "%d",
-                             ntohs(ipv6->sin6_port));
-        } else {
-                LOG(ERROR,
-                    "alloc_host_str() failed due to unsupported ss_family: %d.",
-                    addr->ss_family);
-                free(port_str);
-                return NULL;
-        }
+                const struct sockaddr_in6 *v6 =
+                    (const struct sockaddr_in6 *)addr;
+                n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v6->sin6_port));
+        } else
+                goto error1;
 
-        if (n < 0) {
-                LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
-                free(port_str);
-                return NULL;
-        }
-        if (n >= PORT_WIDTH) {
-                LOG(ERROR, "snprintf() failed (truncated).");
-                free(port_str);
-                return NULL;
-        }
-
+        if (n < 0) goto error2;
+        if (n >= PORT_WIDTH) goto error3;
         return port_str;
+error3:
+        LOG(ERROR, "snprintf() failed (truncated).");
+        goto cleanup_out;
+error2:
+        LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
+        goto cleanup_out;
+error1:
+        LOG(ERROR, "Unsupported ss_family: %d.", addr->ss_family);
+cleanup_out:
+        free(port_str);
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
-#define FULL_ADDR_WIDTH 46  // ADDR:PORT\0
 char *alloc_addr_str(const struct sockaddr *addr) {
-        const struct sockaddr_storage *addr_sto;
-        addr_sto = (const struct sockaddr_storage *)addr;
+        static int n = 46;  // ADDR:PORT\0
+        const struct sockaddr_storage *addr_sto =
+            (const struct sockaddr_storage *)addr;
 
-        char *full_str = (char *)calloc(sizeof(char), FULL_ADDR_WIDTH);
-        if (!full_str) {
-                LOG(ERROR, "malloc() failed");
-                goto error;
-        }
+        char *addr_str, *host_str, *port_str;
+        if (!(addr_str = (char *)my_calloc(sizeof(char), n))) goto error_out;
+        if (!(host_str = alloc_host_str(addr_sto))) goto error1;
+        if (!(port_str = alloc_port_str(addr_sto))) goto error2;
 
-        char *addr_str = alloc_host_str(addr_sto);
-        char *port_str = alloc_port_str(addr_sto);
-        if (addr_str == NULL || port_str == NULL) goto error;
-
-        strncat(full_str, addr_str, FULL_ADDR_WIDTH - 1);
-        strncat(full_str, ":", (FULL_ADDR_WIDTH - 1) - strlen(full_str));
-        strncat(full_str, port_str, (FULL_ADDR_WIDTH - 1) - strlen(full_str));
+        strncat(addr_str, host_str, n - 1);
+        strncat(addr_str, ":", (n - 1) - strlen(addr_str));
+        strncat(addr_str, port_str, (n - 1) - strlen(addr_str));
 
         free(addr_str);
         free(port_str);
-        return full_str;
-error:
+        return addr_str;
+error2:
+        free(host_str);
+error1:
+        free(addr_str);
+error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
@@ -121,7 +110,7 @@ char *alloc_concat_path(const char *path1, const char *path2) {
         if (!path1) goto error1;
         if (!path2) goto error2;
         int full_path_length = strlen(path1) + strlen(path2) + 2;
-        char *full_path = (char *)malloc(sizeof(char) * full_path_length);
+        char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
         if (!full_path) goto error_out;
         snprintf(full_path, full_path_length, "%s/%s", path1, path2);
         return full_path;
@@ -130,7 +119,6 @@ error1:
         goto error_out;
 error2:
         LOG(ERROR, "path2 is NULL.");
-        goto error_out;
 error_out:
         LOG(ERROR, "malloc() failed");
         LOG_FUNC_FAIL;
@@ -141,13 +129,12 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         int path1_len = strlen(path1);
         int i_len = get_int_len(i);
         int full_path_length = path1_len + i_len + 2;  // Underscore + null byte
-        char *full_path = (char *)malloc(sizeof(char) * full_path_length);
+        char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
         if (!full_path) goto error;
         strncpy(full_path, path1, path1_len);
         snprintf(full_path + path1_len, i_len + 2, "_%d", i);
         return full_path;
 error:
-        LOG(ERROR, "malloc() failed.");
         LOG_FUNC_FAIL;
         return NULL;
 }
@@ -165,95 +152,95 @@ char *alloc_log_path_str(TcpConnection *con) {
 }
 
 char *alloc_con_base_dir_path(TcpConnection *con, const char *netspy_path) {
-        char *con_dirname = alloc_con_dirname_str(con);
-        if (con_dirname == NULL) return NULL;
-        char *ret = alloc_concat_path(netspy_path, con_dirname);
+        char *con_dirname, *ret;
+        if (!(con_dirname = alloc_con_dirname_str(con))) goto error_out;
+        if (!(ret = alloc_concat_path(netspy_path, con_dirname))) goto error1;
         free(con_dirname);
         return ret;
+error1:
+        free(con_dirname);
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define PATH_LENGTH 30
-#define CMDLINE_LENGTH 1024
-
-char *alloc_cmdline_str(char **app_name) {
-        // Build path to /proc/pid/cmdline in path
-        char path[PATH_LENGTH];
-        pid_t pid = getpid();
-        if (snprintf(path, PATH_LENGTH, "/proc/%d/cmdline", pid) >=
-            PATH_LENGTH) {
-                LOG(ERROR, "snprintf() failed (truncated).");
-        }
-
-        // Read /proc/pid/cmdline in cmdline
-        FILE *fp = fopen(path, "r");
-        if (fp == NULL) LOG(ERROR, "fopen() failed. %s.", strerror(errno));
-
-        char *cmdline = (char *)malloc(sizeof(char) * CMDLINE_LENGTH);
-        if (cmdline == NULL) {
-                LOG(ERROR, "malloc() failed.");
-                fclose(fp);
-                return NULL;
-        }
-
-        size_t rc = fread(cmdline, 1, CMDLINE_LENGTH, fp);
-        if (rc == 0) {
-                LOG(ERROR, "fread() failed.");
-                fclose(fp);
-                return NULL;
-        }
-
-        fclose(fp);
-
-        // Replace null bytes between args by white spaces &
-        // make char *app_name point to the app_name.
-        int i;
-        int app_name_length = strlen(cmdline);
-        *app_name = (char *)calloc(sizeof(char), app_name_length + 1);
-        if (app_name == NULL) {
-                LOG(ERROR, "calloc() failed.");
-                return cmdline;
-        }
-
-        for (i = 0; i < (int)rc - 1; i++) {
-                if (i < app_name_length) (*app_name)[i] = cmdline[i];
-                if (cmdline[i] == '\0') cmdline[i] = ' ';
-        }
-
-        return cmdline;
+char *alloc_cmdline_path(void) {
+        static int path_length = 30;
+        char *path = (char *)my_malloc(sizeof(char)*path_length);
+        if (!path) goto error;
+        if (snprintf(path, path_length, "/proc/%d/cmdline", getpid()) >=
+            path_length)
+                goto error;
+        return path;
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
-#define KERNEL_WIDTH 30
+char *alloc_cmdline_str(void) {
+        static int cmd_line_length = 1024;
+
+        // Open cmdline file
+        char *cmdline_path = alloc_cmdline_path();
+        if (!cmdline_path) goto error_out;
+
+        FILE *fp = fopen(cmdline_path, "r");
+        if (!fp) goto error1;
+        free(cmdline_path);
+
+        // Read cmdline file into cmdline array
+        char *cmdline = (char *)my_malloc(sizeof(char) * cmd_line_length);
+        if (!cmdline) goto error2;
+
+        int rc = fread(cmdline, 1, cmd_line_length, fp);
+        if (!rc) goto error3;
+
+        fclose(fp);
+        return cmdline;
+error3:
+        LOG(ERROR, "fread() failed. %s.", strerror(errno));
+        free(cmdline);
+error2:
+        fclose(fp);
+        goto error_out;
+error1:
+        LOG(ERROR, "fopen() failed. %s.", strerror(errno));
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char *alloc_kernel_str(void) {
-        FILE *fp;
-        if ((fp = popen("uname -r", "r")) == NULL) {
-                LOG(ERROR, "open() failed. %s.", strerror(errno));
-                return NULL;
-        }
+        static int kernel_width = 30;
+        
+        // Open fd to output of "uname -r"
+        FILE *fp  = popen("uname -r", "r");
+        if (!fp) goto error1;
+       
+        // Read output into kernel_str
+        char *kernel_str = (char *)my_calloc(sizeof(char), kernel_width);
+        if (!kernel_str) goto error2;
+        if (!fgets(kernel_str, kernel_width, fp)) goto error3;
 
-        char *kernel = (char *)calloc(sizeof(char), KERNEL_WIDTH);
-        if (kernel == NULL) {
-                LOG(ERROR, "calloc() failed.");
-                pclose(fp);
-                return NULL;
-        }
-
-        if (fgets(kernel, KERNEL_WIDTH, fp) == NULL) {
-                LOG(ERROR,
-                    "fgets() failed. Error or end of file occured while no "
-                    "characters have been read");
-                pclose(fp);
-                return NULL;
-        }
-
-        if (pclose(fp) == -1) {
-                LOG(ERROR, "pclose() failed. %s.", strerror(errno));
-        }
-
+        pclose(fp);
         // Erase \n at last position.
-        kernel[strlen(kernel) - 1] = '\0';
-        return kernel;
+        kernel_str[strlen(kernel_str) - 1] = '\0';
+        return kernel_str;
+error1:
+        LOG(ERROR, "popen() failed. %s.", strerror(errno));
+        goto error_out;
+error3:
+        LOG(ERROR, "fgets() failed.");
+error2:
+        pclose(fp);
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -343,16 +330,12 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 static char *alloc_string_from_cons(int cons, const IntStrPair *map,
                                     int map_size) {
         static const int str_size = MEMBER_SIZE(IntStrPair, str);
-        int i;
-        char *str = (char *)malloc(str_size);
-        if (str == NULL) {
-                LOG(ERROR, "malloc() failed. Cannot build string.");
-                return str;
-        }
+        char *str = (char *)my_malloc(str_size);
+        if (!str) goto error;
 
         // Search for const in map.
         const IntStrPair *cur;
-        for (i = 0; i < map_size; i++) {
+        for (int i = 0; i < map_size; i++) {
                 cur = (map + i);
                 if (cur->cons == cons) {
                         strncpy(str, cur->str, str_size);
@@ -363,6 +346,9 @@ static char *alloc_string_from_cons(int cons, const IntStrPair *map,
         // No match found, just write the constant digit.
         snprintf(str, str_size, "%d", cons);
         return str;
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 char *alloc_sock_domain_str(int domain) {
@@ -385,13 +371,13 @@ char *alloc_sock_optname_str(int optname) {
 char *alloc_error_str(int err) {
         char *ori_str = strerror(err);
         size_t str_len = strlen(ori_str) + 1;
-        char *alloc_str = (char *)malloc(str_len);
-        if (alloc_str == NULL) {
-                LOG(ERROR, "malloc() failed.");
-                return NULL;
-        }
+        char *alloc_str = (char *)my_malloc(str_len);
+        if (!alloc_str) goto error;
         strncpy(alloc_str, ori_str, str_len);
         return alloc_str;
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -176,12 +176,12 @@ bool ra_is_present(int index) {
         mutex_lock(&main_mutex);
         if (!array && !init(index + 1)) goto error; // If NULL, initialize.
         mutex_lock(&mutex_array[index]);
-        bool ret = (array && (index < size) && array[index]);
+        bool ret = array && index < size && array[index];
         mutex_unlock(&mutex_array[index]);
         mutex_unlock(&main_mutex);
         return ret;
 error:
-         mutex_unlock(&main_mutex);
+        mutex_unlock(&main_mutex);
         LOG_FUNC_FAIL;
         return false;
 }
