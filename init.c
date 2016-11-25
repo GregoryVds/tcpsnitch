@@ -153,8 +153,9 @@ void netspy_reset(void) {
 static void cleanup(void) {
         LOG(INFO, "Performing library cleanup before end of process.");
         tcp_close_unclosed_connections();
-        tcp_free();
-        netspy_free();
+        // free(log_file_path);
+        // tcp_free();
+        // netspy_free();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -216,12 +217,10 @@ void init_netspy(void) {
 
         // Configure logs
         if (!(log_path = create_logs_dir(netspy_path))) goto exit1;
-        if (!(log_file_path = alloc_concat_path(log_path, get_app_name()))) {
+        if (!(log_file_path = alloc_concat_path(log_path, get_app_name())))
                 goto exit1;        
-        } else {
+        else
                 slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
-                free(log_file_path);
-        }
         goto exit;
 exit1:
         LOG(ERROR, "No logs to file.");

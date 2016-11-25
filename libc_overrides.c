@@ -514,6 +514,5 @@ int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
                             flags);
                 }
         }
-
         return orig_poll(__fds, __nfds, __timeout);
 }
