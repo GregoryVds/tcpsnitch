@@ -194,7 +194,6 @@ static void cleanup(void) {
 
 void reset_netspy(void) {
         if (!initialized) return;  // Nothing to do.
-        LOG(ALWAYS, "Netspy reset.");
         slog_init(NULL, NULL, 0, 0, 0);
         netspy_free();
         netspy_reset();

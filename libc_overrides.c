@@ -74,7 +74,6 @@
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
 
 int socket(int __domain, int __type, int __protocol) {
-        init_netspy();
         orig_socket_type orig_socket;
         orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
 
@@ -90,7 +89,6 @@ typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
                               socklen_t __len);
 
 int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-        init_netspy();
         orig_bind_type orig_bind;
         orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
@@ -110,7 +108,6 @@ typedef int (*orig_connect_type)(int __fd, const struct sockaddr *__addr,
                                  socklen_t __len);
 
 int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-        init_netspy();
         orig_connect_type orig_connect;
         orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
 
@@ -132,7 +129,6 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 typedef int (*orig_shutdown_type)(int __fd, int __how);
 
 int shutdown(int __fd, int __how) {
-        init_netspy();
         orig_shutdown_type orig_shutdown;
         orig_shutdown = (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
 
@@ -150,7 +146,6 @@ int shutdown(int __fd, int __how) {
 typedef int (*orig_listen_type)(int __fd, int __n);
 
 int listen(int __fd, int __n) {
-        init_netspy();
         orig_listen_type orig_listen;
         orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
 
@@ -169,7 +164,6 @@ typedef int (*orig_setsockopt_type)(int __fd, int __level, int __optname,
 
 int setsockopt(int __fd, int __level, int __optname, const void *__optval,
                socklen_t __optlen) {
-        init_netspy();
         orig_setsockopt_type orig_setsockopt;
         orig_setsockopt = (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
 
@@ -187,7 +181,6 @@ typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
                                   int __flags);
 
 ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
-        init_netspy();
         orig_send_type orig_send;
         orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
 
@@ -205,7 +198,6 @@ typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
                                   int __flags);
 
 ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
-        init_netspy();
         orig_recv_type orig_recv;
         orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
 
@@ -225,7 +217,6 @@ typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
 
 ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
                const struct sockaddr *__addr, socklen_t __addr_len) {
-        init_netspy();
         orig_sendto_type orig_sendto;
         orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
 
@@ -250,7 +241,6 @@ typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
 
 ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
                  struct sockaddr *__addr, socklen_t *__addr_len) {
-        init_netspy();
         orig_recvfrom_type orig_recvfrom;
         orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
 
@@ -271,7 +261,6 @@ typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
                                      int __flags);
 
 ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
-        init_netspy();
         orig_sendmsg_type orig_sendmsg;
         orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
 
@@ -290,7 +279,6 @@ typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
                                      int __flags);
 
 ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
-        init_netspy();
         orig_recvmsg_type orig_recvmsg;
         orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
 
@@ -320,7 +308,6 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
 
 ssize_t write(int __fd, const void *__buf, size_t __n) {
-        init_netspy();
         orig_write_type orig_write;
         orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
 
@@ -337,7 +324,6 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
 typedef ssize_t (*orig_read_type)(int __fd, void *__buf, size_t __nbytes);
 
 ssize_t read(int __fd, void *__buf, size_t __nbytes) {
-        init_netspy();
         orig_read_type orig_read;
         orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
 
@@ -353,7 +339,6 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
 typedef int (*orig_close_type)(int __fd);
 
 int close(int __fd) {
-        init_netspy();
         orig_close_type orig_close;
         orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
 
@@ -405,7 +390,6 @@ typedef ssize_t (*orig_writev_type)(int __fd, const struct iovec *__iovec,
                                     int __count);
 
 ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
-        init_netspy();
         orig_writev_type orig_writev;
         orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
 
@@ -427,7 +411,6 @@ typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
                                    int __count);
 
 ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
-        init_netspy();
         orig_readv_type orig_readv;
         orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
 
@@ -460,7 +443,6 @@ typedef ssize_t (*orig_sendfile_type)(int __out_fd, int __in_fd,
                                       off_t *__offset, size_t __count);
 
 ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
-        init_netspy();
         orig_sendfile_type orig_sendfile;
         orig_sendfile = (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
@@ -492,7 +474,6 @@ typedef int (*orig_poll_type)(struct pollfd *__fds, nfds_t __nfds,
                               int __timeout);
 
 int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
-        init_netspy();
         orig_poll_type orig_poll;
         orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
         

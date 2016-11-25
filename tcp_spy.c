@@ -414,10 +414,10 @@ void tcp_stop_capture(TcpConnection *con) {
         }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        const char *ev_name = string_from_tcp_event_type(ev_type_cons);        \
-        LOG(INFO, "%s on socket %d.", ev_name, fd);                            \
         TcpConnection *con = ra_get_and_lock_elem(fd);                         \
         FAIL_IF_NULL(con, ev_type_cons);                                       \
+        const char *ev_name = string_from_tcp_event_type(ev_type_cons);        \
+        LOG(INFO, "%s on connection %d.", ev_name, con->id);                   \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
         FAIL_IF_NULL(ev, ev_type_cons);
 
@@ -450,6 +450,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection already exits and was not properly closed. */
+        init_netspy();
         LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 
