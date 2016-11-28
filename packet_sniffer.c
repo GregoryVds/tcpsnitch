@@ -20,6 +20,7 @@
 */
 ///////////////////////////////////////////////////////////////////////////////
 
+#define BUFFER_SIZE 8*100000 // In MB = 8MB
 static pcap_t *get_capture_handle(void);
 static void *capture_thread(void *params);
 static void *delayed_stop_thread(void *params);
@@ -34,6 +35,9 @@ static pcap_t *get_capture_handle(void) {
         pcap_t *handle = pcap_open_live(dev, BUFSIZ, 0, 0, err_buf);
         if (err_buf[0] != 0) LOG(WARN, "pcap_open_live() warn. %s.", err_buf);
         if (!handle) goto error;
+
+        if (!pcap_set_buffer_size(handle, BUFFER_SIZE))
+                LOG(WARN, "pcap_set_buffer_size() failed.");
 
         return handle;
 error:

@@ -508,7 +508,8 @@ static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
 char *alloc_tcp_ev_connection_json(const TcpConnection *con) {
         json_t *json_con = build_tcp_ev_connection(con);
         if (!json_con) goto error;
-        char *json_string = json_dumps(json_con, JSON_PRESERVE_ORDER);
+        char *json_string =
+            json_dumps(json_con, JSON_INDENT(2) | JSON_PRESERVE_ORDER);
         json_decref(json_con);
         return json_string;
 error:
@@ -516,4 +517,3 @@ error:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
