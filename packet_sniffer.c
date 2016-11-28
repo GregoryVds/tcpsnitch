@@ -114,17 +114,17 @@ static void *delayed_stop_thread(void *params) {
 #define DOUBLE_FILTER "port %s and host %s and port %s"
 
 // TODO: Bind to specific IP on host to filter on addr1 host too.
-char *build_capture_filter(const struct sockaddr_storage *addr1,
-                           const struct sockaddr_storage *addr2) {
+char *build_capture_filter(const struct sockaddr *addr1,
+                           const struct sockaddr *addr2) {
         // Build string rep of hosts/ports
-        char *port1 = NULL, *port2 = NULL, *host1 = NULL, *host2 = NULL;
+        char *port1 = NULL, *port2 = NULL, *ip1 = NULL, *ip2 = NULL;
         if (addr1) {
                 if (!(port1 = alloc_port_str(addr1))) goto error_out;
-                if (!(host1 = alloc_host_str(addr1))) goto error1;
+                if (!(ip1 = alloc_ip_str(addr1))) goto error1;
         }
         if (addr2) {
                 if (!(port2 = alloc_port_str(addr2))) goto error2;
-                if (!(host2 = alloc_host_str(addr2))) goto error3;
+                if (!(ip2 = alloc_ip_str(addr2))) goto error3;
         }
 
         // Build filter string
@@ -133,24 +133,24 @@ char *build_capture_filter(const struct sockaddr_storage *addr1,
         if (!filter) goto error4;
 
         if (addr1 && addr2)
-                snprintf(filter, n, DOUBLE_FILTER, port1, host2, port2);
+                snprintf(filter, n, DOUBLE_FILTER, port1, ip2, port2);
         else if (addr1) 
                 snprintf(filter, n, PORT_FILTER, port1);
         else if (addr2)
-                snprintf(filter, n, SINGLE_FILTER, host2, port2);
+                snprintf(filter, n, SINGLE_FILTER, ip2, port2);
 
         LOG(INFO, "Capture filter: '%s'.", filter);
         free(port1);
-        free(host1);
+        free(ip1);
         free(port2);
-        free(host2);
+        free(ip2);
         return filter;
 error4:
-        free(host2);
+        free(ip2);
 error3:
         free(port2);
 error2:
-        free(host1);
+        free(ip1);
 error1:
         free(port1);
 error_out:

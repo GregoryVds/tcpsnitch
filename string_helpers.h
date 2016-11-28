@@ -1,14 +1,16 @@
 #ifndef STRING_HELPERS_H
 #define STRING_HELPERS_H
 
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <sys/socket.h>
 #include "tcp_spy.h"
 
-char *alloc_host_str(const struct sockaddr_storage *addr); 
-char *alloc_port_str(const struct sockaddr_storage *addr);
+char *alloc_ip_str(const struct sockaddr *addr);
+char *alloc_port_str(const struct sockaddr *addr);
 char *alloc_addr_str(const struct sockaddr *addr);
+bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
+                    char **serv);
 
 char *alloc_concat_path(const char *path1, const char *path2);
 char *alloc_append_int_to_path(const char *path1, int i);
@@ -30,4 +32,3 @@ char *alloc_sock_optname_str(int optname);
 char *alloc_error_str(int err);
 
 #endif
-

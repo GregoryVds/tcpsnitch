@@ -56,14 +56,22 @@ typedef struct {
 } TcpEvSocket;
 
 typedef struct {
+        struct sockaddr_storage addr_sto;
+        char *ip;
+        char *port;
+        char *name;
+        char *serv;
+} TcpAddr; 
+
+typedef struct {
         TcpEvent super;
         bool force_bind;
-        struct sockaddr_storage addr;
+        TcpAddr addr;
 } TcpEvBind;
 
 typedef struct {
         TcpEvent super;
-        struct sockaddr_storage addr;
+        TcpAddr addr;
 } TcpEvConnect;
 
 typedef struct {

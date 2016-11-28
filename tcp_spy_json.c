@@ -23,6 +23,7 @@ static add_type add = &json_object_set_new;
 static json_t *build_tcp_ev_connection(const TcpConnection *con);
 static json_t *build_event(const TcpEvent *ev);
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev);
+static json_t *build_addr(const TcpAddr *addr);
 static json_t *build_send_flags(const TcpSendFlags *flags);
 static json_t *build_recv_flags(const TcpRecvFlags *flags);
 static json_t *build_iovec(const TcpIovec *iovec);
@@ -188,6 +189,22 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         add(json_ev, "error_str", json_string(ev->error_str));
 }
 
+static json_t *build_addr(const TcpAddr *addr) {
+        json_t *json_addr = json_object();
+        if (!json_addr) goto error;
+
+        add(json_addr, "ip", json_string(addr->ip));
+        add(json_addr, "port", json_string(addr->port));
+        add(json_addr, "name", json_string(addr->name));
+        add(json_addr, "serv", json_string(addr->serv));
+
+        return json_addr;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
 static json_t *build_send_flags(const TcpSendFlags *flags) {
         json_t *json_flags = json_object();
         if (!json_flags) goto error;
@@ -282,28 +299,18 @@ static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
 
 static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-        char *addr_str = alloc_host_str(&(ev->addr));
-        char *port_str = alloc_port_str(&(ev->addr));
 
-        add(json_details, "addr", json_string(addr_str));
-        add(json_details, "port", json_string(port_str));
+        add(json_details, "addr", build_addr(&ev->addr));
         add(json_details, "force_bind", json_boolean(ev->force_bind));
 
-        free(addr_str);
-        free(port_str);
         return json_ev;
 }
 
 static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-        char *addr_str = alloc_host_str(&(ev->addr));
-        char *port_str = alloc_port_str(&(ev->addr));
 
-        add(json_details, "addr", json_string(addr_str));
-        add(json_details, "port", json_string(port_str));
+        add(json_details, "addr", build_addr(&ev->addr));
 
-        free(addr_str);
-        free(port_str);
         return json_ev;
 }
 

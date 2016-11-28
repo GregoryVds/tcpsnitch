@@ -163,9 +163,13 @@ describe "tcp_spy" do
           {
             type: TCP_EV_BIND,
             details: {
-              addr: String,
+              addr: {
+                ip: String,
+                port: String,
+                name: String,
+                serv: String
+              },
               force_bind: Boolean,
-              port: String
             }
           }.ignore_extra_keys!
         ].ignore_extra_values!
@@ -182,8 +186,12 @@ describe "tcp_spy" do
           {
             type: TCP_EV_CONNECT,
             details: {
-              addr: String,
-              port: String
+              addr: {
+                ip: String,
+                port: String,
+                name: String,
+                serv: String
+              }
             }
           }.ignore_extra_keys!
         ].ignore_extra_values!

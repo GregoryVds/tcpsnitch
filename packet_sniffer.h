@@ -6,8 +6,8 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 
-char *build_capture_filter(const struct sockaddr_storage *addr1,
-			   const struct sockaddr_storage *addr2);
+char *build_capture_filter(const struct sockaddr *addr1,
+			   const struct sockaddr *addr2);
 
 bool *start_capture(const char *filters, const char *path);
 int stop_capture(bool *switch_flag, int delay_ms);

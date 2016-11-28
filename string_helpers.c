@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
 
 #include "string_helpers.h"
 #include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,16 +15,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define ADDR_WIDTH 40  // Include null byte
-char *alloc_host_str(const struct sockaddr_storage *addr) {
+char *alloc_ip_str(const struct sockaddr *addr) {
         char *addr_str = (char *)my_calloc(sizeof(char), ADDR_WIDTH);
         if (!addr_str) goto error_out;
 
         // Convert host from network to printable
         const char *r;
-        if (addr->ss_family == AF_INET) {
+        if (addr->sa_family == AF_INET) {
                 const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
                 r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, ADDR_WIDTH);
-        } else if (addr->ss_family == AF_INET6) {
+        } else if (addr->sa_family == AF_INET6) {
                 const struct sockaddr_in6 *v6 =
                     (const struct sockaddr_in6 *)addr;
                 r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, ADDR_WIDTH);
@@ -35,7 +37,7 @@ error2:
         LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
         goto cleanup_out;
 error1:
-        LOG(ERROR, "Unsupported ss_family: %d.", addr->ss_family);
+        LOG(ERROR, "Unsupported sa_family: %d.", addr->sa_family);
 cleanup_out:
         free(addr_str);
 error_out:
@@ -44,16 +46,16 @@ error_out:
 }
 
 #define PORT_WIDTH 6  // Include null byte
-char *alloc_port_str(const struct sockaddr_storage *addr) {
+char *alloc_port_str(const struct sockaddr *addr) {
         char *port_str = (char *)my_calloc(sizeof(char), PORT_WIDTH);
         if (!port_str) goto error_out;
 
         // Convert port to string
         int n;
-        if (addr->ss_family == AF_INET) {
+        if (addr->sa_family == AF_INET) {
                 const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
                 n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v4->sin_port));
-        } else if (addr->ss_family == AF_INET6) {
+        } else if (addr->sa_family == AF_INET6) {
                 const struct sockaddr_in6 *v6 =
                     (const struct sockaddr_in6 *)addr;
                 n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v6->sin6_port));
@@ -70,7 +72,7 @@ error2:
         LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
         goto cleanup_out;
 error1:
-        LOG(ERROR, "Unsupported ss_family: %d.", addr->ss_family);
+        LOG(ERROR, "Unsupported sa_family: %d.", addr->sa_family);
 cleanup_out:
         free(port_str);
 error_out:
@@ -80,13 +82,11 @@ error_out:
 
 char *alloc_addr_str(const struct sockaddr *addr) {
         static int n = 46;  // ADDR:PORT\0
-        const struct sockaddr_storage *addr_sto =
-            (const struct sockaddr_storage *)addr;
 
         char *addr_str, *host_str, *port_str;
         if (!(addr_str = (char *)my_calloc(sizeof(char), n))) goto error_out;
-        if (!(host_str = alloc_host_str(addr_sto))) goto error1;
-        if (!(port_str = alloc_port_str(addr_sto))) goto error2;
+        if (!(host_str = alloc_ip_str(addr))) goto error1;
+        if (!(port_str = alloc_port_str(addr))) goto error2;
 
         strncat(addr_str, host_str, n - 1);
         strncat(addr_str, ":", (n - 1) - strlen(addr_str));
@@ -104,6 +104,20 @@ error_out:
         return NULL;
 }
 
+bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
+                    char **serv) {
+        if (!(*name = my_malloc(sizeof(char) * NI_MAXHOST))) goto error_out;
+        if (!(*serv = my_malloc(sizeof(char) * NI_MAXSERV))) goto error_out;
+        int rc =
+            getnameinfo(addr, len, *name, NI_MAXHOST, *serv, NI_MAXSERV, 0);
+        if (rc) goto error;
+        return true;
+error:
+        LOG(ERROR, "getnameinfo() failed. %s.", gai_strerror(rc));
+error_out:
+        LOG_FUNC_FAIL;
+        return false;
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_concat_path(const char *path1, const char *path2) {
@@ -148,11 +162,11 @@ char *alloc_base_dirname_str(void) {
         static int timestamp_len = 10;
         int pid = getpid();
         int pid_len = get_int_len(pid);
-        int n = app_name_len + timestamp_len + pid_len + 3; // 3 '_','_','\0'
+        int n = app_name_len + timestamp_len + pid_len + 3;  // 3 '_','_','\0'
 
         char *str = (char *)my_calloc(sizeof(char), n);
         if (!str) goto error;
-        
+
         // Build string
         strncat(str, app_name, app_name_len);
         strncat(str, "_", 1);
@@ -191,7 +205,7 @@ char *alloc_json_path_str(TcpConnection *con) {
 
 char *alloc_cmdline_path(void) {
         static int path_length = 30;
-        char *path = (char *)my_malloc(sizeof(char)*path_length);
+        char *path = (char *)my_malloc(sizeof(char) * path_length);
         if (!path) goto error;
         if (snprintf(path, path_length, "/proc/%d/cmdline", getpid()) >=
             path_length)
@@ -233,16 +247,15 @@ error1:
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
-
 }
 
 char *alloc_kernel_str(void) {
         static int kernel_width = 30;
-        
+
         // Open fd to output of "uname -r"
-        FILE *fp  = popen("uname -r", "r");
+        FILE *fp = popen("uname -r", "r");
         if (!fp) goto error1;
-       
+
         // Read output into kernel_str
         char *kernel_str = (char *)my_calloc(sizeof(char), kernel_width);
         if (!kernel_str) goto error2;

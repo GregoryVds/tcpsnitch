@@ -42,9 +42,11 @@ static int connections_count = 0;
 static TcpConnection *alloc_connection(void);
 static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
 static void free_events_list(TcpEventNode *head);
+static void free_addr(TcpAddr *addr);
 static void free_event(TcpEvent *ev);
 static void push_event(TcpConnection *con, TcpEvent *ev);
 
+static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len);
 static void fill_send_flags(TcpSendFlags *s, int flags);
 static void fill_recv_flags(TcpRecvFlags *s, int flags);
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
@@ -180,9 +182,22 @@ static void free_events_list(TcpEventNode *head) {
         }
 }
 
+static void free_addr(TcpAddr *addr) {
+        free(addr->ip);
+        free(addr->port);
+        free(addr->name);
+        free(addr->serv);
+}
+
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
         switch (ev->type) {
+                case TCP_EV_BIND:
+                        free_addr(&((TcpEvBind *)ev)->addr);
+                        break;
+                case TCP_EV_CONNECT:
+                        free_addr(&((TcpEvConnect *)ev)->addr);
+                        break;
                 case TCP_EV_READV:
                         free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
                         break;
@@ -214,6 +229,13 @@ error:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
+        memcpy(&(a->addr_sto), addr, len);
+        a->ip = alloc_ip_str(addr);
+        a->port = alloc_port_str(addr);
+        alloc_name_str(addr, len, &a->name, &a->serv);
+}
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
         s->msg_confirm = (flags & MSG_CONFIRM);
@@ -362,9 +384,6 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         TcpConnection *con = ra_get_and_lock_elem(fd);
         if (!con) goto error_out;
 
-        const struct sockaddr_storage *addr_sto =
-            (const struct sockaddr_storage *)addr_to;
-
         // We force a bind if the socket is not bound. This allows us to know
         // the source port and use a more specific filter for the capture.
         // Before forcing the bind, we unlock the mutex in order to avoid
@@ -372,7 +391,7 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         TcpEvBind *bind_ev = con->bind_ev;  // Is already bound?
         if (!ra_unlock_elem(fd)) goto error1;
         if (bind_ev == NULL &&
-            force_bind(fd, con, addr_sto->ss_family == AF_INET6)) {
+            force_bind(fd, con, addr_to->sa_family == AF_INET6)) {
                 LOG(INFO, "force_bind() failed. Filter DEST IP/PORT only.");
         }
         if (!(con = ra_get_and_lock_elem(fd))) goto error1;
@@ -382,8 +401,13 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         if (!pcap_file_path) goto error1;
 
         // Build capture filter
-        char *filter = build_capture_filter(
-            ((con->bind_ev) ? &(con->bind_ev->addr) : NULL), addr_sto);
+        const struct sockaddr *addr_from =
+            (con->bind_ev)
+                ? (const struct sockaddr *)&con->bind_ev->addr.addr_sto
+                : NULL;
+
+        char *filter = build_capture_filter(addr_from, addr_to);
+
         if (!filter) goto error2;
 
         con->capture_switch = start_capture(filter, pcap_file_path);
@@ -432,7 +456,8 @@ void tcp_stop_capture(TcpConnection *con) {
                 int _r = fill_tcpinfo(fd, &_i);               \
                 int _e = errno;                               \
                 tcp_ev_tcp_info(fd, _r, _e, &_i);             \
-        }
+        }                                                     \
+        errno = err;
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
@@ -482,7 +507,7 @@ void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
         // Instantiate local vars TcpConnection *con & TcpEvBind *ev
         TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
 
-        memcpy(&(ev->addr), addr, len);
+        fill_addr(&(ev->addr), addr, len);
         con->bind_ev = ev;
         ev->force_bind = con->force_bind;
 
@@ -494,7 +519,7 @@ void tcp_ev_connect(int fd, int return_value, int err,
         // Instantiate local vars TcpConnection *con & TcpEvConnect *ev
         TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
 
-        memcpy(&(ev->addr), addr, len);
+        fill_addr(&(ev->addr), addr, len);
 
         TCP_EV_POSTLUDE(TCP_EV_CONNECT)
 }
