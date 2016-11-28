@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -o errexit
+set -o nounset
+# set -o xtrace
+
+VERSION=0.1.0
+VERSION_STR="tcpspy version ${VERSION}"
+
+# Option default values
+OPT_P="./libnetspy.so"
+OPT_B=4096
+OPT_D=""
+OPT_U=0
+OPT_V=2
+
+usage() {
+        echo "Usage: tcpspy [command] [-h] [ -b <bytes> ] [ -d <dir>]"
+        echo "              [ -u <ms> ] [ -v <lvl> ] [ --version ]"
+        echo ""
+        echo "[command]: command to spy on."
+        echo "-h: show this help text."
+        echo "-b <bytes>: dump tcp_info max once every <bytes> bytes (defaults"\
+             "to 4096)."
+        echo "-d <dir>: dir to save traces (defaults to random dir in /tmp)."
+        echo "-u <micro_seconds>: dump tcp_info max once every <ms> micro"\
+             "seconds (defaults to 0)."
+        echo "-v <lvl>: logs verbosity from 0 to 5 (defaults to 2)."  
+        echo "--version: print tcpspy version." 
+}
+
+is_integer() {
+        [[ "$1" =~ ^[0-9]+$ ]]
+}
+
+assert_int() {
+        if ! is_integer "$1"; then
+                echo "Invalid argument: $1. $2"
+                exit 1
+        fi
+}
+
+# Parse options
+while getopts ":hb:d:u:v:-:" opt; do
+        case $opt in
+                -) # Trick to parse long options with getopts.
+                        case "$OPTARG" in
+                                version)
+                                        echo ${VERSION_STR}
+                                        ;;
+                        esac
+                        ;;
+                h)
+                        usage
+                        exit 0
+                        ;;
+                b)
+                        assert_int "$OPTARG" "-b accepts a non-neg integer." 
+                        OPT_B=$OPTARG
+                        ;;
+                d)
+                        if [[ ! -d "$OPTARG" ]] ; then
+                                echo "Invalid argument: $OPTARG. -d accepts a"\
+                                      "valid directory."  
+                                exit 1
+                        fi
+                        OPT_D=$OPTARG
+                        ;;
+                u)
+                        assert_int "$OPTARG" "-u accepts a non-neg integer." 
+                        OPT_U=$OPTARG
+                        ;;
+                v)
+                        assert_int "$OPTARG" "-v accepts a non-neg integer." 
+                        OPT_D=$OPTARG
+                        ;;
+                
+                \?)     
+                        echo "Invalid option (see -h for usage)."
+                        usage
+                        exit 1
+                        ;;
+        esac
+done
+
+# Consume option args
+shift $((OPTIND - 1))
+
+# Verify number of arguments
+if [[ $# -lt 1 ]]; then
+        echo "Illegal number of arguments."
+        usage
+        exit 1
+fi
+
+# Create temp log directory if option -d not used
+if [[ -z "$OPT_D" ]]; then
+        OPT_D=$(mktemp -d)
+        chmod 555 "$OPT_D"
+fi
+
+# Save network config
+NET_CONFIG_PATH="$OPT_D/sysctl_net.txt"
+if [[ ! -e "$NET_CONFIG_PATH" ]]; then
+        sysctl net > "$NET_CONFIG_PATH"
+fi
+
+# Save os config
+OS_CONFIG_PATH="$OPT_D/uname.txt"
+if [[ ! -e "$OS_CONFIG_PATH" ]]; then
+        uname -a > "$OS_CONFIG_PATH"
+fi
+
+NETSPY_PATH="$OPT_D" NETSPY_BYTES_IVAL=$OPT_B NETSPY_MICROS_IVAL=$OPT_U \
+        LD_PRELOAD="$OPT_P" $@
+
+echo "tcpspy data saved in $OPT_D"
