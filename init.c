@@ -88,13 +88,6 @@ error_out:
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void log_metadata(const char *netspy_path) {
-        // TODO
-        if (netspy_path == NULL) return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 static char *create_logs_dir(const char *netspy_path) {
         char *base_path, *path;
         DIR *dir;
@@ -204,24 +197,24 @@ void reset_netspy(void) {
 void init_netspy(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
-        LOG(ALWAYS, "Initialization of Netspy library...");
-        const char *netspy_path;
-        char *log_file_path;
+
+        const char *netspy_path = get_netspy_path();
+        if (!netspy_path) goto exit1;
 
         atexit(cleanup);      // Register cleanup handler
         get_tcpinfo_ivals();  // Extract tcp_info intervals from ENV.
 
-        if (!(netspy_path = get_netspy_path())) goto exit1; // Get netspy_path.
-        log_metadata(netspy_path); // Log metadata about machine.
-
         // Configure logs
-        if (!(log_path = create_logs_dir(netspy_path))) goto exit1;
+        if (!(log_path = create_logs_dir(netspy_path))) goto exit2;
+        char *log_file_path;
         if (!(log_file_path = alloc_concat_path(log_path, get_app_name())))
                 goto exit1;        
         else
                 slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
         goto exit;
 exit1:
+        LOG(ERROR, "%s not set.", ENV_PATH);
+exit2:
         LOG(ERROR, "No logs to file.");
 exit:
         initialized = true;
