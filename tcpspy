@@ -15,8 +15,8 @@ OPT_U=0
 OPT_V=2
 
 usage() {
-        echo "Usage: tcpspy [command] [-h] [ -b <bytes> ] [ -d <dir>]"
-        echo "              [ -f <lvl> ] [ -u <ms> ] [ -v <lvl> ] [ --version ]"
+        echo "Usage: tcpspy [-h] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+        echo "              [ -u <ms> ] [ -v <lvl> ] [ --version ]"
         echo ""
         echo "[command]: command to spy on."
         echo "-h: show this help text."
@@ -120,6 +120,6 @@ TCPSPY_FILE_LOG_LVL="$OPT_F" \
 TCPSPY_STDERR_LOG_LVL="$OPT_V" \
 TCPSPY_BYTES_IVAL=$OPT_B \
 TCPSPY_MICROS_IVAL=$OPT_U \
-LD_PRELOAD="$OPT_P" $@
+LD_PRELOAD="$OPT_P" $@ >/dev/null
 
 >&2 echo "tcpspy data saved in $OPT_D"
