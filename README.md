@@ -12,11 +12,18 @@ Tcpsnitch is a program that helps investigate the interactions between an applic
 
 ## Intallation
 
-Dependencies:
+Install the required dependencies:
 - jansson library (https://jansson.readthedocs.io)
 - pcap library (http://www.tcpdump.org/)
 
+Then run `make install` & `sudo make install`.
+
 ## Usage
 
+To run tcpsnitch with curl and defaults options: `sudo tcpsnitch curl google.com`. 
+
+To see verbose output and choose the log directory: `sudo tcpsnitch -v 4 -d /path curl google.com`.
+
+See `tcpsnitch -h` for more information about the options.
 
 ## How it works?

@@ -4,10 +4,9 @@ set -o nounset
 # set -o xtrace
 
 VERSION=0.1.0
-VERSION_STR="tcpspy version ${VERSION}"
+VERSION_STR="tcpsnitch version ${VERSION}"
 
 # Option default values
-OPT_P="./libnetspy.so"
 OPT_B=4096
 OPT_D=""
 OPT_F=2
@@ -15,8 +14,8 @@ OPT_U=0
 OPT_V=2
 
 usage() {
-        echo "Usage: tcpspy [-h] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
-        echo "              [ -u <ms> ] [ -v <lvl> ] [ --version ]"
+        echo "Usage: tcpsnitch [-h] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+        echo "                 [ -u <ms> ] [ -v <lvl> ] [ --version ]"
         echo ""
         echo "[command]: command to spy on."
         echo "-h: show this help text."
@@ -27,7 +26,7 @@ usage() {
         echo "-u <micro_seconds>: dump tcp_info max once every <ms> micro"\
              "seconds (defaults to 0)."
         echo "-v <lvl>: logs to stderr verbosity (0 to 5, defaults to 2)."  
-        echo "--version: print tcpspy version." 
+        echo "--version: print tcpsnitch version." 
 }
 
 is_integer() {
@@ -103,6 +102,8 @@ if [[ -z "$OPT_D" ]]; then
         chmod 555 "$OPT_D"
 fi
 
+# TODO: MUST BE ROOT FOR THIS!
+
 # Save network config
 NET_CONFIG_PATH="$OPT_D/sysctl_net.txt"
 if [[ ! -e "$NET_CONFIG_PATH" ]]; then
@@ -120,6 +121,6 @@ TCPSPY_FILE_LOG_LVL="$OPT_F" \
 TCPSPY_STDERR_LOG_LVL="$OPT_V" \
 TCPSPY_BYTES_IVAL=$OPT_B \
 TCPSPY_MICROS_IVAL=$OPT_U \
-LD_PRELOAD="$OPT_P" $@ >/dev/null
+LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@
 
->&2 echo "tcpspy data saved in $OPT_D"
+>&2 echo "tcpsnitch data saved in $OPT_D"

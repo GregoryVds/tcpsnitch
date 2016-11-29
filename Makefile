@@ -9,43 +9,47 @@ MAJOR_VERSION=1
 MINOR_VERSION=0
 VERSION=$(MAJOR_VERSION).$(MINOR_VERSION)
 
-LINKER_NAME=libnetspy.so
+LINKER_NAME=libtcpsnitch.so
 SONAME=$(LINKER_NAME).$(MAJOR_VERSION)
 REAL_NAME=$(SONAME).$(MINOR_VERSION)
 
-ENV=NETSPY_PATH=/home/greg/host \
-    NETSPY_BYTES_IVAL=4096 \
-    NETSPY_MICROS_IVAL=0 \
-    LD_PRELOAD=./$(LINKER_NAME) 
-#    NETSPY_DEV=enp0s3 \
+EXECUTABLE=tcpsnitch
 
-ANGULAR=https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js 
+INSTALL_PATH=/usr/local
+LIB_PATH=$(INSTALL_PATH)/lib
+BIN_PATH=$(INSTALL_PATH)/bin
 
-default: netspy
+default: tcpsnitch
 
-netspy: $(HEADERS) $(SOURCES)
+tcpsnitch: $(HEADERS) $(SOURCES)
 	$(CC) -g -Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -fPIC \
 		-Wpointer-arith -Wcast-align -Wstrict-prototypes \
 		-Wwrite-strings -Waggregate-return -Wcast-qual \
 		-Wunreachable-code -shared -Wl,-Bsymbolic \
 		-Wl,-soname,$(SONAME) -o $(REAL_NAME) $(SOURCES) $(DEPS) 
-	ln -sf $(REAL_NAME) $(SONAME)
-	ln -sf $(REAL_NAME) $(LINKER_NAME)
+
+install:
+	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
+	@install -m 0755 $(EXECUTABLE) $(BIN_PATH) 
+	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
+	@install -m 0644 $(REAL_NAME) $(LIB_PATH)
+	@ln -fs $(LIB_PATH)/$(REAL_NAME) $(LIB_PATH)/$(SONAME) 
+	@ln -fs $(LIB_PATH)/$(SONAME) $(LIB_PATH)/$(LINKER_NAME)
+
+uninstall:
+	@rm $(BIN_PATH)/$(EXECUTABLE)
+	@rm $(LIB_PATH)/$(LINKER_NAME)
+	@rm $(LIB_PATH)/$(SONAME)
+	@rm $(LIB_PATH)/$(REAL_NAME)
 
 clean:
 	rm -f *.o .*.s* *.so* tests/.*.s*
 
-curl: netspy
-	./tcpspy -v 4 -f 4 curl google.com
-
-angular: netspy
-	./tcpspy -v 4 -f 4 curl -s $(ANGULAR) >/dev/null
-
-firefox: netspy
-	./tcpspy -v 4 -f 2 firefox
-
-tests: netspy
+tests: tcpsnitch
 	cd tests && rake
 
 index: 
 	ctags -R .
+
+.PHONY: tcpsnitch tests clean index
+
