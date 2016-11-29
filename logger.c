@@ -114,8 +114,8 @@ void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
 
 void logger(LogLevel log_lvl, const char *formated_str, const char *file,
             int line) {
-        if (log_file && log_lvl >= file_lvl)
+        if (log_file && log_lvl <= file_lvl)
                 log_to_stream(log_lvl, formated_str, file, line, log_file);
-        if (log_lvl >= stderr_lvl)
+        if (log_lvl <= stderr_lvl)
                 log_to_stream(log_lvl, formated_str, file, line, stderr);
 }

@@ -13,79 +13,40 @@
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
-char *log_path = NULL;
+char *tcpspy_dir = NULL;
 long tcp_info_bytes_ival = 0;
-long tcp_info_time_ival = 0;
-
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
- |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
-  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
-  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
- |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
+long tcp_info_micros_ival = 0;
 
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-///////////////////////////////////////////////////////////////////////////////
+static const char *get_tcpspy_dir(void);
+static char *create_logs_dir(const char *netspy_path);
+static void netspy_free(void);
+static void cleanup(void);
+ 
+/* Private functions */
 
-static long get_tcpinfo_ival(const char *env_var) {
-        long val = get_env_as_long(env_var);
-        if (val < 0) {
-                LOG(WARN, "Interval %s assumed to be 0.", env_var);
-        } else
-                LOG(INFO, "Interval %s set to %lu.", env_var, val);
-        return (val < 0) ? 0 : val;
-}
-
-static void get_tcpinfo_ivals(void) {
-        tcp_info_bytes_ival = get_tcpinfo_ival(ENV_BYTES_IVAL);
-        tcp_info_time_ival = get_tcpinfo_ival(ENV_MICROS_IVAL);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-static const char *get_netspy_path(void) {
-        // Try to get ENV_PATH.
+static const char *get_tcpspy_dir(void) {
         DIR *dir;
-        const char *path = getenv(ENV_PATH);
+        const char *path = getenv(ENV_DIR);
         if (path) {
-                // If ENV_PATH is set, we verify than we can open it.
-                // Otherwise we report an error.
-                LOG(INFO, "Netspy path set with %s=%s.", ENV_PATH, path);
                 if ((dir = opendir(path)))
                         closedir(dir);
                 else
-                        goto error2;
-        } else {
-                // If ENV_PATH is not set, we default to DEFAULT_PATH.
-                // If we cannot open it, we try to create it.
-                path = NETSPY_DEFAULT_PATH;
-                LOG(WARN, "%s not set. Defaults to %s.", ENV_PATH, path);
-                if ((dir = opendir(path)))
-                        closedir(dir);       // Ok.
-                else if (errno == ENOENT) {  // Does not exists.
-                        LOG(INFO, "%s does not exists. Creating it.", path);
-                        if (mkdir(path, 0777)) goto error1;
-                } else
-                        goto error2;
-        }
+                        goto error1;
+        } else
+                goto error2;
         return path;
-error2:
+error1:
         LOG(ERROR, "opendir() failed on %s. %s.", path, strerror(errno));
         goto error_out;
-error1:
-        LOG(ERROR, "mkdir failed. %s.", strerror(errno));
+error2:
+        LOG(ERROR, "%s not set.", ENV_DIR);
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 static char *create_logs_dir(const char *netspy_path) {
         char *base_path, *path;
@@ -99,8 +60,6 @@ static char *create_logs_dir(const char *netspy_path) {
         while (true) {
                 if ((dir = opendir(path))) {  // Already exists.
                         i++;
-                        LOG(INFO, "Cannot create %s (already exists).", path);
-                        LOG(INFO, "Appending next integer (%d).", i);
                         path = alloc_append_int_to_path(base_path, i);
                 } else if (!dir && errno == ENOENT)
                         break;  // Free.
@@ -111,7 +70,6 @@ static char *create_logs_dir(const char *netspy_path) {
 
         // Finally, create dir at path.
         if (mkdir(path, 0777)) goto error3;
-        LOG(INFO, "Logs directory created at %s.", path);
         return path;
 error3:
         LOG(ERROR, "mkdir() failed for %s. %s.", path, strerror(errno));
@@ -127,43 +85,23 @@ error_out:
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-void netspy_free(void) {
-        free(log_path);
+static void netspy_free(void) {
+        free(tcpspy_dir);
         mutex_destroy(&init_mutex);
-}
-
-void netspy_reset(void) {
-        log_path = NULL;
-        tcp_info_time_ival = 0;
-        tcp_info_time_ival = 0;
-        initialized = false;
-        mutex_init(&init_mutex);
 }
 
 static void cleanup(void) {
         LOG(INFO, "Performing library cleanup before end of process.");
         tcp_close_unclosed_connections();
-        // free(log_file_path);
         // tcp_free();
         // netspy_free();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ____  _   _ ____  _     ___ ____      _    ____ ___
- |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
- | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
- |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
- |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
+/* Public functions */
 
 /*  This function is used to reset the library after a fork() call. If a fork()
  *  is not followed by exec(), the global variables are not reinitialized.
- *  This means that 2 processes with differents PID would use the same log_path,
+ *  This means that 2 processes with differents PID would use the same tcpspy_dir,
  *  but more importantly, the child would inherit all the states from the
  *  fd_con_map of its parents. This leads to many issues:
  *     - The 2 processes will mix their logs in the same file.
@@ -186,41 +124,64 @@ static void cleanup(void) {
 
 void reset_netspy(void) {
         if (!initialized) return;  // Nothing to do.
-        logger_init(NULL, 0, 0); 
+
         netspy_free();
-        netspy_reset();
+        logger_init(NULL, 0, 0);
+        tcpspy_dir = NULL;
+        tcp_info_bytes_ival = 0;
+        tcp_info_micros_ival = 0;
+        initialized = false;
+        mutex_init(&init_mutex);
+
         tcp_free();
         tcp_reset();
+}
+
+static bool config_init_logger(const char *netspy_path) {
+        const char *init_logs_path =
+            alloc_concat_path(netspy_path, TCPSPY_INIT_LOGS_FILE);
+        if (init_logs_path)
+                logger_init(init_logs_path, DEBUG, DEBUG);
+        else
+                goto error;
+        return true;
+error:
+        LOG_FUNC_FAIL;
+        return false;
 }
 
 void init_netspy(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
-        LOG(INFO, "Initializing library for PID %d.", getpid());
-
-        const char *netspy_path = get_netspy_path();
+        const char *netspy_path = get_tcpspy_dir();
         if (!netspy_path) goto exit1;
+        
+        config_init_logger(netspy_path);
+        /* At this point we have initialization logs to file */
 
-        const char *init_logs = alloc_concat_path(netspy_path, "init");
-        if (init_logs) logger_init(init_logs, DEBUG, DEBUG);
+        atexit(cleanup);
 
-        atexit(cleanup);      // Register cleanup handler
-        get_tcpinfo_ivals();  // Extract tcp_info intervals from ENV.
+        /* Fetch other ENV variables */
+        static long file_log_lvl, stderr_log_lvl;
+        tcp_info_bytes_ival = get_long_env_or_defaultval(ENV_BYTES_IVAL, 4096);
+        tcp_info_micros_ival = get_long_env_or_defaultval(ENV_MICROS_IVAL, 0);
+        file_log_lvl = get_long_env_or_defaultval(ENV_FILE_LOG_LVL, WARN);
+        stderr_log_lvl = get_long_env_or_defaultval(ENV_STDERR_LOG_LVL, WARN);
 
-        // TODO: ERROR HANDLING
-//        int log_lvl = atoi(getenv(ENV_LOGLVL));
-// /
-        // Configure logs
-        if (!(log_path = create_logs_dir(netspy_path))) goto exit2;
-        char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(log_path, get_app_name())))
-                goto exit1;        
+        /* Create dir containing log, pcap and json files for this process */
+        if (!(tcpspy_dir = create_logs_dir(netspy_path))) goto exit1;
+
+        const char *log_file_path;
+        if (!(log_file_path = alloc_concat_path(tcpspy_dir, get_app_name())))
+                goto exit2;
         else
-                logger_init(log_file_path, log_lvl, log_lvl);
+                logger_init(log_file_path, stderr_log_lvl, file_log_lvl);
+
         goto exit;
 exit1:
-        LOG(ERROR, "%s not set.", ENV_PATH);
+        LOG(ERROR, "Nothing will be written to file (log, pcap, json).");
+        goto exit;
 exit2:
         LOG(ERROR, "No logs to file.");
 exit:
@@ -228,4 +189,3 @@ exit:
         mutex_unlock(&init_mutex);
         return;
 }
-

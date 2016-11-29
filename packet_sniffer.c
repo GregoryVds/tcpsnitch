@@ -1,5 +1,6 @@
 #include "packet_sniffer.h"
 #include <pcap.h>
+#include "logger.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,11 +29,11 @@ static void *delayed_stop_thread(void *params);
 ///////////////////////////////////////////////////////////////////////////////
 
 static pcap_t *get_capture_handle(void) {
-        char *dev = getenv(ENV_DEV);
-        if (!dev) LOG(WARN, "%s not set. Capture all interfaces.", ENV_DEV);
-
+//        char *dev = getenv(ENV_DEV);
+//        if (!dev) LOG(WARN, "%s not set. Capture all interfaces.", ENV_DEV);
         char err_buf[PCAP_ERRBUF_SIZE];
-        pcap_t *handle = pcap_open_live(dev, BUFSIZ, 0, 0, err_buf);
+        err_buf[0] = 0;
+        pcap_t *handle = pcap_open_live(NULL, BUFSIZ, 0, 0, err_buf);
         if (err_buf[0] != 0) LOG(WARN, "pcap_open_live() warn. %s.", err_buf);
         if (!handle) goto error;
 

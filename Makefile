@@ -36,13 +36,13 @@ clean:
 	rm -f *.o .*.s* *.so* tests/.*.s*
 
 curl: netspy
-	$(ENV) /usr/bin/curl -s google.com
+	./tcpspy -v 4 -f 4 curl google.com
 
 angular: netspy
-	$(ENV) curl -s $(ANGULAR)
+	./tcpspy -v 4 -f 4 curl -s $(ANGULAR) >/dev/null
 
 firefox: netspy
-	$(ENV) firefox
+	./tcpspy -v 4 -f 2 firefox
 
 tests: netspy
 	cd tests && rake

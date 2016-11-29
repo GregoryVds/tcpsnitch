@@ -16,8 +16,6 @@
 #include "logger.h"
 #include "string_helpers.h"
 
-///////////////////////////////////////////////////////////////////////////////
-
 bool is_fd(int fd) { return fcntl(fd, F_GETFD) != -1 || errno != EBADF; }
 
 bool is_socket(int fd) {
@@ -58,8 +56,6 @@ error:
         return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 int append_string_to_file(const char *str, const char *path) {
         FILE *fp = fopen(path, "a");
         if (!fp) goto error1;
@@ -80,8 +76,6 @@ error_out:
         return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 int fill_timeval(struct timeval *timeval) {
         if (gettimeofday(timeval, NULL)) goto error;
         return 0;
@@ -100,8 +94,6 @@ error:
         LOG_FUNC_FAIL;
         return -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 time_t get_time_sec() {
         struct timeval tv;
@@ -123,8 +115,6 @@ error:
         return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 long get_env_as_long(const char *env_var) {
         char *var_str_end, *var_str = getenv(env_var);
         if (var_str == NULL) goto error1;
@@ -143,6 +133,13 @@ error3:
 error_out:
         LOG_FUNC_FAIL;
         return -1;
+}
+
+long get_long_env_or_defaultval(const char *env_var, long def_val) {
+        long val = get_env_as_long(env_var);
+        if (val < 0)
+                LOG(WARN, "%s incorrect. Defaults to %lu.", env_var, def_val);
+        return val;
 }
 
 const char *get_app_name(void) {
@@ -164,8 +161,6 @@ error:
         LOG(ERROR, "Negative numbers not supported.");
         return 0;
 }
-
-////////////////////////////////////////////////////////////////////////////////
 
 bool mutex_lock(pthread_mutex_t *mutex) {
         int rc = pthread_mutex_lock(mutex);
@@ -212,8 +207,6 @@ error:
         return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
 void *my_malloc(size_t size) {
         void *ret = malloc(size);
         if (!ret) goto error;
@@ -233,8 +226,6 @@ error:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
-////////////////////////////////////////////////////////////////////////////////
 
 char *create_numbered_dir_in_path(char *path, int dir_number) {
         char *dirname, *dir_path;

@@ -76,7 +76,7 @@ static TcpConnection *alloc_connection(void) {
         mutex_unlock(&connections_count_mutex);
 
         // Has to be done AFTER getting the con->id
-        con->directory = create_numbered_dir_in_path(log_path, con->id);
+        con->directory = create_numbered_dir_in_path(tcpspy_dir, con->id);
         return con;
 error:
         LOG_FUNC_FAIL;
@@ -343,10 +343,10 @@ error_out:
 
 static bool should_dump_tcp_info(const TcpConnection *con) {
         /* Check if time lower bound is set, otherwise assume no lower bound */
-        if (tcp_info_time_ival > 0) {
+        if (tcp_info_micros_ival > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
-                if (time_elasped < tcp_info_time_ival) return false;
+                if (time_elasped < tcp_info_micros_ival) return false;
         }
 
         /* Check if bytes lower bound set, otherwise assume no lower bound */
