@@ -71,7 +71,7 @@ while getopts ":hb:d:u:v:-:" opt; do
                         ;;
                 v)
                         assert_int "$OPTARG" "-v accepts a non-neg integer." 
-                        OPT_D=$OPTARG
+                        OPT_V=$OPTARG
                         ;;
                 
                 \?)     
@@ -101,7 +101,7 @@ fi
 # Save network config
 NET_CONFIG_PATH="$OPT_D/sysctl_net.txt"
 if [[ ! -e "$NET_CONFIG_PATH" ]]; then
-        sysctl net > "$NET_CONFIG_PATH"
+        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
 fi
 
 # Save os config
@@ -111,6 +111,6 @@ if [[ ! -e "$OS_CONFIG_PATH" ]]; then
 fi
 
 NETSPY_PATH="$OPT_D" NETSPY_BYTES_IVAL=$OPT_B NETSPY_MICROS_IVAL=$OPT_U \
-        LD_PRELOAD="$OPT_P" $@
+        NETSPY_LOGLVL="$OPT_V" LD_PRELOAD="$OPT_P" $@
 
 echo "tcpspy data saved in $OPT_D"

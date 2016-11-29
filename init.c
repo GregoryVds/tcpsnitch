@@ -3,7 +3,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
-#include <slog.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -37,9 +36,9 @@ static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 static long get_tcpinfo_ival(const char *env_var) {
         long val = get_env_as_long(env_var);
         if (val < 0) {
-                LOG(ALWAYS, "Interval %s assumed to be 0.", env_var);
+                LOG(WARN, "Interval %s assumed to be 0.", env_var);
         } else
-                LOG(ALWAYS, "Interval %s set to %lu.", env_var, val);
+                LOG(INFO, "Interval %s set to %lu.", env_var, val);
         return (val < 0) ? 0 : val;
 }
 
@@ -100,8 +99,8 @@ static char *create_logs_dir(const char *netspy_path) {
         while (true) {
                 if ((dir = opendir(path))) {  // Already exists.
                         i++;
-                        LOG(ALWAYS, "Cannot create %s (already exists).", path);
-                        LOG(ALWAYS, "Appending next integer (%d).", i);
+                        LOG(INFO, "Cannot create %s (already exists).", path);
+                        LOG(INFO, "Appending next integer (%d).", i);
                         path = alloc_append_int_to_path(base_path, i);
                 } else if (!dir && errno == ENOENT)
                         break;  // Free.
@@ -112,14 +111,14 @@ static char *create_logs_dir(const char *netspy_path) {
 
         // Finally, create dir at path.
         if (mkdir(path, 0777)) goto error3;
-        LOG(ALWAYS, "Logs directory created at %s.", path);
+        LOG(INFO, "Logs directory created at %s.", path);
         return path;
 error3:
-        LOG(ALWAYS, "mkdir() failed for %s. %s.", path, strerror(errno));
+        LOG(ERROR, "mkdir() failed for %s. %s.", path, strerror(errno));
         free(path);
         goto error_out;
 error2:
-        LOG(ALWAYS, "opendir() failed. %s.", strerror(errno));
+        LOG(ERROR, "opendir() failed. %s.", strerror(errno));
         free(path);
 error1:
         free(base_path);
@@ -187,7 +186,7 @@ static void cleanup(void) {
 
 void reset_netspy(void) {
         if (!initialized) return;  // Nothing to do.
-        slog_init(NULL, NULL, 0, 0, 0);
+        logger_init(NULL, 0, 0); 
         netspy_free();
         netspy_reset();
         tcp_free();
@@ -198,19 +197,27 @@ void init_netspy(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
+        LOG(INFO, "Initializing library for PID %d.", getpid());
+
         const char *netspy_path = get_netspy_path();
         if (!netspy_path) goto exit1;
+
+        const char *init_logs = alloc_concat_path(netspy_path, "init");
+        if (init_logs) logger_init(init_logs, DEBUG, DEBUG);
 
         atexit(cleanup);      // Register cleanup handler
         get_tcpinfo_ivals();  // Extract tcp_info intervals from ENV.
 
+        // TODO: ERROR HANDLING
+//        int log_lvl = atoi(getenv(ENV_LOGLVL));
+// /
         // Configure logs
         if (!(log_path = create_logs_dir(netspy_path))) goto exit2;
         char *log_file_path;
         if (!(log_file_path = alloc_concat_path(log_path, get_app_name())))
                 goto exit1;        
         else
-                slog_init(log_file_path, "/etc/netspy_log.cfg", 1, 1, 1);
+                logger_init(log_file_path, log_lvl, log_lvl);
         goto exit;
 exit1:
         LOG(ERROR, "%s not set.", ENV_PATH);
