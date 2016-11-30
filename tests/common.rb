@@ -86,6 +86,14 @@ def run_pkt_script(script, env='')
   rc
 end
 
+
+def write_and_compile_c_script(script, name)
+  file = File.open("c_programs/#{name}.c", "w")
+  file.puts(script)
+  file.close
+#  stderr = `gcc -Wall -Wextra #{file.path} >/dev/null` 
+end
+
 def run_curl
   run_exec("curl -s google.com", "NETSPY_DEV=enp0s3")
 #  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
