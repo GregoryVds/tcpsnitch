@@ -26,305 +26,55 @@ def assert_event_present(type, success=true)
 end
 
 describe "libc overrides" do
-=begin
-  ____   ___   ____ _  _______ _____      _    ____ ___
- / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
- \___ \| | | | |   | ' /|  _|   | |     / _ \ | |_) | |
-  ___) | |_| | |___| . \| |___  | |    / ___ \|  __/| |
- |____/ \___/ \____|_|\_\_____| |_|   /_/   \_\_|  |___|
 
- sys/socket.h - Internet Protocol family
+  SOCKET_SYSCALLS.each do |syscall|
+    describe "when calling #{syscall}()" do
+      stream  = "#{syscall}_stream.out"
+      dgram   = "#{syscall}_dgram.out"
+      failing = "#{syscall}_fail.out"
 
- functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(), 
- send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
+      it "#{stream} should not crash" do
+        assert run_c_program(stream)
+      end
 
-=end
+      it "#{stream} should log no ERROR" do
+        run_c_program(stream)
+        assert no_error_log
+      end
 
-  describe "when calling #{TCP_EV_SOCKET}" do
-    socket_stream = "socket_stream.out"
-    socket_dgram = "socket_dgram.out"
-    socket_fail = "socket_fail.out"
+      it "should be in JSON with #{stream}" do
+        run_c_program(stream)
+        assert_event_present("#{syscall}()")
+      end
 
-    it "#{socket_stream} should not crash" do
-      assert run_c_program(socket_stream)
-    end
-    
-    it "#{socket_stream} should give no ERROR log" do
-      run_c_program(socket_stream)
-      assert no_error_log
-    end
+      # LISTEN: Cannot listen() on DGRAM socket
+      unless [TCP_EV_LISTEN].include?(syscall)
+        it "#{dgram} should not crash" do
+          assert run_c_program(dgram)
+        end
+      end
 
-    it "#{TCP_EV_SOCKET} should be tracked with #{socket_stream}" do
-      run_c_program(socket_stream)
-      assert_event_present(TCP_EV_SOCKET)
-    end
+      it "#{failing} should not crash" do
+        assert run_c_program(failing)
+      end
 
-    it "#{socket_dgram} should not crash" do
-      assert run_c_program(socket_dgram)
-    end
+      # SOCKET: No log file if no TCP connection
+      unless [TCP_EV_SOCKET].include?(syscall)
+        it "#{failing} should log no ERROR" do
+          run_c_program(failing)
+          assert no_error_log
+        end
+      end
 
-    it "#{socket_fail} should not crash" do
-      assert run_c_program(socket_fail)
-    end
-  end
-
-  describe "when calling #{TCP_EV_BIND}" do
-    bind_stream = "bind_stream.out"
-    bind_dgram = "bind_dgram.out"
-    bind_fail = "bind_fail.out"
-  
-    it "#{bind_stream} should not crash" do
-      assert run_c_program(bind_stream)
-    end
-    
-    it "#{bind_stream} should give no ERROR log" do
-      run_c_program(bind_stream)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_BIND} should be tracked with #{bind_stream}" do
-      run_c_program(bind_stream)
-      assert_event_present(TCP_EV_BIND)
-    end
-
-    it "#{bind_dgram} should not crash" do
-      assert run_c_program(bind_dgram)
-    end
-
-    it "#{bind_fail} should not crash" do
-      assert run_c_program(bind_fail)
-    end
-
-    it "#{bind_fail} should give no ERROR log" do
-      run_c_program(bind_fail)
-      assert no_error_log
-    end
-  end
-
-  describe "when calling #{TCP_EV_CONNECT}" do
-    connect_stream = "connect_stream.out"
-    connect_dgram = "connect_dgram.out"
-    connect_fail = "connect_fail.out"
-  
-    it "#{connect_stream} should not crash" do
-      assert run_c_program(connect_stream)
-    end
-    
-    it "#{connect_stream} should give no ERROR log" do
-      run_c_program(connect_stream)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_CONNECT} should be tracked with #{connect_stream}" do
-      run_c_program(connect_stream)
-      assert_event_present(TCP_EV_CONNECT)
-    end
-
-    it "#{connect_dgram} should not crash" do
-      assert run_c_program(connect_dgram)
-    end
-
-    it "#{connect_fail} should not crash" do
-      assert run_c_program(connect_fail)
-    end
-
-    it "#{connect_fail} should give no ERROR log" do
-      run_c_program(connect_fail)
-      assert no_error_log
-    end
-  end
-=begin
-  describe "when calling #{TCP_EV_SHUTDOWN}" do
-    it "#{TCP_EV_SHUTDOWN} should not crash" do
-      assert run_c_program(PKT_SHUTDOWN_STREAM)
-    end
-    
-    it "#{TCP_EV_SHUTDOWN} should give no ERROR log" do
-      run_c_program(PKT_SHUTDOWN_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SHUTDOWN} should be tracked" do
-      run_c_program(PKT_SHUTDOWN_STREAM)
-      assert_event_present(TCP_EV_SHUTDOWN)
-    end
-
-    it "#{TCP_EV_SHUTDOWN} should not crash" do
-      assert run_c_program(PKT_SHUTDOWN_DGRAM)
-    end
-
-    it "#{TCP_EV_SHUTDOWN} should give no ERROR log" do
-      run_c_program(PKT_SHUTDOWN_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SHUTDOWN} should not crash" do
-      skip
-    end
-  end
-  
-  describe "when calling #{TCP_EV_LISTEN}" do
-    it "#{TCP_EV_LISTEN} should not crash" do
-      assert run_c_program(PKT_LISTEN_STREAM)
-    end
-    
-    it "#{TCP_EV_LISTEN} should give no ERROR log" do
-      run_c_program(PKT_LISTEN_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_LISTEN} should be tracked" do
-      run_c_program(PKT_LISTEN_STREAM)
-      assert_event_present(TCP_EV_LISTEN)
-    end
-
-    it "#{TCP_EV_LISTEN} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_SETSOCKOPT}" do
-    it "#{TCP_EV_SETSOCKOPT} should not crash" do
-      assert run_c_program(PKT_SETSOCKOPT_STREAM)
-    end
-    
-    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log" do
-      run_c_program(PKT_SETSOCKOPT_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SETSOCKOPT} should be tracked" do
-      run_c_program(PKT_SETSOCKOPT_STREAM)
-      assert_event_present(TCP_EV_SETSOCKOPT)
-    end
-
-    it "#{TCP_EV_SETSOCKOPT} should not crash" do
-      assert run_c_program(PKT_SETSOCKOPT_DGRAM)
-    end
-
-    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log" do
-      run_c_program(PKT_SETSOCKOPT_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SETSOCKOPT} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_SEND}" do
-    it "#{TCP_EV_SEND} should not crash" do
-      assert run_c_program(PKT_SEND_STREAM)
-    end
-    
-    it "#{TCP_EV_SEND} should give no ERROR log" do
-      run_c_program(PKT_SEND_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SEND} should be tracked" do
-      run_c_program(PKT_SEND_STREAM)
-      assert_event_present(TCP_EV_SEND)
-    end
-
-    it "#{TCP_EV_SEND} should not crash" do
-      assert run_c_program(PKT_SEND_DGRAM)
-    end
-
-    it "#{TCP_EV_SEND} should give no ERROR log" do
-      run_c_program(PKT_SEND_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SEND} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_RECV}" do
-    it "#{TCP_EV_RECV} should not crash" do
-      assert run_c_program(PKT_RECV_STREAM)
-    end
-    
-    it "#{TCP_EV_RECV} should give no ERROR log" do
-      run_c_program(PKT_RECV_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_RECV} should be tracked" do
-      run_c_program(PKT_RECV_STREAM)
-      assert_event_present(TCP_EV_RECV)
-    end
-
-    it "#{TCP_EV_RECV} should not crash" do
-      assert run_c_program(PKT_RECV_DGRAM)
-    end
-
-    it "#{TCP_EV_RECV} should give no ERROR log" do
-      run_c_program(PKT_RECV_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_RECV} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_SENDTO}" do
-    it "#{TCP_EV_SENDTO} should not crash" do
-      assert run_c_program(PKT_SENDTO_STREAM)
-    end
-    
-    it "#{TCP_EV_SENDTO} should give no ERROR log" do
-      run_c_program(PKT_SENDTO_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SENDTO} should be tracked" do
-      run_c_program(PKT_SENDTO_STREAM)
-      assert_event_present(TCP_EV_SENDTO)
-    end
-
-    it "#{TCP_EV_SENDTO} should not crash" do
-      assert run_c_program(PKT_SENDTO_DGRAM)
-    end
-
-    it "#{TCP_EV_SENDTO} should give no ERROR log" do
-      run_c_program(PKT_SENDTO_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SENDTO} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_RECVFROM}" do
-    it "#{TCP_EV_RECVFROM} should not crash" do
-      assert run_c_program(PKT_RECVFROM_STREAM)
-    end
-    
-    it "#{TCP_EV_RECVFROM} should give no ERROR log" do
-      run_c_program(PKT_RECVFROM_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_RECVFROM} should be tracked" do
-      run_c_program(PKT_RECVFROM_STREAM)
-      assert_event_present(TCP_EV_RECVFROM)
-    end
-
-    it "#{TCP_EV_RECVFROM} should not crash" do
-      assert run_c_program(PKT_RECVFROM_DGRAM)
-    end
-
-    it "#{TCP_EV_RECVFROM} should give no ERROR log" do
-      run_c_program(PKT_RECVFROM_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_RECVFROM} should not crash" do
-      skip
+      # SOCKET: No JSON if no TCP connection.
+      # LISTEN: How to fail listen() on valid TCP socket? 
+      # CLOSE: How to fail close() on valid TCP socket?
+      unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE].include?(syscall)
+        it "should be in JSON with #{failing}" do
+          run_c_program(failing)
+          assert_event_present("#{syscall}()", false)
+        end
+      end
     end
   end
 

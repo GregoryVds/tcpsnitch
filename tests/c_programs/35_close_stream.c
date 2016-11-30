@@ -15,13 +15,11 @@
 
 int main(void) {
   int sock;
-  if (!((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) >-1))
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
 
-
-  if (!(close(sock) >0))
+  if (close(sock) < 0)
     return(EXIT_FAILURE);
-
           
   return(EXIT_SUCCESS);
 }

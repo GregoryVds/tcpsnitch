@@ -15,16 +15,12 @@
 
 int main(void) {
   int sock;
-  if (!((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) >-1))
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     return(EXIT_FAILURE);
-
 
   int optval = 1;
-  if (!(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, 
-                   sizeof(optval)) ==0)) {
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
     return(EXIT_FAILURE);
-  }
-
           
   return(EXIT_SUCCESS);
 }

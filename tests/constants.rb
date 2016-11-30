@@ -30,18 +30,33 @@ ENV_MICROS_IVAL="TCPSPY_MICROS_IVAL"
 # EVENTS
 
 # sys/socket.h
-TCP_EV_SOCKET="socket()"
-TCP_EV_BIND="bind()"
-TCP_EV_CONNECT="connect()"
-TCP_EV_SHUTDOWN="shutdown()"
-TCP_EV_LISTEN="listen()"
-TCP_EV_SETSOCKOPT="setsockopt()"
-TCP_EV_SEND="send()"
-TCP_EV_RECV="recv()"
-TCP_EV_SENDTO="sendto()"
-TCP_EV_RECVFROM="recvfrom()"
-TCP_EV_SENDMSG="sendmsg()"
-TCP_EV_RECVMSG="recvmsg()"
+TCP_EV_SOCKET="socket"
+TCP_EV_BIND="bind"
+TCP_EV_CONNECT="connect"
+TCP_EV_SHUTDOWN="shutdown"
+TCP_EV_LISTEN="listen"
+TCP_EV_SETSOCKOPT="setsockopt"
+TCP_EV_SEND="send"
+TCP_EV_RECV="recv"
+TCP_EV_SENDTO="sendto"
+TCP_EV_RECVFROM="recvfrom"
+TCP_EV_SENDMSG="sendmsg"
+TCP_EV_RECVMSG="recvmsg"
+
+SOCKET_SYSCALLS = [
+  #TCP_EV_SOCKET,
+  TCP_EV_BIND,
+  TCP_EV_CONNECT,
+  TCP_EV_SHUTDOWN,
+  TCP_EV_LISTEN,
+  TCP_EV_SETSOCKOPT,
+  TCP_EV_SEND,
+  TCP_EV_RECV,
+  TCP_EV_SENDTO,
+  TCP_EV_RECVFROM
+#  TCP_EV_SENDMSG,
+#  TCP_EV_RECVMSG
+]
 
 # unistd.h
 TCP_EV_CLOSE="close()"
