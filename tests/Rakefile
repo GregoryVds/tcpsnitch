@@ -10,10 +10,12 @@ Rake::TestTask.new do |t|
 end
 
 task :write_cprogs do
+  system("rm -rf ./c_programs/*.c")
   require('./write_cprogs.rb')
 end
 
 task :compile_cprogs do
+  system("rm -rf ./c_programs/*.out")
   Dir.glob('./c_programs/*.c') do |c_file|
     system("gcc -Wall -Wextra #{c_file} -o #{c_file.chomp(".c")}.out")
   end

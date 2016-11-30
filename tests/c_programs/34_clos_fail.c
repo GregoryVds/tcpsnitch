@@ -18,6 +18,10 @@ int main(void) {
   if (!((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >-1))
     return(EXIT_FAILURE);
 
+
+  if (!(close(42) ==-1))
+    return(EXIT_FAILURE);
+
           
   return(EXIT_SUCCESS);
 }

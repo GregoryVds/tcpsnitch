@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/unistd.h>
+#include <sys/fcntl.h>
+#include <string.h>
 
 int main(void) {
   int sock;

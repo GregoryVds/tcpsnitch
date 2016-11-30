@@ -9,23 +9,21 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/unistd.h>
+#include <sys/fcntl.h>
+#include <string.h>
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-    return(EXIT_FAILURE);
-
-  struct sockaddr_in addr;
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(8000);
-  inet_aton("127.0.0.1", &addr.sin_addr);
-
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)))
+  if (!((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >-1))
     return(EXIT_FAILURE);
 
 
-  if (shutdown(sock, SHUT_WR))
+  int optval = 1;
+  if (!(setsockopt(42, SOL_SOCKET, SO_REUSEADDR, &optval, 
+                   sizeof(optval)) ==-1)) {
     return(EXIT_FAILURE);
+  }
 
           
   return(EXIT_SUCCESS);
