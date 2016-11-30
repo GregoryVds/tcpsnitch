@@ -5,6 +5,8 @@
 #include <poll.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
 
 int main(void) {
   int sock;

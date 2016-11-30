@@ -1,4 +1,4 @@
 Gemfile.lock
 udp.pkt
 tcp.pkt
-c_progs
+c_programs/*.out

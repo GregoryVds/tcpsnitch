@@ -9,30 +9,23 @@ Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 describe "Init" do
 		
-  let(:script) { "0 socket(..., SOCK_DGRAM, 0) = 3" }
+  let(:script) { "./c_programs/00_socket_stream.out" } 
   let(:dir) { "/tmp/dummy" }
+
+  def run_lib(env='')
+    system("#{env} #{LD_PRELOAD} #{script}") 
+  end
 
   describe "when no ENV variable is set" do
     it "should simply not crash" do
-      assert run_pkt_script(script)
-    end
-
-    it "should create #{DEFAULT_PATH} if does not exits" do
-      rmdir(DEFAULT_PATH)
-      run_pkt_script(script)
-      assert dir_exists?(DEFAULT_PATH) 
-    end
-    
-    it "should not crash when #{DEFAULT_PATH} already exists" do
-      mkdir(DEFAULT_PATH)
-      assert run_pkt_script(script)
+      assert run_lib
     end
   end
 
   describe "when #{ENV_PATH} is set" do
     it "should not crash when #{ENV_PATH} exists" do
       mkdir(dir)
-      assert run_pkt_script(script, "#{ENV_PATH}=#{dir}")
+      assert(run_lib, "#{ENV_PATH}=#{dir}")
     end
 
     it "should not crash when #{ENV_PATH} does not exists" do

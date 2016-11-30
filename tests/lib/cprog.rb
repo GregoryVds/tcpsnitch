@@ -6,8 +6,6 @@ class CProg
     @instructions = instructions
     @name = name
     write_to_file
-    compile
-    assert_success
     @@count += 1
   end
   
@@ -20,6 +18,8 @@ class CProg
 #include <poll.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
 
 int main(void) {
 #{@instructions}          
@@ -32,24 +32,16 @@ EOT
     format('%02d', @@count) + '_' + @name
   end
   
-  def c_path
+  def path
     @@programs_path + numbered_name + ".c"
   end
 
-  def exec_path
-    @@programs_path + numbered_name + ".out"
-  end
-
   def write_to_file
-    f = File.open(c_path, "w")
+    f = File.open(path, "w")
     f.puts program
     f.close
   end
   
-  def compile
-    system("gcc -Wall -Wextra #{c_path} -o #{exec_path} >/dev/null") 
-  end
-
   def to_s
     @instructions
   end

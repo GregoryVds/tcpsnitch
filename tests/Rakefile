@@ -1,8 +1,32 @@
 require 'rake/testtask'
+require 'webrick'
+require './lib/webserver.rb'
+require './constants.rb'
 
 task default: [:test]
 
 Rake::TestTask.new do |t|
-	t.pattern = "test*.rb"
+  t.pattern = "test*.rb"
 end
+
+task :write_cprogs do
+  require('./write_cprogs.rb')
+end
+
+task :compile_cprogs do
+  Dir.glob('./c_programs/*.c') do |c_file|
+    system("gcc -Wall -Wextra #{c_file} -o #{c_file.chomp(".c")}.out")
+  end
+end
+
+task :verify_cprogs do
+  WebServer.start
+  sleep 0.1 # Wait for WebServer to start
+  Dir.glob('./c_programs/*.out') do |c_file|
+    if !system(c_file) then puts "#{c_file} failed!" end
+  end
+  WebServer.stop
+end
+
+task :prepare_cprogs => [:write_cprogs, :compile_cprogs, :verify_cprogs]
 
