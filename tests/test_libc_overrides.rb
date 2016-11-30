@@ -8,7 +8,7 @@ require './common.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 def no_error_log
-  !errors_in_log?(log_file_str("packetdrill"))
+  !errors_in_log?
 end
 
 # Not very robust but it seems that packetdrill always open another TCP connection
@@ -22,15 +22,10 @@ def assert_event_present(type, success=true)
       }.ignore_extra_keys!
     ].ignore_extra_values!
   }.ignore_extra_keys!
-  assert_json_match(pattern, read_json("packetdrill", 1))
+  assert_json_match(pattern, read_json)
 end
 
-
 describe "libc overrides" do
-  before do
-    reset_dir(DEFAULT_PATH) 
-  end
-
 =begin
   ____   ___   ____ _  _______ _____      _    ____ ___
  / ___| / _ \ / ___| |/ / ____|_   _|    / \  |  _ \_ _|
@@ -46,282 +41,289 @@ describe "libc overrides" do
 =end
 
   describe "when calling #{TCP_EV_SOCKET}" do
-    it "#{TCP_EV_SOCKET} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_SOCKET_STREAM)
+    socket_stream = "socket_stream.out"
+    socket_dgram = "socket_dgram.out"
+    socket_fail = "socket_fail.out"
+
+    it "#{socket_stream} should not crash" do
+      assert run_c_program(socket_stream)
     end
     
-    it "#{TCP_EV_SOCKET} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_SOCKET_STREAM)
+    it "#{socket_stream} should give no ERROR log" do
+      run_c_program(socket_stream)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SOCKET} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_SOCKET_STREAM)
+    it "#{TCP_EV_SOCKET} should be tracked with #{socket_stream}" do
+      run_c_program(socket_stream)
       assert_event_present(TCP_EV_SOCKET)
     end
 
-    it "#{TCP_EV_SOCKET} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_SOCKET_DGRAM)
+    it "#{socket_dgram} should not crash" do
+      assert run_c_program(socket_dgram)
     end
 
-    it "#{TCP_EV_SOCKET} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_SOCKET_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_SOCKET} should not crash when failing" do
-      skip
+    it "#{socket_fail} should not crash" do
+      assert run_c_program(socket_fail)
     end
   end
 
   describe "when calling #{TCP_EV_BIND}" do
-    it "#{TCP_EV_BIND} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_BIND_STREAM)
+    bind_stream = "bind_stream.out"
+    bind_dgram = "bind_dgram.out"
+    bind_fail = "bind_fail.out"
+  
+    it "#{bind_stream} should not crash" do
+      assert run_c_program(bind_stream)
     end
     
-    it "#{TCP_EV_BIND} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_BIND_STREAM)
+    it "#{bind_stream} should give no ERROR log" do
+      run_c_program(bind_stream)
       assert no_error_log
     end
 
-    it "#{TCP_EV_BIND} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_BIND_STREAM)
+    it "#{TCP_EV_BIND} should be tracked with #{bind_stream}" do
+      run_c_program(bind_stream)
       assert_event_present(TCP_EV_BIND)
     end
 
-    it "#{TCP_EV_BIND} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_BIND_DGRAM)
+    it "#{bind_dgram} should not crash" do
+      assert run_c_program(bind_dgram)
     end
 
-    it "#{TCP_EV_BIND} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_BIND_DGRAM)
+    it "#{bind_fail} should not crash" do
+      assert run_c_program(bind_fail)
+    end
+
+    it "#{bind_fail} should give no ERROR log" do
+      run_c_program(bind_fail)
       assert no_error_log
-    end
-
-    it "#{TCP_EV_BIND} should not crash when failing" do
-      skip
     end
   end
 
   describe "when calling #{TCP_EV_CONNECT}" do
-    it "#{TCP_EV_CONNECT} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_CONNECT_STREAM)
+    connect_stream = "connect_stream.out"
+    connect_dgram = "connect_dgram.out"
+    connect_fail = "connect_fail.out"
+  
+    it "#{connect_stream} should not crash" do
+      assert run_c_program(connect_stream)
     end
     
-    it "#{TCP_EV_CONNECT} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_CONNECT_STREAM)
+    it "#{connect_stream} should give no ERROR log" do
+      run_c_program(connect_stream)
       assert no_error_log
     end
 
-    it "#{TCP_EV_CONNECT} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_CONNECT_STREAM)
+    it "#{TCP_EV_CONNECT} should be tracked with #{connect_stream}" do
+      run_c_program(connect_stream)
       assert_event_present(TCP_EV_CONNECT)
     end
 
-    it "#{TCP_EV_CONNECT} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_CONNECT_DGRAM)
+    it "#{connect_dgram} should not crash" do
+      assert run_c_program(connect_dgram)
     end
 
-    it "#{TCP_EV_CONNECT} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_CONNECT_DGRAM)
+    it "#{connect_fail} should not crash" do
+      assert run_c_program(connect_fail)
+    end
+
+    it "#{connect_fail} should give no ERROR log" do
+      run_c_program(connect_fail)
       assert no_error_log
-    end
-
-    it "#{TCP_EV_CONNECT} should not crash when failing" do
-      skip
     end
   end
-
+=begin
   describe "when calling #{TCP_EV_SHUTDOWN}" do
-    it "#{TCP_EV_SHUTDOWN} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_SHUTDOWN_STREAM)
+    it "#{TCP_EV_SHUTDOWN} should not crash" do
+      assert run_c_program(PKT_SHUTDOWN_STREAM)
     end
     
-    it "#{TCP_EV_SHUTDOWN} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_SHUTDOWN_STREAM)
+    it "#{TCP_EV_SHUTDOWN} should give no ERROR log" do
+      run_c_program(PKT_SHUTDOWN_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SHUTDOWN} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_SHUTDOWN_STREAM)
+    it "#{TCP_EV_SHUTDOWN} should be tracked" do
+      run_c_program(PKT_SHUTDOWN_STREAM)
       assert_event_present(TCP_EV_SHUTDOWN)
     end
 
-    it "#{TCP_EV_SHUTDOWN} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_SHUTDOWN_DGRAM)
+    it "#{TCP_EV_SHUTDOWN} should not crash" do
+      assert run_c_program(PKT_SHUTDOWN_DGRAM)
     end
 
-    it "#{TCP_EV_SHUTDOWN} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_SHUTDOWN_DGRAM)
+    it "#{TCP_EV_SHUTDOWN} should give no ERROR log" do
+      run_c_program(PKT_SHUTDOWN_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SHUTDOWN} should not crash when failing" do
+    it "#{TCP_EV_SHUTDOWN} should not crash" do
       skip
     end
   end
   
   describe "when calling #{TCP_EV_LISTEN}" do
-    it "#{TCP_EV_LISTEN} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_LISTEN_STREAM)
+    it "#{TCP_EV_LISTEN} should not crash" do
+      assert run_c_program(PKT_LISTEN_STREAM)
     end
     
-    it "#{TCP_EV_LISTEN} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_LISTEN_STREAM)
+    it "#{TCP_EV_LISTEN} should give no ERROR log" do
+      run_c_program(PKT_LISTEN_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_LISTEN} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_LISTEN_STREAM)
+    it "#{TCP_EV_LISTEN} should be tracked" do
+      run_c_program(PKT_LISTEN_STREAM)
       assert_event_present(TCP_EV_LISTEN)
     end
 
-    it "#{TCP_EV_LISTEN} should not crash when failing" do
+    it "#{TCP_EV_LISTEN} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_SETSOCKOPT}" do
-    it "#{TCP_EV_SETSOCKOPT} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_SETSOCKOPT_STREAM)
+    it "#{TCP_EV_SETSOCKOPT} should not crash" do
+      assert run_c_program(PKT_SETSOCKOPT_STREAM)
     end
     
-    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_SETSOCKOPT_STREAM)
+    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log" do
+      run_c_program(PKT_SETSOCKOPT_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SETSOCKOPT} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_SETSOCKOPT_STREAM)
+    it "#{TCP_EV_SETSOCKOPT} should be tracked" do
+      run_c_program(PKT_SETSOCKOPT_STREAM)
       assert_event_present(TCP_EV_SETSOCKOPT)
     end
 
-    it "#{TCP_EV_SETSOCKOPT} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_SETSOCKOPT_DGRAM)
+    it "#{TCP_EV_SETSOCKOPT} should not crash" do
+      assert run_c_program(PKT_SETSOCKOPT_DGRAM)
     end
 
-    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_SETSOCKOPT_DGRAM)
+    it "#{TCP_EV_SETSOCKOPT} should give no ERROR log" do
+      run_c_program(PKT_SETSOCKOPT_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SETSOCKOPT} should not crash when failing" do
+    it "#{TCP_EV_SETSOCKOPT} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_SEND}" do
-    it "#{TCP_EV_SEND} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_SEND_STREAM)
+    it "#{TCP_EV_SEND} should not crash" do
+      assert run_c_program(PKT_SEND_STREAM)
     end
     
-    it "#{TCP_EV_SEND} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_SEND_STREAM)
+    it "#{TCP_EV_SEND} should give no ERROR log" do
+      run_c_program(PKT_SEND_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SEND} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_SEND_STREAM)
+    it "#{TCP_EV_SEND} should be tracked" do
+      run_c_program(PKT_SEND_STREAM)
       assert_event_present(TCP_EV_SEND)
     end
 
-    it "#{TCP_EV_SEND} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_SEND_DGRAM)
+    it "#{TCP_EV_SEND} should not crash" do
+      assert run_c_program(PKT_SEND_DGRAM)
     end
 
-    it "#{TCP_EV_SEND} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_SEND_DGRAM)
+    it "#{TCP_EV_SEND} should give no ERROR log" do
+      run_c_program(PKT_SEND_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SEND} should not crash when failing" do
+    it "#{TCP_EV_SEND} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_RECV}" do
-    it "#{TCP_EV_RECV} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_RECV_STREAM)
+    it "#{TCP_EV_RECV} should not crash" do
+      assert run_c_program(PKT_RECV_STREAM)
     end
     
-    it "#{TCP_EV_RECV} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_RECV_STREAM)
+    it "#{TCP_EV_RECV} should give no ERROR log" do
+      run_c_program(PKT_RECV_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_RECV} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_RECV_STREAM)
+    it "#{TCP_EV_RECV} should be tracked" do
+      run_c_program(PKT_RECV_STREAM)
       assert_event_present(TCP_EV_RECV)
     end
 
-    it "#{TCP_EV_RECV} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_RECV_DGRAM)
+    it "#{TCP_EV_RECV} should not crash" do
+      assert run_c_program(PKT_RECV_DGRAM)
     end
 
-    it "#{TCP_EV_RECV} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_RECV_DGRAM)
+    it "#{TCP_EV_RECV} should give no ERROR log" do
+      run_c_program(PKT_RECV_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_RECV} should not crash when failing" do
+    it "#{TCP_EV_RECV} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_SENDTO}" do
-    it "#{TCP_EV_SENDTO} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_SENDTO_STREAM)
+    it "#{TCP_EV_SENDTO} should not crash" do
+      assert run_c_program(PKT_SENDTO_STREAM)
     end
     
-    it "#{TCP_EV_SENDTO} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_SENDTO_STREAM)
+    it "#{TCP_EV_SENDTO} should give no ERROR log" do
+      run_c_program(PKT_SENDTO_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SENDTO} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_SENDTO_STREAM)
+    it "#{TCP_EV_SENDTO} should be tracked" do
+      run_c_program(PKT_SENDTO_STREAM)
       assert_event_present(TCP_EV_SENDTO)
     end
 
-    it "#{TCP_EV_SENDTO} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_SENDTO_DGRAM)
+    it "#{TCP_EV_SENDTO} should not crash" do
+      assert run_c_program(PKT_SENDTO_DGRAM)
     end
 
-    it "#{TCP_EV_SENDTO} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_SENDTO_DGRAM)
+    it "#{TCP_EV_SENDTO} should give no ERROR log" do
+      run_c_program(PKT_SENDTO_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_SENDTO} should not crash when failing" do
+    it "#{TCP_EV_SENDTO} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_RECVFROM}" do
-    it "#{TCP_EV_RECVFROM} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_RECVFROM_STREAM)
+    it "#{TCP_EV_RECVFROM} should not crash" do
+      assert run_c_program(PKT_RECVFROM_STREAM)
     end
     
-    it "#{TCP_EV_RECVFROM} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_RECVFROM_STREAM)
+    it "#{TCP_EV_RECVFROM} should give no ERROR log" do
+      run_c_program(PKT_RECVFROM_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_RECVFROM} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_RECVFROM_STREAM)
+    it "#{TCP_EV_RECVFROM} should be tracked" do
+      run_c_program(PKT_RECVFROM_STREAM)
       assert_event_present(TCP_EV_RECVFROM)
     end
 
-    it "#{TCP_EV_RECVFROM} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_RECVFROM_DGRAM)
+    it "#{TCP_EV_RECVFROM} should not crash" do
+      assert run_c_program(PKT_RECVFROM_DGRAM)
     end
 
-    it "#{TCP_EV_RECVFROM} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_RECVFROM_DGRAM)
+    it "#{TCP_EV_RECVFROM} should give no ERROR log" do
+      run_c_program(PKT_RECVFROM_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_RECVFROM} should not crash when failing" do
+    it "#{TCP_EV_RECVFROM} should not crash" do
       skip
     end
   end
@@ -337,91 +339,90 @@ describe "libc overrides" do
 
  functions: write(), read(), close().
 
-=end
 
   describe "when calling #{TCP_EV_WRITE}" do
-    it "#{TCP_EV_WRITE} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_WRITE_STREAM)
+    it "#{TCP_EV_WRITE} should not crash" do
+      assert run_c_program(PKT_WRITE_STREAM)
     end
     
-    it "#{TCP_EV_WRITE} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_WRITE_STREAM)
+    it "#{TCP_EV_WRITE} should give no ERROR log" do
+      run_c_program(PKT_WRITE_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_WRITE} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_WRITE_STREAM)
+    it "#{TCP_EV_WRITE} should be tracked" do
+      run_c_program(PKT_WRITE_STREAM)
       assert_event_present(TCP_EV_WRITE)
     end
 
-    it "#{TCP_EV_WRITE} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_WRITE_DGRAM)
+    it "#{TCP_EV_WRITE} should not crash" do
+      assert run_c_program(PKT_WRITE_DGRAM)
     end
 
-    it "#{TCP_EV_WRITE} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_WRITE_DGRAM)
+    it "#{TCP_EV_WRITE} should give no ERROR log" do
+      run_c_program(PKT_WRITE_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_WRITE} should not crash when failing" do
+    it "#{TCP_EV_WRITE} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_READ}" do
-    it "#{TCP_EV_READ} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_READ_STREAM)
+    it "#{TCP_EV_READ} should not crash" do
+      assert run_c_program(PKT_READ_STREAM)
     end
     
-    it "#{TCP_EV_READ} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_READ_STREAM)
+    it "#{TCP_EV_READ} should give no ERROR log" do
+      run_c_program(PKT_READ_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_READ} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_READ_STREAM)
+    it "#{TCP_EV_READ} should be tracked" do
+      run_c_program(PKT_READ_STREAM)
       assert_event_present(TCP_EV_READ)
     end
 
-    it "#{TCP_EV_READ} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_READ_DGRAM)
+    it "#{TCP_EV_READ} should not crash" do
+      assert run_c_program(PKT_READ_DGRAM)
     end
 
-    it "#{TCP_EV_READ} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_READ_DGRAM)
+    it "#{TCP_EV_READ} should give no ERROR log" do
+      run_c_program(PKT_READ_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_READ} should not crash when failing" do
+    it "#{TCP_EV_READ} should not crash" do
       skip
     end
   end
 
   describe "when calling #{TCP_EV_CLOSE}" do
-    it "#{TCP_EV_CLOSE} should not crash with SOCK_STREAM" do
-      assert run_pkt_script(PKT_CLOSE_STREAM)
+    it "#{TCP_EV_CLOSE} should not crash" do
+      assert run_c_program(PKT_CLOSE_STREAM)
     end
     
-    it "#{TCP_EV_CLOSE} should give no ERROR log with SOCK_STREAM" do
-      run_pkt_script(PKT_CLOSE_STREAM)
+    it "#{TCP_EV_CLOSE} should give no ERROR log" do
+      run_c_program(PKT_CLOSE_STREAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_CLOSE} should be tracked with SOCK_STREAM" do
-      run_pkt_script(PKT_CLOSE_STREAM)
+    it "#{TCP_EV_CLOSE} should be tracked" do
+      run_c_program(PKT_CLOSE_STREAM)
       assert_event_present(TCP_EV_CLOSE)
     end
 
-    it "#{TCP_EV_CLOSE} should not crash with SOCK_DGRAM" do
-      assert run_pkt_script(PKT_CLOSE_DGRAM)
+    it "#{TCP_EV_CLOSE} should not crash" do
+      assert run_c_program(PKT_CLOSE_DGRAM)
     end
 
-    it "#{TCP_EV_CLOSE} should give no ERROR log with SOCK_DGRAM" do
-      run_pkt_script(PKT_CLOSE_DGRAM)
+    it "#{TCP_EV_CLOSE} should give no ERROR log" do
+      run_c_program(PKT_CLOSE_DGRAM)
       assert no_error_log
     end
 
-    it "#{TCP_EV_CLOSE} should not crash when failing" do
+    it "#{TCP_EV_CLOSE} should not crash" do
       skip
     end
   end

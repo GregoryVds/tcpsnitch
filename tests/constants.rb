@@ -1,7 +1,10 @@
 
 NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
 
+EXECUTABLE="../tcpsnitch"
 LD_PRELOAD="LD_PRELOAD=../libtcpsnitch.so.1.0"
+TEST_DIR="/tmp/netspy"
+
 PACKET_DRILL="packetdrill --tolerance_usecs=10000000"
 
 # packetdrill scripts

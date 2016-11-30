@@ -173,7 +173,7 @@ void init_netspy(void) {
         if (!(tcpspy_dir = create_logs_dir(netspy_path))) goto exit1;
 
         const char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(tcpspy_dir, get_app_name())))
+        if (!(log_file_path = alloc_concat_path(tcpspy_dir, "tcpsnitch.log")))
                 goto exit2;
         else
                 logger_init(log_file_path, stderr_log_lvl, file_log_lvl);

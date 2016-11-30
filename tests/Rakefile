@@ -11,7 +11,7 @@ end
 
 task :write_cprogs do
   system("rm -rf ./c_programs/*.c")
-  require('./write_cprogs.rb')
+  require('./lib/write_cprogs.rb')
 end
 
 task :compile_cprogs do

@@ -295,10 +295,10 @@ EOT
 
 CLOSE_DGRAM = CProg.new(<<-EOT, "close_dgram")
 #{SOCKET_DGRAM}
-#{close("sock", ">0")}
+#{close("sock", "==0")}
 EOT
 
-CLOSE_FAIL = CProg.new(<<-EOT, "clos_fail")
+CLOSE_FAIL = CProg.new(<<-EOT, "close_fail")
 #{SOCKET_STREAM}
 #{close(42, "==-1")}
 EOT

@@ -2,7 +2,6 @@ require 'json_expressions/minitest'
 require 'tempfile'
 require 'packetfu'
 require './constants.rb'
-require './pkt_scripts.rb'
 
 # Create Boolean module as suggested by Jansson library.
 # http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean#answer-3028378
@@ -43,29 +42,29 @@ end
 # Log files manipulations #
 ###########################
 
-# Assumes the DEFAULT_PATH was cleared before running the prog.
-def log_dir_str(prog)
-  Dir[DEFAULT_PATH+"/#{prog}_*"].last
+# Assumes the TEST_DIR was cleared before running the prog.
+def dir_str
+  Dir[TEST_DIR+"/*.out*"].last
 end
 
-def log_file_str(prog)
-  log_dir_str(prog)+"/"+LOG_FILE
+def log_file_str
+  dir_str+"/"+LOG_FILE
 end
 
-def con_dir_str(prog, con_id)
-  log_dir_str(prog)+"/#{con_id}/"
+def con_dir_str(con_id=0)
+  dir_str+"/#{con_id}/"
 end
 
-def json_file_str(prog, con_id)
-  con_dir_str(prog, con_id)+JSON_FILE
+def json_file_str(con_id=0)
+  con_dir_str(con_id)+JSON_FILE
 end
 
-def pcap_file_str(prog, con_id)
-  con_dir_str(prog, con_id)+PCAP_FILE
+def pcap_file_str(con_id=0)
+  con_dir_str(con_id)+PCAP_FILE
 end
 
-def read_json(prog, con_id)
-  File.read(json_file_str(prog, con_id))
+def read_json(con_id=0)
+  File.read(json_file_str(con_id))
 end
 
 ##################
@@ -87,7 +86,8 @@ def run_pkt_script(script, env='')
 end
 
 def run_c_program(name)
-  system("c_programs/#{name}")
+  reset_dir(TEST_DIR) 
+  system("#{EXECUTABLE} -d #{TEST_DIR} ./c_programs/*#{name} 2>/dev/null")
 end
 
 def run_curl
@@ -95,7 +95,7 @@ def run_curl
 #  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
 end
 
-def errors_in_log?(log_path)
-  system("grep \"#{LOG_LVL_ERROR}\" #{log_path}")
+def errors_in_log?
+  system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str}")
 end
 

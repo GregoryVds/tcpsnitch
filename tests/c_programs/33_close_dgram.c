@@ -19,7 +19,7 @@ int main(void) {
     return(EXIT_FAILURE);
 
 
-  if (!(close(sock) ==0))
+  if (!(close(sock) >0))
     return(EXIT_FAILURE);
 
           
