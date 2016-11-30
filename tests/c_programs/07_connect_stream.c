@@ -12,7 +12,15 @@
 
 int main(void) {
   int sock;
-  if (!((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) >-1))
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    return(EXIT_FAILURE);
+
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(8000);
+  inet_aton("127.0.0.1", &addr.sin_addr);
+
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)))
     return(EXIT_FAILURE);
 
           

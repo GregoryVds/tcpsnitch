@@ -7,12 +7,14 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 int main(void) {
   int sock;
-  sock = socket(AF_INET, SOCK_STREAM, IPPROTO_UDP);
-  if (sock > -1)
+  if (!((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_UDP)) ==-1))
     return(EXIT_FAILURE);
+
           
   return(EXIT_SUCCESS);
 }

@@ -12,7 +12,11 @@
 
 int main(void) {
   int sock;
-  if (!((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) >-1))
+  if (!((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >-1))
+    return(EXIT_FAILURE);
+
+
+  if (!(listen(sock, 10) ==0))
     return(EXIT_FAILURE);
 
           
