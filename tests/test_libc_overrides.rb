@@ -2,7 +2,6 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
@@ -11,8 +10,6 @@ def no_error_log
   !errors_in_log?
 end
 
-# Not very robust but it seems that packetdrill always open another TCP connection
-# before the script. So the first connection we are interested in is at /1/
 def assert_event_present(type, success=true)
   pattern = {
     events: [
@@ -26,7 +23,6 @@ def assert_event_present(type, success=true)
 end
 
 describe "libc overrides" do
-
   SOCKET_SYSCALLS.each do |syscall|
     describe "when calling #{syscall}()" do
       stream  = "#{syscall}_stream.out"
