@@ -3,8 +3,8 @@
 
 static void output_ev_socket(TcpEvSocket *ev);
 static void output_ev_bind(TcpEvBind *ev);
-static void output_ev_connect(TcpEvConnect*ev);
-static void output_ev_shutdown(TcpEvShutdown*ev);
+static void output_ev_connect(TcpEvConnect *ev);
+static void output_ev_shutdown(TcpEvShutdown *ev);
 static void output_ev_listen(TcpEvListen *ev);
 static void output_ev_setsockopt(TcpEvSetsockopt *ev);
 static void output_ev_send(TcpEvSend *ev);
@@ -20,59 +20,41 @@ static void output_ev_writev(TcpEvWritev *ev);
 static void output_ev_readv(TcpEvReadv *ev);
 static void output_ev_tcpinfo(TcpEvTcpInfo *ev);
 
-static void output_ev_socket(TcpEvSocket *ev) {
-}
+static void output_ev_socket(TcpEvSocket *ev) {}
 
-static void output_ev_bind(TcpEvBind *ev) {
-}
+static void output_ev_bind(TcpEvBind *ev) {}
 
-static void output_ev_connect(TcpEvConnect*ev) {
-}
+static void output_ev_connect(TcpEvConnect *ev) {}
 
-static void output_ev_shutdown(TcpEvShutdown*ev) {
-}
+static void output_ev_shutdown(TcpEvShutdown *ev) {}
 
-static void output_ev_listen(TcpEvListen *ev) {
-}
+static void output_ev_listen(TcpEvListen *ev) {}
 
-static void output_ev_setsockopt(TcpEvSetsockopt *ev) {
-}
+static void output_ev_setsockopt(TcpEvSetsockopt *ev) {}
 
-static void output_ev_send(TcpEvSend *ev) {
-}
+static void output_ev_send(TcpEvSend *ev) {}
 
-static void output_ev_recv(TcpEvRecv *ev) {
-}
+static void output_ev_recv(TcpEvRecv *ev) {}
 
-static void output_ev_sendto(TcpEvSendto *ev) {
-}
+static void output_ev_sendto(TcpEvSendto *ev) {}
 
-static void output_ev_recvfrom(TcpEvRecvfrom *ev) {
-}
+static void output_ev_recvfrom(TcpEvRecvfrom *ev) {}
 
-static void output_ev_sendmsg(TcpEvSendmsg *ev) {
-}
+static void output_ev_sendmsg(TcpEvSendmsg *ev) {}
 
-static void output_ev_recvmsg(TcpEvRecvmsg *ev) {
-}
+static void output_ev_recvmsg(TcpEvRecvmsg *ev) {}
 
-static void output_ev_write(TcpEvWrite *ev) {
-}
+static void output_ev_write(TcpEvWrite *ev) {}
 
-static void output_ev_read(TcpEvRead *ev) {
-}
+static void output_ev_read(TcpEvRead *ev) {}
 
-static void output_ev_close(TcpEvClose *ev) {
-}
+static void output_ev_close(TcpEvClose *ev) {}
 
-static void output_ev_writev(TcpEvWritev *ev) {
-}
+static void output_ev_writev(TcpEvWritev *ev) {}
 
-static void output_ev_readv(TcpEvReadv *ev) {
-}
+static void output_ev_readv(TcpEvReadv *ev) {}
 
-static void output_ev_tcpinfo(TcpEvTcpInfo *ev) {
-}
+static void output_ev_tcpinfo(TcpEvTcpInfo *ev) {}
 
 void output_event(TcpEvent *ev) {
         switch (ev->type) {
@@ -132,4 +114,3 @@ void output_event(TcpEvent *ev) {
                         break;
         }
 }
-
