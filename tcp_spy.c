@@ -21,6 +21,7 @@
 #include "resizable_array.h"
 #include "string_helpers.h"
 #include "tcp_spy_json.h"
+#include "verbose_mode.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -343,17 +344,17 @@ error_out:
 
 static bool should_dump_tcp_info(const TcpConnection *con) {
         /* Check if time lower bound is set, otherwise assume no lower bound */
-        if (tcp_info_micros_ival > 0) {
+        if (conf_micros_ival > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
-                if (time_elasped < tcp_info_micros_ival) return false;
+                if (time_elasped < conf_micros_ival) return false;
         }
 
         /* Check if bytes lower bound set, otherwise assume no lower bound */
-        if (tcp_info_bytes_ival > 0) {
+        if (conf_bytes_ival > 0) {
                 long cur_bytes = con->bytes_sent + con->bytes_received;
                 long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
-                if (bytes_elapsed < tcp_info_bytes_ival) return false;
+                if (bytes_elapsed < conf_bytes_ival) return false;
         }
 
         /* If we reach this point, no lower bound prevents from dumping */
@@ -447,6 +448,7 @@ void tcp_stop_capture(TcpConnection *con) {
 
 #define TCP_EV_POSTLUDE(ev_type_cons)                         \
         push_event(con, (TcpEvent *)ev);                      \
+        output_event((TcpEvent *)ev);                         \
         bool should_dump = should_dump_tcp_info(con) &&       \
                            ev_type_cons != TCP_EV_TCP_INFO && \
                            ev_type_cons != TCP_EV_CLOSE;      \

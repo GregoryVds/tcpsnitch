@@ -14,8 +14,9 @@
 #include "tcp_spy.h"
 
 char *tcpspy_dir = NULL;
-long tcp_info_bytes_ival = 0;
-long tcp_info_micros_ival = 0;
+long conf_bytes_ival = 0;
+long conf_micros_ival = 0;
+long conf_verbosity = 0;
 
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
@@ -128,8 +129,9 @@ void reset_netspy(void) {
         netspy_free();
         logger_init(NULL, 0, 0);
         tcpspy_dir = NULL;
-        tcp_info_bytes_ival = 0;
-        tcp_info_micros_ival = 0;
+        conf_bytes_ival = 0;
+        conf_micros_ival = 0;
+        conf_verbosity = 0;
         initialized = false;
         mutex_init(&init_mutex);
 
@@ -163,11 +165,12 @@ void init_netspy(void) {
         atexit(cleanup);
 
         /* Fetch other ENV variables */
-        static long file_log_lvl, stderr_log_lvl;
-        tcp_info_bytes_ival = get_long_env_or_defaultval(ENV_BYTES_IVAL, 4096);
-        tcp_info_micros_ival = get_long_env_or_defaultval(ENV_MICROS_IVAL, 0);
-        file_log_lvl = get_long_env_or_defaultval(ENV_FILE_LOG_LVL, WARN);
-        stderr_log_lvl = get_long_env_or_defaultval(ENV_STDERR_LOG_LVL, WARN);
+        static long conf_file_log_lvl, conf_stderr_lvl;
+        conf_bytes_ival = get_long_env_or_defaultval(ENV_BYTES_IVAL, 4096);
+        conf_micros_ival = get_long_env_or_defaultval(ENV_MICROS_IVAL, 0);
+        conf_file_log_lvl = get_long_env_or_defaultval(ENV_FILE_LOG_LVL, WARN);
+        conf_stderr_lvl = get_long_env_or_defaultval(ENV_STDERR_LOG_LVL, WARN);
+        conf_verbosity = get_long_env_or_defaultval(ENV_VERBOSITY, 0); 
 
         /* Create dir containing log, pcap and json files for this process */
         if (!(tcpspy_dir = create_logs_dir(netspy_path))) goto exit1;
@@ -176,7 +179,7 @@ void init_netspy(void) {
         if (!(log_file_path = alloc_concat_path(tcpspy_dir, "tcpsnitch.log")))
                 goto exit2;
         else
-                logger_init(log_file_path, stderr_log_lvl, file_log_lvl);
+                logger_init(log_file_path, conf_stderr_lvl, conf_file_log_lvl);
 
         goto exit;
 exit1:
