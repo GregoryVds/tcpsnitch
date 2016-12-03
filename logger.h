@@ -6,13 +6,13 @@ typedef enum LogLevel { ALWAYS, ERROR, WARN, INFO, DEBUG } LogLevel;
 
 void logger_init(const char *path, LogLevel stdout_lvl, LogLevel file_lvl);
 
-void logger(LogLevel lvl, const char *formated_str, const char *file, int line);
+void logger(LogLevel lvl, const char *str, const char *file, int line);
 
 #define LOG(lvl, format, args...)                           \
         {                                                   \
-                char buf[1024];                             \
-                snprintf(buf, sizeof(buf), format, ##args); \
-                logger(lvl, buf, __FILE__, __LINE__);       \
+                char _buf[1024];                             \
+                snprintf(_buf, sizeof(_buf), format, ##args); \
+                logger(lvl, _buf, __FILE__, __LINE__);       \
         }
 
 #define D(format, args...) LOG(DEBUG, format, ##args)

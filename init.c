@@ -13,22 +13,25 @@
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
-char *tcpspy_dir = NULL;
+char *conf_dir = NULL;
 long conf_bytes_ival = 0;
 long conf_micros_ival = 0;
 long conf_verbosity = 0;
 
+FILE *_stdout = NULL;
+FILE *_stderr = NULL;
+
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-static const char *get_tcpspy_dir(void);
+static const char *get_conf_dir(void);
 static char *create_logs_dir(const char *netspy_path);
 static void netspy_free(void);
 static void cleanup(void);
  
 /* Private functions */
 
-static const char *get_tcpspy_dir(void) {
+static const char *get_conf_dir(void) {
         DIR *dir;
         const char *path = getenv(ENV_DIR);
         if (path) {
@@ -87,7 +90,7 @@ error_out:
 }
 
 static void netspy_free(void) {
-        free(tcpspy_dir);
+        free(conf_dir);
         mutex_destroy(&init_mutex);
 }
 
@@ -102,7 +105,7 @@ static void cleanup(void) {
 
 /*  This function is used to reset the library after a fork() call. If a fork()
  *  is not followed by exec(), the global variables are not reinitialized.
- *  This means that 2 processes with differents PID would use the same tcpspy_dir,
+ *  This means that 2 processes with differents PID would use the same conf_dir,
  *  but more importantly, the child would inherit all the states from the
  *  fd_con_map of its parents. This leads to many issues:
  *     - The 2 processes will mix their logs in the same file.
@@ -128,7 +131,7 @@ void reset_netspy(void) {
 
         netspy_free();
         logger_init(NULL, 0, 0);
-        tcpspy_dir = NULL;
+        conf_dir = NULL;
         conf_bytes_ival = 0;
         conf_micros_ival = 0;
         conf_verbosity = 0;
@@ -141,7 +144,7 @@ void reset_netspy(void) {
 
 static bool config_init_logger(const char *netspy_path) {
         const char *init_logs_path =
-            alloc_concat_path(netspy_path, TCPSPY_INIT_LOGS_FILE);
+            alloc_concat_path(netspy_path, INIT_LOG_FILE);
         if (init_logs_path)
                 logger_init(init_logs_path, DEBUG, DEBUG);
         else
@@ -156,7 +159,19 @@ void init_netspy(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
-        const char *netspy_path = get_tcpspy_dir();
+        /* We need a way to unweave the main process and tcpsnitch standard 
+         * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
+         * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
+         * tcpsnitch stderr/stdout do not have the regular 1 & 2 fd, but are
+         * 3 and 4 instead. */
+        if (!(_stdout = fdopen(STDOUT_FD, "w")))
+                LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
+        if (!(_stderr = fdopen(STDERR_FD, "w")))
+                LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
+
+        _stderr = NULL;
+
+        const char *netspy_path = get_conf_dir();
         if (!netspy_path) goto exit1;
         
         config_init_logger(netspy_path);
@@ -173,10 +188,10 @@ void init_netspy(void) {
         conf_verbosity = get_long_env_or_defaultval(ENV_VERBOSITY, 0); 
 
         /* Create dir containing log, pcap and json files for this process */
-        if (!(tcpspy_dir = create_logs_dir(netspy_path))) goto exit1;
+        if (!(conf_dir = create_logs_dir(netspy_path))) goto exit1;
 
         const char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(tcpspy_dir, "tcpsnitch.log")))
+        if (!(log_file_path = alloc_concat_path(conf_dir, MAIN_LOG_FILE)))
                 goto exit2;
         else
                 logger_init(log_file_path, conf_stderr_lvl, conf_file_log_lvl);

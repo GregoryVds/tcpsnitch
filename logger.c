@@ -10,6 +10,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "config.h"
+#include "init.h"
+#include "lib.h"
 #include "tcp_spy.h"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
@@ -45,6 +48,9 @@ static void fill_timestamp(Timestamp *timestamp);
 static void log_to_stream(LogLevel log_lvl, const char *formated_str,
                           const char *file, int line, FILE *stream);
 static void set_log_path(const char *path);
+static void unbuffered_stderr(const char *str);
+static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
+                          int line);
 
 /* Private functions */
 
@@ -100,8 +106,27 @@ static void set_log_path(const char *path) {
                 char str[1024];
                 snprintf(str, sizeof(str), "fopen() failed on %s. %s.", path,
                          strerror(errno));
-                log_to_stream(ERROR, str, __FILE__, __LINE__, stdout);
+                log_to_stderr(ERROR, str, __FILE__, __LINE__);
         }
+}
+
+static void unbuffered_stderr(const char *str) {
+        char *msg = malloc(sizeof(char) * (strlen(str) + 2));
+        if (msg) {
+                strcpy(msg, str);
+                strcat(msg, "\n");
+                write(STDOUT_FD, msg, strlen(msg));
+                free(msg);
+        } else
+                write(STDOUT_FD, str, strlen(str));
+}
+
+static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
+                          int line) {
+        if (_stderr)
+                log_to_stream(log_lvl, str, file, line, stderr);
+        else
+                unbuffered_stderr(str);
 }
 
 /* Exposed functions */
@@ -112,10 +137,8 @@ void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
         file_lvl = _file_lvl;
 }
 
-void logger(LogLevel log_lvl, const char *formated_str, const char *file,
-            int line) {
+void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
         if (log_file && log_lvl <= file_lvl)
-                log_to_stream(log_lvl, formated_str, file, line, log_file);
-        if (log_lvl <= stderr_lvl)
-                log_to_stream(log_lvl, formated_str, file, line, stderr);
+                log_to_stream(log_lvl, str, file, line, log_file);
+        if (log_lvl <= stderr_lvl) log_to_stderr(log_lvl, str, file, line);
 }

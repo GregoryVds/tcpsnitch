@@ -127,6 +127,6 @@ TCPSNITCH_FILE_LOG_LVL="$OPT_F" \
 TCPSNITCH_STDERR_LOG_LVL="$OPT_L" \
 TCPSNITCH_MICROS_IVAL=$OPT_U \
 TCPSNITCH_VERBOSITY=$OPT_V \
-LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 1>/dev/null 2>&1
+LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 4>&2 1>/dev/null 2>&1
 
 >&2 echo "tcpsnitch data saved in $OPT_D"

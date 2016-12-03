@@ -192,16 +192,13 @@ error_out:
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 char *alloc_pcap_path_str(TcpConnection *con) {
-        return alloc_concat_path(con->directory, NETSPY_PCAP_FILE);
+        return alloc_concat_path(con->directory, PCAP_FILE);
 }
 
 char *alloc_json_path_str(TcpConnection *con) {
-        return alloc_concat_path(con->directory, NETSPY_JSON_FILE);
+        return alloc_concat_path(con->directory, JSON_FILE);
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_cmdline_path(void) {
         static int path_length = 30;

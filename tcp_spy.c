@@ -77,7 +77,7 @@ static TcpConnection *alloc_connection(void) {
         mutex_unlock(&connections_count_mutex);
 
         // Has to be done AFTER getting the con->id
-        con->directory = create_numbered_dir_in_path(tcpspy_dir, con->id);
+        con->directory = create_numbered_dir_in_path(conf_dir, con->id);
         return con;
 error:
         LOG_FUNC_FAIL;
