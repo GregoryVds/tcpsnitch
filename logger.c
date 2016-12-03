@@ -124,7 +124,7 @@ static void unbuffered_stderr(const char *str) {
 static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
                           int line) {
         if (_stderr)
-                log_to_stream(log_lvl, str, file, line, stderr);
+                log_to_stream(log_lvl, str, file, line, _stderr);
         else
                 unbuffered_stderr(str);
 }

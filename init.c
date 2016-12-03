@@ -169,8 +169,6 @@ void init_netspy(void) {
         if (!(_stderr = fdopen(STDERR_FD, "w")))
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
 
-        _stderr = NULL;
-
         const char *netspy_path = get_conf_dir();
         if (!netspy_path) goto exit1;
         

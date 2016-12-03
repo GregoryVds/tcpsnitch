@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "init.h"
@@ -6,90 +8,94 @@
 #include "logger.h"
 #include "verbose_mode.h"
 
-#define STDOUT(format, args...)                                                \
-        {                                                                      \
-                int _str_size = 1024;                                          \
-                char _str[_str_size];                                          \
-                if (snprintf(_str, sizeof(_str), format, ##args) >= _str_size) \
-                        LOG(ERROR, "snprintf() failed. Truncated");            \
-                if (_stdout)                                                   \
-                        fprintf(_stdout, "%s", _str);                          \
-                else                                                           \
-                        write(STDOUT_FD, _str, sizeof(_str));                  \
-        }
+#define BUF_SIZE 512
 
-static const char *meta = "[Curl - pid 23344]";
+#define MKSTR(var, format, args...)                                 \
+        char var[BUF_SIZE];                                         \
+        if (snprintf(var, sizeof(var), format, ##args) >= BUF_SIZE) \
+                LOG(ERROR, "snprintf() failed. Truncated");
+
+#define STDOUT(format, args...)               \
+        MKSTR(_str, format, ##args);          \
+        if (_stdout)                          \
+                fprintf(_stdout, "%s", _str); \
+        else                                  \
+                write(STDOUT_FD, _str, sizeof(_str));
+
+#define OUTPUT_EV(format, args...)  \
+        MKSTR(_ev, format, ##args); \
+        STDOUT("[pid %d] %s\n", getpid(), _ev);
 
 static void output_ev_socket(TcpEvSocket *ev) {
-        STDOUT("%s socket()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("socket()=%d", ev->super.return_value);
 }
 
 static void output_ev_bind(TcpEvBind *ev) {
-        STDOUT("%s bind()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("bind()=%d", ev->super.return_value);
 }
 
 static void output_ev_connect(TcpEvConnect *ev) {
-        STDOUT("%s connect()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("connect()=%d", ev->super.return_value);
 }
 
 static void output_ev_shutdown(TcpEvShutdown *ev) {
-        STDOUT("%s shutdown()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("shutdown()=%d", ev->super.return_value);
 }
 
 static void output_ev_listen(TcpEvListen *ev) {
-        STDOUT("%s listen()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("listen()=%d", ev->super.return_value);
 }
 
 static void output_ev_setsockopt(TcpEvSetsockopt *ev) {
-        STDOUT("%s setsockopt()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("setsockopt()=%d", ev->super.return_value);
 }
 
 static void output_ev_send(TcpEvSend *ev) {
-        STDOUT("%s send()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("send()=%d", ev->super.return_value);
 }
 
 static void output_ev_recv(TcpEvRecv *ev) {
-        STDOUT("%s recv()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("recv()=%d", ev->super.return_value);
 }
 
 static void output_ev_sendto(TcpEvSendto *ev) {
-        STDOUT("%s sendto()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("sendto()=%d", ev->super.return_value);
 }
 
 static void output_ev_recvfrom(TcpEvRecvfrom *ev) {
-        STDOUT("%s recvfrom()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("recvfrom()=%d", ev->super.return_value);
 }
 
 static void output_ev_sendmsg(TcpEvSendmsg *ev) {
-        STDOUT("%s sendmsg()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("sendmsg()=%d", ev->super.return_value);
 }
 
 static void output_ev_recvmsg(TcpEvRecvmsg *ev) {
-        STDOUT("%s recvmsg()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("recvmsg()=%d", ev->super.return_value);
 }
 
 static void output_ev_write(TcpEvWrite *ev) {
-        STDOUT("%s write()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("write()=%d", ev->super.return_value);
 }
 
 static void output_ev_read(TcpEvRead *ev) {
-        STDOUT("%s read()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("read()=%d", ev->super.return_value);
 }
 
 static void output_ev_close(TcpEvClose *ev) {
-        STDOUT("%s close()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("close()=%d", ev->super.return_value);
 }
 
 static void output_ev_writev(TcpEvWritev *ev) {
-        STDOUT("%s writev()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("writev()=%d", ev->super.return_value);
 }
 
 static void output_ev_readv(TcpEvReadv *ev) {
-        STDOUT("%s readv()=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("readv()=%d", ev->super.return_value);
 }
 
 static void output_ev_tcpinfo(TcpEvTcpInfo *ev) {
-        STDOUT("%s tcp_info=%d\n", meta, ev->super.return_value);
+        OUTPUT_EV("tcp_info=%d", ev->super.return_value);
 }
 
 void output_event(TcpEvent *ev) {
