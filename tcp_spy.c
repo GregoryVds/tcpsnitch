@@ -199,6 +199,9 @@ static void free_event(TcpEvent *ev) {
                 case TCP_EV_CONNECT:
                         free_addr(&((TcpEvConnect *)ev)->addr);
                         break;
+                case TCP_EV_SETSOCKOPT:
+                        free(((TcpEvSetsockopt *)ev)->optname_str);
+                        break;
                 case TCP_EV_READV:
                         free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
                         break;
@@ -551,8 +554,12 @@ void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
         // *ev
         TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
 
+        struct protoent *p = getprotobynumber(ev->level);
+
         ev->level = level;
+        ev->level_str = p ? p->p_name : NULL;
         ev->optname = optname;
+        ev->optname_str = alloc_sock_optname_str(ev->optname);
 
         TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT)
 }

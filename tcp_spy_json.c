@@ -333,13 +333,12 @@ static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
 
 static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
-        struct protoent *protocol = getprotobynumber(ev->level);
-        char *optname_str = alloc_sock_optname_str(ev->optname);
 
-        add(json_details, "level", json_string(protocol->p_name));
-        add(json_details, "optname", json_string(optname_str));
+        add(json_details, "level", json_integer(ev->level));
+        add(json_details, "level_str", json_string(ev->level_str));
+        add(json_details, "optname", json_integer(ev->optname));
+        add(json_details, "optname_str", json_string(ev->optname_str));
 
-        free(optname_str);
         return json_ev;
 }
 

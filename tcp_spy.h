@@ -88,7 +88,9 @@ typedef struct {
 typedef struct {
         TcpEvent super;
         int level;
+        char *level_str;
         int optname;
+        char *optname_str;
 } TcpEvSetsockopt;
 
 typedef struct {
