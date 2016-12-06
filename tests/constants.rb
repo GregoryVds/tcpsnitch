@@ -48,6 +48,9 @@ TCP_EV_CLOSE="close"
 TCP_EV_WRITE="write"
 TCP_EV_READ="read"
 
+# sys/uio.h
+TCP_EV_WRITEV="writev"
+TCP_EV_READV="readv"
 
 SOCKET_SYSCALLS = [
   #TCP_EV_SOCKET,
@@ -64,17 +67,15 @@ SOCKET_SYSCALLS = [
 #  TCP_EV_RECVMSG
   TCP_EV_CLOSE,
   TCP_EV_WRITE,
-  TCP_EV_READ
+  TCP_EV_READ,
+  TCP_EV_WRITEV,
+  TCP_EV_READV
 ]
 
-# sys/uio.h
-TCP_EV_WRITEV="writev()"
-TCP_EV_READV="readv()"
-
 # sys/sendfile.h
-TCP_EV_SENDFILE="sendfile()"
+TCP_EV_SENDFILE="sendfile"
 
 # pool.h
-TCP_EV_POLL="poll()"
+TCP_EV_POLL="poll"
 
 TCP_EV_TCP_INFO="tcp_info"

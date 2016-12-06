@@ -270,6 +270,8 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count) {
         iov1->iovec_count = iovec_count;
+        if (iovec_count <= 0) return 0;
+
         iov1->iovec_sizes = (size_t *)my_malloc(sizeof(size_t *) * iovec_count);
         if (!iov1->iovec_sizes) goto error;
 

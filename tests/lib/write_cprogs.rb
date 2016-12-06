@@ -296,3 +296,77 @@ CLOSE_FAIL = CProg.new(<<-EOT, "close_fail")
     return(EXIT_FAILURE);
 EOT
 
+WRITE_IOV = <<-EOT
+  char *buf0 = \"short string\\n\";
+  char *buf1 = \"This is a longer string\\n\";
+  char *buf2 = \"This is the longest string in this example\\n\";
+
+  struct iovec iov[3];
+  iov[0].iov_base = buf0;
+  iov[0].iov_len = strlen(buf0);
+  iov[1].iov_base = buf1;
+  iov[1].iov_len = strlen(buf1);
+  iov[2].iov_base = buf2;
+  iov[2].iov_len = strlen(buf2);
+EOT
+
+WRITEV_STREAM = CProg.new(<<-EOT, "writev_stream")
+#{CONNECT_STREAM}
+#{WRITE_IOV}
+  if (writev(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+WRITEV_DGRAM = CProg.new(<<-EOT, "writev_dgram")
+#{CONNECT_DGRAM}
+#{WRITE_IOV}
+  if (writev(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+WRITEV_FAIL = CProg.new(<<-EOT, "writev_fail")
+#{CONNECT_STREAM}
+#{WRITE_IOV}
+  if (writev(sock, iov, -1) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+READ_IOV = <<-EOT
+  char buf0[20];
+  char buf1[30];
+  char buf2[40];
+  struct iovec iov[3];
+
+  iov[0].iov_base = buf0;
+  iov[0].iov_len = sizeof(buf0);
+  iov[1].iov_base = buf1;
+  iov[1].iov_len = sizeof(buf1);
+  iov[2].iov_base = buf2;
+  iov[2].iov_len = sizeof(buf2);
+EOT
+
+READV_STREAM = CProg.new(<<-EOT, "readv_stream")
+#{CONNECT_STREAM}
+#{send_http_get}
+#{READ_IOV} 
+  if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+READV_DGRAM = CProg.new(<<-EOT, "readv_dgram")
+#{SOCKET_DGRAM}
+#{READ_IOV}
+  fcntl(sock, F_SETFL, O_NONBLOCK);
+  if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) != -1)
+    return(EXIT_FAILURE); 
+EOT
+
+READV_FAIL = CProg.new(<<-EOT, "readv_fail")
+#{CONNECT_STREAM}
+#{send_http_get}
+#{READ_IOV} 
+  if (readv(sock, iov, -1) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+
