@@ -43,6 +43,12 @@ TCP_EV_RECVFROM="recvfrom"
 TCP_EV_SENDMSG="sendmsg"
 TCP_EV_RECVMSG="recvmsg"
 
+# unistd.h
+TCP_EV_CLOSE="close"
+TCP_EV_WRITE="write"
+TCP_EV_READ="read"
+
+
 SOCKET_SYSCALLS = [
   #TCP_EV_SOCKET,
   TCP_EV_BIND,
@@ -53,15 +59,13 @@ SOCKET_SYSCALLS = [
   TCP_EV_SEND,
   TCP_EV_RECV,
   TCP_EV_SENDTO,
-  TCP_EV_RECVFROM
+  TCP_EV_RECVFROM,
 #  TCP_EV_SENDMSG,
 #  TCP_EV_RECVMSG
+  TCP_EV_CLOSE,
+  TCP_EV_WRITE,
+  TCP_EV_READ
 ]
-
-# unistd.h
-TCP_EV_CLOSE="close()"
-TCP_EV_WRITE="write()"
-TCP_EV_READ="read()"
 
 # sys/uio.h
 TCP_EV_WRITEV="writev()"

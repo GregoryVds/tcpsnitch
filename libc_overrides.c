@@ -299,7 +299,7 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 
  unistd.h - standard symbolic constants and types
 
- functions: close(), write(), read(), fork().
+ functions: write(), read(), close(), fork().
 
 */
 

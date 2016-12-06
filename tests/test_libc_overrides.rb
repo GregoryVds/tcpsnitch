@@ -3,6 +3,7 @@ require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
 require './common.rb'
+require './lib/webserver.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
@@ -22,7 +23,14 @@ def assert_event_present(type, success=true)
   assert_json_match(pattern, read_json)
 end
 
+
 describe "libc overrides" do
+  before do 
+    WebServer.start  # Memoization done in WebServer
+  end
+
+  MiniTest::Unit.after_tests { WebServer.stop }
+
   SOCKET_SYSCALLS.each do |syscall|
     describe "when calling #{syscall}()" do
       stream  = "#{syscall}_stream.out"
@@ -54,8 +62,9 @@ describe "libc overrides" do
         assert run_c_program(failing)
       end
 
-      # SOCKET: No log file if no TCP connection
-      unless [TCP_EV_SOCKET].include?(syscall)
+      # SOCKET: No log file if no TCP connection.
+      # CLOSE: No log file if no TCP connection. How to fail close() with con?
+      unless [TCP_EV_SOCKET, TCP_EV_CLOSE].include?(syscall)
         it "#{failing} should log no ERROR" do
           run_c_program(failing)
           assert no_error_log
@@ -71,105 +80,6 @@ describe "libc overrides" do
           assert_event_present("#{syscall}()", false)
         end
       end
-    end
-  end
-
-=begin
-  _   _ _   _ ___ ____ _____ ____       _    ____ ___
- | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
- | | | |  \| || |\___ \ | | | | | |   / _ \ | |_) | |
- | |_| | |\  || | ___) || | | |_| |  / ___ \|  __/| |
-  \___/|_| \_|___|____/ |_| |____/  /_/   \_\_|  |___|
-
- unistd.h - standard symbolic constants and types
-
- functions: write(), read(), close().
-
-
-  describe "when calling #{TCP_EV_WRITE}" do
-    it "#{TCP_EV_WRITE} should not crash" do
-      assert run_c_program(PKT_WRITE_STREAM)
-    end
-    
-    it "#{TCP_EV_WRITE} should give no ERROR log" do
-      run_c_program(PKT_WRITE_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_WRITE} should be tracked" do
-      run_c_program(PKT_WRITE_STREAM)
-      assert_event_present(TCP_EV_WRITE)
-    end
-
-    it "#{TCP_EV_WRITE} should not crash" do
-      assert run_c_program(PKT_WRITE_DGRAM)
-    end
-
-    it "#{TCP_EV_WRITE} should give no ERROR log" do
-      run_c_program(PKT_WRITE_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_WRITE} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_READ}" do
-    it "#{TCP_EV_READ} should not crash" do
-      assert run_c_program(PKT_READ_STREAM)
-    end
-    
-    it "#{TCP_EV_READ} should give no ERROR log" do
-      run_c_program(PKT_READ_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_READ} should be tracked" do
-      run_c_program(PKT_READ_STREAM)
-      assert_event_present(TCP_EV_READ)
-    end
-
-    it "#{TCP_EV_READ} should not crash" do
-      assert run_c_program(PKT_READ_DGRAM)
-    end
-
-    it "#{TCP_EV_READ} should give no ERROR log" do
-      run_c_program(PKT_READ_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_READ} should not crash" do
-      skip
-    end
-  end
-
-  describe "when calling #{TCP_EV_CLOSE}" do
-    it "#{TCP_EV_CLOSE} should not crash" do
-      assert run_c_program(PKT_CLOSE_STREAM)
-    end
-    
-    it "#{TCP_EV_CLOSE} should give no ERROR log" do
-      run_c_program(PKT_CLOSE_STREAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_CLOSE} should be tracked" do
-      run_c_program(PKT_CLOSE_STREAM)
-      assert_event_present(TCP_EV_CLOSE)
-    end
-
-    it "#{TCP_EV_CLOSE} should not crash" do
-      assert run_c_program(PKT_CLOSE_DGRAM)
-    end
-
-    it "#{TCP_EV_CLOSE} should give no ERROR log" do
-      run_c_program(PKT_CLOSE_DGRAM)
-      assert no_error_log
-    end
-
-    it "#{TCP_EV_CLOSE} should not crash" do
-      skip
     end
   end
 
