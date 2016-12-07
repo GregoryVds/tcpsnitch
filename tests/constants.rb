@@ -15,6 +15,7 @@ JSON_FILE="dump.json"
 PCAP_FILE="dump.pcap"
 
 # LOGS
+PROCESS_DIR_REGEX="*.out*"
 LOG_FILE="*.log"
 LOG_LVL_ERROR="ERROR"
 LOG_LVL_WARN="WARN"

@@ -42,9 +42,13 @@ end
 # Log files manipulations #
 ###########################
 
+def process_dirs
+  Dir[TEST_DIR+"/"+PROCESS_DIR_REGEX]
+end
+
 # Assumes the TEST_DIR was cleared before running the prog.
 def dir_str
-  Dir[TEST_DIR+"/*.out*"].last
+  process_dirs.last
 end
 
 def log_file_str
@@ -95,7 +99,7 @@ def run_curl
 #  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
 end
 
-def errors_in_log?
-  system("grep \"#{LOG_LVL_ERROR}\" #{log_file_str}")
+def errors_in_log?(log_file=log_file_str)
+  system("grep \"#{LOG_LVL_ERROR}\" #{log_file}")
 end
 
