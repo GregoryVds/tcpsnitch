@@ -234,6 +234,95 @@ RECVFROM_FAIL = CProg.new(<<-EOT, "recvfrom_fail")
   }
 EOT
 
+WRITE_IOV = <<-EOT
+  char *buf0 = \"short string\\n\";
+  char *buf1 = \"This is a longer string\\n\";
+  char *buf2 = \"This is the longest string in this example\\n\";
+
+  struct iovec iov[3];
+  iov[0].iov_base = buf0;
+  iov[0].iov_len = strlen(buf0);
+  iov[1].iov_base = buf1;
+  iov[1].iov_len = strlen(buf1);
+  iov[2].iov_base = buf2;
+  iov[2].iov_len = strlen(buf2);
+EOT
+
+SEND_MSGHDR = <<-EOT
+#{WRITE_IOV}
+  struct msghdr msg;
+  memset(&msg, '\\0', sizeof(msg));
+  msg.msg_iov = iov;
+  msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
+EOT
+
+SENDMSG_STREAM = CProg.new(<<-EOT, "sendmsg_stream")
+#{CONNECT_STREAM}
+#{SEND_MSGHDR}
+  if (sendmsg(sock, &msg, 0) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+SENDMSG_DGRAM = CProg.new(<<-EOT, "sendmsg_dgram")
+#{CONNECT_DGRAM}
+#{SEND_MSGHDR}
+  if (sendmsg(sock, &msg, 0) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+SENDMSG_FAIL = CProg.new(<<-EOT, "sendmsg_fail")
+#{CONNECT_STREAM}
+#{SEND_MSGHDR}
+  if (sendmsg(sock, &msg, -1) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+READ_IOV = <<-EOT
+  char buf0[20];
+  char buf1[30];
+  char buf2[40];
+  struct iovec iov[3];
+
+  iov[0].iov_base = buf0;
+  iov[0].iov_len = sizeof(buf0);
+  iov[1].iov_base = buf1;
+  iov[1].iov_len = sizeof(buf1);
+  iov[2].iov_base = buf2;
+  iov[2].iov_len = sizeof(buf2);
+EOT
+
+RECV_MSGHDR = <<-EOT
+#{READ_IOV}
+  struct msghdr msg;
+  memset(&msg, '\\0', sizeof(msg));
+  msg.msg_iov = iov;
+  msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
+EOT
+
+RECVMSG_STREAM = CProg.new(<<-EOT, "recvmsg_stream")
+#{CONNECT_STREAM}
+#{send_http_get}
+#{RECV_MSGHDR} 
+  if (recvmsg(sock, &msg, 0) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+RECVMSG_DGRAM = CProg.new(<<-EOT, "recvmsg_dgram")
+#{CONNECT_DGRAM}
+#{RECV_MSGHDR} 
+  fcntl(sock, F_SETFL, O_NONBLOCK);
+  if (recvmsg(sock, &msg, 0) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+RECVMSG_FAIL = CProg.new(<<-EOT, "recvmsg_fail")
+#{CONNECT_STREAM}
+#{send_http_get}
+#{RECV_MSGHDR} 
+  if (recvmsg(sock, &msg, -1) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 WRITE_STREAM = CProg.new(<<-EOT, "write_stream")
 #{CONNECT_STREAM}
   int data = 42;
@@ -296,20 +385,6 @@ CLOSE_FAIL = CProg.new(<<-EOT, "close_fail")
     return(EXIT_FAILURE);
 EOT
 
-WRITE_IOV = <<-EOT
-  char *buf0 = \"short string\\n\";
-  char *buf1 = \"This is a longer string\\n\";
-  char *buf2 = \"This is the longest string in this example\\n\";
-
-  struct iovec iov[3];
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = strlen(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = strlen(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = strlen(buf2);
-EOT
-
 WRITEV_STREAM = CProg.new(<<-EOT, "writev_stream")
 #{CONNECT_STREAM}
 #{WRITE_IOV}
@@ -329,20 +404,6 @@ WRITEV_FAIL = CProg.new(<<-EOT, "writev_fail")
 #{WRITE_IOV}
   if (writev(sock, iov, -1) != -1)
     return(EXIT_FAILURE);
-EOT
-
-READ_IOV = <<-EOT
-  char buf0[20];
-  char buf1[30];
-  char buf2[40];
-  struct iovec iov[3];
-
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = sizeof(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = sizeof(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = sizeof(buf2);
 EOT
 
 READV_STREAM = CProg.new(<<-EOT, "readv_stream")
