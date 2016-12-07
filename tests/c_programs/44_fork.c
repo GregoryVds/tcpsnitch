@@ -18,9 +18,23 @@ int main(void) {
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
 
-  int optval = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
+/*  pid_t pid;
+  pid = fork();
+  if (pid == -1) return (EXIT_FAILURE);
+  if (pid == 0) { // Child
+    int sock;
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
+
+  printf("childdone");
+  fflush(stdout);
+  } else { // Parent
+    int status;
+    waitpid(pid, &status, 0);
+    printf("fatehrdone");
+    fflush(stdout);
+  }
+  */
           
   return(EXIT_SUCCESS);
 }

@@ -1,17 +1,17 @@
-#include <sys/socket.h>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <sys/sendfile.h>
-#include <poll.h>
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/unistd.h>
-#include <sys/fcntl.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/fcntl.h>
+#include <sys/sendfile.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <sys/unistd.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 int main(void) {
   int sock;
@@ -26,19 +26,22 @@ int main(void) {
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
 
-  char *buf0 = "short string\n";
-  char *buf1 = "This is a longer string\n";
-  char *buf2 = "This is the longest string in this example\n";
+  char *req = "GET / HTTP/1.0\r\n\r\n";
+  send(sock, req, sizeof(char)*strlen(req), 0); 
 
+  char buf0[20];
+  char buf1[30];
+  char buf2[40];
   struct iovec iov[3];
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = strlen(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = strlen(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = strlen(buf2);
 
-  if (writev(sock, iov, -1) != -1)
+  iov[0].iov_base = buf0;
+  iov[0].iov_len = sizeof(buf0);
+  iov[1].iov_base = buf1;
+  iov[1].iov_len = sizeof(buf1);
+  iov[2].iov_base = buf2;
+  iov[2].iov_len = sizeof(buf2);
+ 
+  if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);

@@ -38,7 +38,7 @@ is_integer() {
 
 assert_int() {
         if ! is_integer "$1"; then
-                echo "Invalid argument: $1. $2"
+                echo "Error: Invalid argument: $1. $2"
                 exit 1
         fi
 }
@@ -64,8 +64,8 @@ while getopts ":hvb:d:f:l:u:-:" opt; do
                         ;;
                 d)
                         if [[ ! -d "$OPTARG" ]] ; then
-                                echo "Invalid argument: $OPTARG. -d accepts a"\
-                                      "valid directory."  
+                                echo "Error: Invalid argument: $OPTARG. -d "\
+                                  "accepts a valid directory."  
                                 exit 1
                         fi
                         OPT_D=$OPTARG
@@ -86,7 +86,7 @@ while getopts ":hvb:d:f:l:u:-:" opt; do
                         OPT_V=$((OPT_V+1))
                         ;;
                \?)     
-                        echo "Invalid option (see -h for usage)."
+                        echo "Error: Invalid option (see -h for usage)."
                         usage
                         exit 1
                         ;;
@@ -98,10 +98,30 @@ shift $((OPTIND - 1))
 
 # Verify number of arguments
 if [[ $# -lt 1 ]]; then
-        echo "Illegal number of arguments."
+        echo "Error: Illegal number of arguments."
         usage
         exit 1
 fi
+
+# Test command validity
+command=$1
+if [ ${command:0:2} = "./" -o ${command:0:1} = "/" ]; then # $command is a path
+  if ! [[ -x $command ]]; then
+    echo "Error: $command is not executable."
+    exit 1
+  fi
+else
+  if ! which $command > /dev/null; then
+    echo "Error: $command is not in \$PATH."
+    exit 1
+  fi
+fi
+
+if [[ ! $(which $command) ]] && [[ ! -x $command ]]; then
+  echo "trouble"
+  exit 1
+fi
+
 
 # Create temp dir if option -d not used
 if [[ -z "$OPT_D" ]]; then

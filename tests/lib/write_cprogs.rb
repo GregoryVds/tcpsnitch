@@ -385,6 +385,24 @@ CLOSE_FAIL = CProg.new(<<-EOT, "close_fail")
     return(EXIT_FAILURE);
 EOT
 
+FORK = CProg.new(<<-EOT, "fork")
+#{SOCKET_STREAM}
+/*  pid_t pid;
+  pid = fork();
+  if (pid == -1) return (EXIT_FAILURE);
+  if (pid == 0) { // Child
+  #{SOCKET_STREAM}
+  printf("childdone");
+  fflush(stdout);
+  } else { // Parent
+    int status;
+    waitpid(pid, &status, 0);
+    printf("fatehrdone");
+    fflush(stdout);
+  }
+  */
+EOT
+
 WRITEV_STREAM = CProg.new(<<-EOT, "writev_stream")
 #{CONNECT_STREAM}
 #{WRITE_IOV}
