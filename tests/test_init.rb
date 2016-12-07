@@ -7,22 +7,79 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-describe "Init" do
+describe "tcpsnitch" do
 		
-  let(:script) { "./c_programs/00_socket_stream.out" } 
-  let(:dir) { "/tmp/dummy" }
+  let(:cmd) { "./c_programs/00_socket_stream.out" } 
 
-  def run_lib(env='')
-    system("#{env} #{LD_PRELOAD} #{script}") 
-  end
-
-  describe "when no ENV variable is set" do
-    it "should simply not crash" do
-      assert run_lib
+  describe "when no option is set" do
+    it "should not crash" do
+      assert tcpsnitch('', cmd)
     end
   end
 
-  describe "when #{ENV_PATH} is set" do
+  describe "when no command is passed" do
+    it "should report 'too few arguments'" do
+      assert_match(/too few arguments/, tcpsnitch_output('', '')) 
+      assert_match(/too few arguments/, tcpsnitch_output('-b 42', ''))
+    end
+  end
+  
+  ["-b", "-f", "-l", "-u"].each do |opt|
+    describe "when #{opt} is set" do
+      it "should report 'invalid #{opt} argument'" do
+        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
+        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} foo", cmd))
+      end
+   
+      it "should not crash with a valid arg" do
+        assert tcpsnitch("#{opt} 5", cmd)
+      end
+    end
+  end
+
+  describe "when -d is set" do
+    it "should report 'invalid argument' with invalid dir" do
+      assert_match(/invalid -d argument/, tcpsnitch_output("-d 1234", cmd))
+      assert_match(/invalid -d argument/, tcpsnitch_output("-d /crazy/path", cmd))
+    end
+
+    it "should not crash with a valid arg" do
+      assert tcpsnitch("-d #{TEST_DIR}", cmd)
+    end
+
+    it "should write to a valid dir" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert !dir_empty?(TEST_DIR)
+    end
+  end
+  
+  describe "when -h is set" do
+    it "should not crash" do
+      assert tcpsnitch("-h", '')
+    end
+
+    it "should print usage dialog" do
+      assert_match(/Usage/, tcpsnitch_output('-h', ''))
+    end
+  end
+
+  describe "when --version is set" do
+    it "should not crash" do
+      assert tcpsnitch("--version", '')
+    end
+
+    it "should print version" do
+      assert_match(/version/, tcpsnitch_output('--version', ''))
+    end
+  end
+
+
+
+=begin
+
+
+  describe "lo" do
     it "should not crash when #{ENV_PATH} exists" do
       mkdir(dir)
       assert(run_lib, "#{ENV_PATH}=#{dir}")
@@ -104,5 +161,5 @@ describe "Init" do
       assert !errors_in_log?(log_file_str("curl"))
     end
   end
-
+=end
 end

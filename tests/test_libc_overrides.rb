@@ -1,4 +1,5 @@
-# Purpose: test that all libc overrides do not crash the main process.
+# Purpose: test that all libc overrides do not crash the main process, do not
+# generate any error log and are present in the JSON trace.
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
@@ -22,7 +23,6 @@ def assert_event_present(type, success=true, json=read_json)
   }.ignore_extra_keys!
   assert_json_match(pattern, json)
 end
-
 
 describe "libc overrides" do
   before do 
@@ -119,44 +119,4 @@ describe "libc overrides" do
       assert_event_present("socket()", true, File.read(dir1+"/0/"+JSON_FILE))
     end
   end
-
-=begin
-  _   _ ___ ___       _    ____ ___
- | | | |_ _/ _ \     / \  |  _ \_ _|
- | | | || | | | |   / _ \ | |_) | |
- | |_| || | |_| |  / ___ \|  __/| |
-  \___/|___\___/  /_/   \_\_|  |___|
-
- sys/uio.h - definitions for vector I/O operations
-
- functions: writev(), readv()
-
-=end
-
-=begin
-  ____  _____ _   _ ____  _____ ___ _     _____      _    ____ ___
- / ___|| ____| \ | |  _ \|  ___|_ _| |   | ____|    / \  |  _ \_ _|
- \___ \|  _| |  \| | | | | |_   | || |   |  _|     / _ \ | |_) | |
-  ___) | |___| |\  | |_| |  _|  | || |___| |___   / ___ \|  __/| |
- |____/|_____|_| \_|____/|_|   |___|_____|_____| /_/   \_\_|  |___|
-
- sendfile.h - transfer data between file descriptors
-
- functions: sendfile()
-
-=end
-
-=begin
-  ____   ___  _     _          _    ____ ___
- |  _ \ / _ \| |   | |        / \  |  _ \_ _|
- | |_) | | | | |   | |       / _ \ | |_) | |
- |  __/| |_| | |___| |___   / ___ \|  __/| |
- |_|    \___/|_____|_____| /_/   \_\_|  |___|
-
- poll.h - definitions for the poll() function
-
- functions: poll()
-
-=end
-
 end

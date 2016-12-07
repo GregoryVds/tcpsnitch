@@ -89,9 +89,17 @@ def run_pkt_script(script, env='')
   rc
 end
 
+def tcpsnitch(options='', cmd='')
+  system("#{EXECUTABLE} #{options} #{cmd}")
+end
+
+def tcpsnitch_output(options='', cmd='')
+  `#{EXECUTABLE} #{options} #{cmd}`
+end
+
 def run_c_program(name)
   reset_dir(TEST_DIR) 
-  system("#{EXECUTABLE} -d #{TEST_DIR} ./c_programs/*#{name} 2>/dev/null")
+  tcpsnitch("-d #{TEST_DIR}", "./c_programs/*#{name} 2>/dev/null")
 end
 
 def run_curl

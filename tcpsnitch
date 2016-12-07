@@ -3,8 +3,9 @@ set -o errexit
 set -o nounset
 # set -o xtrace
 
+NAME="tcpsnitch"
 VERSION=0.1.0
-VERSION_STR="tcpsnitch version ${VERSION}"
+VERSION_STR="${NAME} version ${VERSION}"
 MAX_VERBOSITY=1
 
 # Option default values
@@ -20,11 +21,11 @@ usage() {
         echo "                 [ -u <ms> ] [ -l <lvl> ] [ --version ]"
         echo ""
         echo "[command]: command to spy on."
-        echo "-h: show this help text."
         echo "-b <bytes>: dump tcp_info max once every <bytes> bytes (defaults"\
              "to 4096)."
         echo "-d <dir>: dir to save traces (defaults to random dir in /tmp)."
         echo "-f <lvl>: logs to file verbosity (0 to 5, defaults to 2)."
+        echo "-h: show this help text."
         echo "-l <lvl>: logs to stderr verbosity (0 to 5, defaults to 0)."  
         echo "-u <micro_seconds>: dump tcp_info max once every <ms> micro"\
              "seconds (defaults to 0)."
@@ -37,10 +38,17 @@ is_integer() {
 }
 
 assert_int() {
+        error_msg=$2
         if ! is_integer "$1"; then
-                echo "Error: Invalid argument: $1. $2"
+                error "$error_msg"
                 exit 1
         fi
+}
+
+error() {
+        msg=$1
+        echo "${NAME}: ${msg}."
+        echo "Try '${NAME} -h' for more information."
 }
 
 # Parse options
@@ -59,35 +67,33 @@ while getopts ":hvb:d:f:l:u:-:" opt; do
                         exit 0
                         ;;
                 b)
-                        assert_int "$OPTARG" "-b accepts a non-neg integer." 
+                        assert_int "$OPTARG" "invalid -b argument: '$OPTARG'" 
                         OPT_B=$OPTARG
                         ;;
                 d)
                         if [[ ! -d "$OPTARG" ]] ; then
-                                echo "Error: Invalid argument: $OPTARG. -d "\
-                                  "accepts a valid directory."  
+                                error "invalid -d argument: '$OPTARG'"
                                 exit 1
                         fi
                         OPT_D=$OPTARG
                         ;;
                 f)
-                        assert_int "$OPTARG" "-f accepts a non-neg integer." 
+                        assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
                         OPT_F=$OPTARG
                         ;;
                 l)
-                        assert_int "$OPTARG" "-l accepts a non-neg integer." 
+                        assert_int "$OPTARG" "invalid -l argument: '$OPTARG'" 
                         OPT_L=$OPTARG
                         ;;
                 u)
-                        assert_int "$OPTARG" "-u accepts a non-neg integer." 
+                        assert_int "$OPTARG" "invalid -u argument: '$OPTARG'" 
                         OPT_U=$OPTARG
                         ;;
                 v)
                         OPT_V=$((OPT_V+1))
                         ;;
                \?)     
-                        echo "Error: Invalid option (see -h for usage)."
-                        usage
+                        error "invalid option"
                         exit 1
                         ;;
         esac
@@ -98,30 +104,23 @@ shift $((OPTIND - 1))
 
 # Verify number of arguments
 if [[ $# -lt 1 ]]; then
-        echo "Error: Illegal number of arguments."
-        usage
+        error "too few arguments"
         exit 1
 fi
 
-# Test command validity
+# Test command is executable/in path
 command=$1
 if [ ${command:0:2} = "./" -o ${command:0:1} = "/" ]; then # $command is a path
-  if ! [[ -x $command ]]; then
-    echo "Error: $command is not executable."
-    exit 1
-  fi
+        if ! [[ -x $command ]]; then
+                error "invalid command: '$command' is not executable" 
+                exit 1
+        fi
 else
-  if ! which $command > /dev/null; then
-    echo "Error: $command is not in \$PATH."
-    exit 1
-  fi
+        if ! which $command > /dev/null; then
+                error "invalid argument: '$command' is not in \$PATH"
+                exit 1
+        fi
 fi
-
-if [[ ! $(which $command) ]] && [[ ! -x $command ]]; then
-  echo "trouble"
-  exit 1
-fi
-
 
 # Create temp dir if option -d not used
 if [[ -z "$OPT_D" ]]; then
