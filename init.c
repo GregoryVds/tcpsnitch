@@ -7,13 +7,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "config.h"
+#include "constants.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
 long conf_opt_b;
+long conf_opt_c;
 char *conf_opt_d;
 long conf_opt_f;
 char *conf_opt_i;
@@ -144,6 +145,7 @@ void reset_tcpsnitch(void) {
         tcp_snitch_free();
         logger_init(NULL, 0, 0);
         conf_opt_b = 0;
+        conf_opt_c = 0;
         conf_opt_d = NULL;
         conf_opt_f = 0;
         conf_opt_i = NULL;
@@ -182,6 +184,7 @@ void init_tcpsnitch(void) {
 
         /* Fetch other ENV variables */
         conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);
+        conf_opt_c = get_long_env_or_defaultval(ENV_OPT_C, 0);
         // conf_opt_d is fetched earlier
         conf_opt_f = get_long_env_or_defaultval(ENV_OPT_F, WARN);
         conf_opt_i = get_str_env(ENV_OPT_I);

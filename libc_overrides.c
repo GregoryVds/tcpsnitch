@@ -30,6 +30,7 @@
 
 #define _GNU_SOURCE
 
+#include "lib.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -44,7 +45,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "init.h"
-#include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 #include "tcp_spy.h"
@@ -111,7 +111,7 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
         orig_connect_type orig_connect;
         orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
 
-        if (is_tcp_socket(__fd)) tcp_start_capture(__fd, __addr);
+        if (is_tcp_socket(__fd) && conf_opt_c) tcp_start_capture(__fd, __addr);
         int ret = orig_connect(__fd, __addr, __len);
         int err = errno;
         if (is_tcp_socket(__fd)) tcp_ev_connect(__fd, ret, err, __addr, __len);
@@ -476,7 +476,7 @@ typedef int (*orig_poll_type)(struct pollfd *__fds, nfds_t __nfds,
 int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
         orig_poll_type orig_poll;
         orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
-        
+
         unsigned long ndfs = __nfds;
         int i;
         for (i = 0; (unsigned long)i < ndfs; i++) {

@@ -11,20 +11,22 @@ SYSCTL_FILE="sysctl_net.txt"
 
 # Option default values
 OPT_B=4096
-OPT_D=
+OPT_C=0
+OPT_D=""
 OPT_F=2
-OPT_I=
+OPT_I=""
 OPT_L=0
 OPT_P=0
 OPT_U=0
 OPT_V=0
 
 usage() {
-        echo "Usage: tcpsnitch [-hpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+        echo "Usage: tcpsnitch [-chpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
         echo "                 [ -i <iface> ] [ -l <lvl> ] [ -u <msec> ]"
         echo "                 [ --version ] <command>"
         echo ""
         echo "<command>   command to spy on."
+        echo "-c          capture pcap trace."
         echo "-b <bytes>  dump tcp_info max once every <bytes> (def. 4096)."
         echo "-d <dir>    dir to save traces (defaults to random dir in /tmp)."
         echo "-f <lvl>    logs to file verbosity (0 to 5, defaults to 2)."
@@ -56,7 +58,7 @@ error() {
 }
 
 # Parse options
-while getopts ":hpvb:d:f:i:l:u:-:" opt; do
+while getopts ":chpvb:d:f:i:l:u:-:" opt; do
         case $opt in
                 -) # Trick to parse long options with getopts.
                         case "$OPTARG" in
@@ -73,6 +75,9 @@ while getopts ":hpvb:d:f:i:l:u:-:" opt; do
                 b)
                         assert_int "$OPTARG" "invalid -b argument: '$OPTARG'" 
                         OPT_B=$OPTARG
+                        ;;
+                c)
+                        OPT_C=1;
                         ;;
                 d)
                         if [[ ! -d "$OPTARG" ]] ; then
@@ -155,6 +160,7 @@ if [[ ! -e "$OS_CONFIG_PATH" ]]; then
 fi
 
 TCPSNITCH_OPT_B=$OPT_B \
+TCPSNITCH_OPT_C=$OPT_C \
 TCPSNITCH_OPT_D=$OPT_D \
 TCPSNITCH_OPT_F=$OPT_F \
 TCPSNITCH_OPT_I=$OPT_I \

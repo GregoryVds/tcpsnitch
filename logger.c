@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "config.h"
+#include "constants.h"
 #include "init.h"
 #include "lib.h"
 #include "logger.h"

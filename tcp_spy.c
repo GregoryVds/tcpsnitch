@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include "config.h"
+#include "constants.h"
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
@@ -388,10 +388,6 @@ error_out:
         return;
 }
 
-void tcp_stop_capture(TcpConnection *con) {
-        stop_capture(con->capture_switch, con->rtt * 2);
-}
-
 #define FAIL_IF_NULL(var, ev_type_cons) \
         if (!var) {                     \
                 LOG_FUNC_FAIL;          \
@@ -615,7 +611,8 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
         TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvClose);
 
         ev->detected = detected;
-        if (con->capture_switch != NULL) tcp_stop_capture(con);
+        if (con->capture_switch != NULL)
+                stop_capture(con->capture_switch, con->rtt * 2);
 
         TCP_EV_POSTLUDE(TCP_EV_CLOSE)
 

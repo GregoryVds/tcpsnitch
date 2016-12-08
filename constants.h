@@ -11,6 +11,7 @@
 #define MAIN_LOG_FILE "main.log"
 
 #define ENV_OPT_B "TCPSNITCH_OPT_B"
+#define ENV_OPT_C "TCPSNITCH_OPT_C"
 #define ENV_OPT_D "TCPSNITCH_OPT_D"
 #define ENV_OPT_F "TCPSNITCH_OPT_F"
 #define ENV_OPT_I "TCPSNITCH_OPT_I"

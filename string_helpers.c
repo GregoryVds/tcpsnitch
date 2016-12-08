@@ -7,7 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "config.h"
+#include "constants.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "config.h"
+#include "constants.h"
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
