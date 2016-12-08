@@ -4,6 +4,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
+#include "init.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -85,6 +86,7 @@ static json_t *build_tcp_ev_connection(const TcpConnection *con) {
         add(json_con, "events_count", json_integer(con->events_count));
         add(json_con, "bytes_sent", json_integer(con->bytes_sent));
         add(json_con, "bytes_received", json_integer(con->bytes_received));
+        add(json_con, "capture_filter", json_string(con->capture_filter));
         add(json_con, "successful_pcap", json_boolean(con->successful_pcap));
 
         /* Loop through all events to build JSON */
@@ -514,8 +516,8 @@ static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
 char *alloc_tcp_ev_connection_json(const TcpConnection *con) {
         json_t *json_con = build_tcp_ev_connection(con);
         if (!json_con) goto error;
-        char *json_string =
-            json_dumps(json_con, JSON_INDENT(2) | JSON_PRESERVE_ORDER);
+        size_t flags = conf_opt_p ? JSON_INDENT(2) : 0; 
+        char *json_string = json_dumps(json_con, flags);
         json_decref(json_con);
         return json_string;
 error:

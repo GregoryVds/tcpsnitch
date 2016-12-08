@@ -100,7 +100,7 @@ static void output_ev_tcpinfo(TcpEvTcpInfo *ev) {
 
 void output_event(TcpEvent *ev) {
         if (!_stdout) return;  // We don't bother handling a fdopen() fail.
-        if (!conf_verbosity) return;
+        if (!conf_opt_v) return;
 
         switch (ev->type) {
                 case TCP_EV_SOCKET:

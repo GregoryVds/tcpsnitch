@@ -142,6 +142,11 @@ long get_long_env_or_defaultval(const char *env_var, long def_val) {
         return val;
 }
 
+char *get_str_env(const char *env_var) {
+        char *val = getenv(env_var);
+        return strlen(val) ? val : NULL;
+}
+
 const char *get_app_name(void) {
         char *app_name, *last = strrchr(program_invocation_name, '/');
         app_name = (last == NULL) ? program_invocation_name : last + 1;

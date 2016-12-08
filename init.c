@@ -13,49 +13,67 @@
 #include "string_helpers.h"
 #include "tcp_spy.h"
 
-char *conf_dir = NULL;
-long conf_bytes_ival = 0;
-long conf_micros_ival = 0;
-long conf_verbosity = 0;
+long conf_opt_b;
+char *conf_opt_d;
+long conf_opt_f;
+char *conf_opt_i;
+long conf_opt_l;
+long conf_opt_p;
+long conf_opt_u;
+long conf_opt_v;
 
-FILE *_stdout = NULL;
-FILE *_stderr = NULL;
+FILE *_stdout;
+FILE *_stderr;
 
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-static const char *get_conf_dir(void);
-static char *create_logs_dir(const char *netspy_path);
-static void netspy_free(void);
+static char *get_conf_opt_d(void);
+static bool config_init_logger(void);
+static char *create_logs_dir(void);
+static void tcp_snitch_free(void);
 static void cleanup(void);
  
 /* Private functions */
 
-static const char *get_conf_dir(void) {
+static char *get_conf_opt_d(void) {
         DIR *dir;
-        const char *path = getenv(ENV_DIR);
-        if (path) {
-                if ((dir = opendir(path)))
+        char *val = get_str_env(ENV_OPT_D);
+        if (val) {
+                if ((dir = opendir(val)))
                         closedir(dir);
                 else
                         goto error1;
         } else
                 goto error2;
-        return path;
+        return val;
 error1:
-        LOG(ERROR, "opendir() failed on %s. %s.", path, strerror(errno));
+        LOG(ERROR, "opendir() failed on %s. %s.", val, strerror(errno));
         goto error_out;
 error2:
-        LOG(ERROR, "%s not set.", ENV_DIR);
+        LOG(ERROR, "%s not set.", ENV_OPT_D);
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
 
-static char *create_logs_dir(const char *netspy_path) {
+static bool config_init_logger(void) {
+        const char *init_logs_path =
+            alloc_concat_path(conf_opt_d, INIT_LOG_FILE);
+        if (init_logs_path)
+                logger_init(init_logs_path, DEBUG, DEBUG);
+        else
+                goto error;
+        return true;
+error:
+        LOG_FUNC_FAIL;
+        return false;
+}
+
+static char *create_logs_dir(void) {
         char *base_path, *path;
         DIR *dir;
-        if (!(base_path = alloc_base_dir_path(netspy_path))) goto error_out;
+        if (!(base_path = alloc_base_dir_path(conf_opt_d))) goto error_out;
 
         // Find first directory available starting from base_path and by
         // concatenating increasing integers.
@@ -89,8 +107,8 @@ error_out:
         return NULL;
 }
 
-static void netspy_free(void) {
-        free(conf_dir);
+static void tcp_snitch_free(void) {
+        free(conf_opt_d);
         mutex_destroy(&init_mutex);
 }
 
@@ -98,14 +116,14 @@ static void cleanup(void) {
         LOG(INFO, "Performing library cleanup before end of process.");
         tcp_close_unclosed_connections();
         // tcp_free();
-        // netspy_free();
+        // tcp_snitch_free();
 }
 
 /* Public functions */
 
 /*  This function is used to reset the library after a fork() call. If a fork()
  *  is not followed by exec(), the global variables are not reinitialized.
- *  This means that 2 processes with differents PID would use the same conf_dir,
+ *  This means that 2 processes with differents PID would use the same conf_opt_d,
  *  but more importantly, the child would inherit all the states from the
  *  fd_con_map of its parents. This leads to many issues:
  *     - The 2 processes will mix their logs in the same file.
@@ -126,15 +144,19 @@ static void cleanup(void) {
  *  mutex. Not resetting could have much more drastic consequences such as those
  *  explained above. */
 
-void reset_netspy(void) {
+void reset_tcpsnitch(void) {
         if (!initialized) return;  // Nothing to do.
 
-        netspy_free();
+        tcp_snitch_free();
         logger_init(NULL, 0, 0);
-        conf_dir = NULL;
-        conf_bytes_ival = 0;
-        conf_micros_ival = 0;
-        conf_verbosity = 0;
+        conf_opt_b = 0;
+        conf_opt_d = NULL;
+        conf_opt_f = 0;
+        conf_opt_i = NULL;
+        conf_opt_l = 0;
+        conf_opt_p = 0;
+        conf_opt_u = 0;
+        conf_opt_v = 0;
         initialized = false;
         mutex_init(&init_mutex);
 
@@ -142,20 +164,7 @@ void reset_netspy(void) {
         tcp_reset();
 }
 
-static bool config_init_logger(const char *netspy_path) {
-        const char *init_logs_path =
-            alloc_concat_path(netspy_path, INIT_LOG_FILE);
-        if (init_logs_path)
-                logger_init(init_logs_path, DEBUG, DEBUG);
-        else
-                goto error;
-        return true;
-error:
-        LOG_FUNC_FAIL;
-        return false;
-}
-
-void init_netspy(void) {
+void init_tcpsnitch(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
@@ -168,31 +177,33 @@ void init_netspy(void) {
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
         if (!(_stderr = fdopen(STDERR_FD, "w")))
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
-
-        const char *netspy_path = get_conf_dir();
-        if (!netspy_path) goto exit1;
         
-        config_init_logger(netspy_path);
+        conf_opt_d = get_conf_opt_d();
+        if (!conf_opt_d) goto exit1;
+        
+        config_init_logger();
         /* At this point we have initialization logs to file */
 
         atexit(cleanup);
 
         /* Fetch other ENV variables */
-        static long conf_file_log_lvl, conf_stderr_lvl;
-        conf_bytes_ival = get_long_env_or_defaultval(ENV_BYTES_IVAL, 4096);
-        conf_micros_ival = get_long_env_or_defaultval(ENV_MICROS_IVAL, 0);
-        conf_file_log_lvl = get_long_env_or_defaultval(ENV_FILE_LOG_LVL, WARN);
-        conf_stderr_lvl = get_long_env_or_defaultval(ENV_STDERR_LOG_LVL, WARN);
-        conf_verbosity = get_long_env_or_defaultval(ENV_VERBOSITY, 0); 
+        conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);
+        // conf_opt_d is fetched earlier
+        conf_opt_f = get_long_env_or_defaultval(ENV_OPT_F, WARN);
+        conf_opt_i = get_str_env(ENV_OPT_I);
+        conf_opt_l = get_long_env_or_defaultval(ENV_OPT_L, WARN);
+        conf_opt_p = get_long_env_or_defaultval(ENV_OPT_P, 0); 
+        conf_opt_u = get_long_env_or_defaultval(ENV_OPT_U, 0);
+        conf_opt_v = get_long_env_or_defaultval(ENV_OPT_V, 0); 
 
         /* Create dir containing log, pcap and json files for this process */
-        if (!(conf_dir = create_logs_dir(netspy_path))) goto exit1;
+        if (!(conf_opt_d = create_logs_dir())) goto exit1;
 
         const char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(conf_dir, MAIN_LOG_FILE)))
+        if (!(log_file_path = alloc_concat_path(conf_opt_d, MAIN_LOG_FILE)))
                 goto exit2;
         else
-                logger_init(log_file_path, conf_stderr_lvl, conf_file_log_lvl);
+                logger_init(log_file_path, conf_opt_l, conf_opt_f);
 
         goto exit;
 exit1:

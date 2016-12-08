@@ -208,6 +208,7 @@ typedef struct {
         char *cmdline;       // Cmdline (app name + args).
         char *kernel;        // Kernel version.
         char *directory;     // Directory for all logging purpose.
+        char *capture_filter;
         TcpEventNode *head;  // Head for list of events.
         TcpEventNode *tail;  // Tail for list of events.
         // Others

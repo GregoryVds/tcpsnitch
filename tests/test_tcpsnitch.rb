@@ -52,7 +52,18 @@ describe "tcpsnitch" do
       assert !dir_empty?(TEST_DIR)
     end
   end
- 
+  
+  describe "option -i" do
+    it "should not crash with valid iface" do
+      assert tcpsnitch("-i lo", cmd)
+    end
+
+    it "should report 'invalid argument' with invalid iface" do
+      assert_match(/invalid -i argument/, tcpsnitch_output("-i abc", cmd))
+      assert_match(/invalid -i argument/, tcpsnitch_output("-i 123", cmd))
+    end
+  end
+
   describe "when -l is set" do
     it "should show logs at 3" do
       assert_match(/[INFO]/, tcpsnitch_output("-l 3", cmd))
@@ -66,6 +77,24 @@ describe "tcpsnitch" do
 
     it "should print usage dialog" do
       assert_match(/Usage/, tcpsnitch_output('-h', ''))
+    end
+  end
+
+  describe "option -p" do
+    it "should not crash with -p" do
+      assert tcpsnitch("-p", cmd)
+    end
+
+    it "should pretty print the JSON with -p" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR} -p", cmd)
+      assert system("test $(wc -l < #{json_file_str}) -gt 0") 
+    end
+
+    it "should not pretty print the JSON without -p" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert system("test $(wc -l < #{json_file_str}) -eq 0") 
     end
   end
 

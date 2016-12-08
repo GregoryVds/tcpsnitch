@@ -17,13 +17,14 @@ describe "tcp_spy" do
 
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
-      run_c_program(TCP_EV_SOCKET)
+      run_c_program(TCP_EV_CONNECT)
       pattern = {
         app_name: String,
         bytes_received: Fixnum,
         bytes_sent: Fixnum,
         cmdline: String,
         directory: String,
+        capture_filter: String,
         events: Array,
         events_count: Fixnum,
         id: Fixnum,

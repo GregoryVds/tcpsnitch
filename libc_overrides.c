@@ -362,7 +362,7 @@ pid_t fork(void) {
         LOG(INFO, "fork() called.");
 
         pid_t ret = orig_fork();
-        if (ret == 0) reset_netspy();  // Child
+        if (ret == 0) reset_tcpsnitch();  // Child
 
         return ret;
 }

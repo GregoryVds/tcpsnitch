@@ -22,6 +22,7 @@ time_t get_time_sec(void);
 unsigned long get_time_micros(void);
 
 long get_env_as_long(const char *env_var);
+char *get_str_env(const char *env_var);
 long get_long_env_or_defaultval(const char *env_var, long def_val);
 const char *get_app_name(void);
 int get_int_len(int i);

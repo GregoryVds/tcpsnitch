@@ -48,7 +48,7 @@ describe "libc overrides" do
 
       it "should be in JSON with #{stream}" do
         run_c_program(stream)
-        ssert_event_present(syscall)
+        assert_event_present(syscall)
       end
 
       # LISTEN: Cannot listen() on DGRAM socket

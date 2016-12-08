@@ -77,7 +77,7 @@ static TcpConnection *alloc_connection(void) {
         mutex_unlock(&connections_count_mutex);
 
         // Has to be done AFTER getting the con->id
-        con->directory = create_numbered_dir_in_path(conf_dir, con->id);
+        con->directory = create_numbered_dir_in_path(conf_opt_d, con->id);
         return con;
 error:
         LOG_FUNC_FAIL;
@@ -349,17 +349,17 @@ error_out:
 
 static bool should_dump_tcp_info(const TcpConnection *con) {
         /* Check if time lower bound is set, otherwise assume no lower bound */
-        if (conf_micros_ival > 0) {
+        if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
-                if (time_elasped < conf_micros_ival) return false;
+                if (time_elasped < conf_opt_u) return false;
         }
 
         /* Check if bytes lower bound set, otherwise assume no lower bound */
-        if (conf_bytes_ival > 0) {
+        if (conf_opt_b > 0) {
                 long cur_bytes = con->bytes_sent + con->bytes_received;
                 long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
-                if (bytes_elapsed < conf_bytes_ival) return false;
+                if (bytes_elapsed < conf_opt_b) return false;
         }
 
         /* If we reach this point, no lower bound prevents from dumping */
@@ -383,6 +383,7 @@ void free_connection(TcpConnection *con) {
         free(con->cmdline);
         free(con->kernel);
         free(con->directory);
+        free(con->capture_filter);
         free(con);
 }
 
@@ -412,13 +413,12 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
                 ? (const struct sockaddr *)&con->bind_ev->addr.addr_sto
                 : NULL;
 
-        char *filter = build_capture_filter(addr_from, addr_to);
+        if (!(con->capture_filter = build_capture_filter(addr_from, addr_to)))
+                goto error2;
 
-        if (!filter) goto error2;
+        con->capture_switch =
+            start_capture(con->capture_filter, pcap_file_path);
 
-        con->capture_switch = start_capture(filter, pcap_file_path);
-
-        free(filter);
         free(pcap_file_path);
         ra_unlock_elem(fd);
         return;
@@ -480,7 +480,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection already exits and was not properly closed. */
-        init_netspy();
+        init_tcpsnitch();
         LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 

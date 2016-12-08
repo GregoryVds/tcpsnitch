@@ -4,16 +4,21 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-extern char *conf_dir;
-extern long conf_bytes_ival;
-extern long conf_micros_ival;
-extern long conf_verbosity;
+
+extern long conf_opt_b;
+extern char *conf_opt_d;
+extern long conf_opt_f;
+extern char *conf_opt_i;
+extern long conf_opt_l;
+extern long conf_opt_p;
+extern long conf_opt_u;
+extern long conf_opt_v;
 
 extern FILE *_stdout;
 extern FILE *_stderr;
 
-void reset_netspy(void);
-void init_netspy(void);
+void reset_tcpsnitch(void);
+void init_tcpsnitch(void);
 
 #endif
 

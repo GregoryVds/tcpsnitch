@@ -11,27 +11,30 @@ SYSCTL_FILE="sysctl_net.txt"
 
 # Option default values
 OPT_B=4096
-OPT_D=""
+OPT_D=
 OPT_F=2
+OPT_I=
 OPT_L=0
+OPT_P=0
 OPT_U=0
 OPT_V=0
 
 usage() {
-        echo "Usage: tcpsnitch [-hv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
-        echo "                 [ -u <ms> ] [ -l <lvl> ] [ --version ]"
+        echo "Usage: tcpsnitch [-hpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+        echo "                 [ -i <iface> ] [ -l <lvl> ] [ -u <msec> ]"
+        echo "                 [ --version ] <command>"
         echo ""
-        echo "[command]: command to spy on."
-        echo "-b <bytes>: dump tcp_info max once every <bytes> bytes (defaults"\
-             "to 4096)."
-        echo "-d <dir>: dir to save traces (defaults to random dir in /tmp)."
-        echo "-f <lvl>: logs to file verbosity (0 to 5, defaults to 2)."
-        echo "-h: show this help text."
-        echo "-l <lvl>: logs to stderr verbosity (0 to 5, defaults to 0)."  
-        echo "-u <micro_seconds>: dump tcp_info max once every <ms> micro"\
-             "seconds (defaults to 0)."
-        echo "-v: verbose output."  
-        echo "--version: print tcpsnitch version." 
+        echo "<command>   command to spy on."
+        echo "-b <bytes>  dump tcp_info max once every <bytes> (def. 4096)."
+        echo "-d <dir>    dir to save traces (defaults to random dir in /tmp)."
+        echo "-f <lvl>    logs to file verbosity (0 to 5, defaults to 2)."
+        echo "-h          show this help text."
+        echo "-i <iface>  add interface name to capture filter." 
+        echo "-l <lvl>    logs to stderr verbosity (0 to 5, defaults to 0)."  
+        echo "-p          pretty print JSON in json files."
+        echo "-u <msec>   dump tcp_info max once every <msec> (def. 0)."
+        echo "-v          verbose output."  
+        echo "--version   print tcpsnitch version." 
 }
 
 is_integer() {
@@ -53,7 +56,7 @@ error() {
 }
 
 # Parse options
-while getopts ":hvb:d:f:l:u:-:" opt; do
+while getopts ":hpvb:d:f:i:l:u:-:" opt; do
         case $opt in
                 -) # Trick to parse long options with getopts.
                         case "$OPTARG" in
@@ -82,9 +85,19 @@ while getopts ":hvb:d:f:l:u:-:" opt; do
                         assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
                         OPT_F=$OPTARG
                         ;;
+                i)
+                        if ! ip link show $OPTARG >/dev/null ; then
+                                error "invalid -i argument: '$OPTARG'"
+                                exit 1
+                        fi
+                        OPT_I=$OPTARG
+                        ;;
                 l)
                         assert_int "$OPTARG" "invalid -l argument: '$OPTARG'" 
                         OPT_L=$OPTARG
+                        ;;
+                p)
+                        OPT_P=1
                         ;;
                 u)
                         assert_int "$OPTARG" "invalid -u argument: '$OPTARG'" 
@@ -141,12 +154,14 @@ if [[ ! -e "$OS_CONFIG_PATH" ]]; then
         uname -a > "$OS_CONFIG_PATH"
 fi
 
-TCPSNITCH_BYTES_IVAL=$OPT_B \
-TCPSNITCH_DIR="$OPT_D" \
-TCPSNITCH_FILE_LOG_LVL="$OPT_F" \
-TCPSNITCH_STDERR_LOG_LVL="$OPT_L" \
-TCPSNITCH_MICROS_IVAL=$OPT_U \
-TCPSNITCH_VERBOSITY=$OPT_V \
+TCPSNITCH_OPT_B=$OPT_B \
+TCPSNITCH_OPT_D=$OPT_D \
+TCPSNITCH_OPT_F=$OPT_F \
+TCPSNITCH_OPT_I=$OPT_I \
+TCPSNITCH_OPT_L=$OPT_L \
+TCPSNITCH_OPT_P=$OPT_P \
+TCPSNITCH_OPT_U=$OPT_U \
+TCPSNITCH_OPT_V=$OPT_V \
 LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 4>&2 1>/dev/null 2>&1
 
 echo "tcpsnitch data saved in $OPT_D"
