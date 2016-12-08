@@ -53,7 +53,13 @@ describe "tcpsnitch" do
       assert !dir_empty?(TEST_DIR)
     end
   end
-  
+ 
+  describe "when -l is set" do
+    it "should show logs at 3" do
+      assert_match(/[INFO]/, tcpsnitch_output("-l 3", cmd))
+    end
+  end
+ 
   describe "when -h is set" do
     it "should not crash" do
       assert tcpsnitch("-h", '')
@@ -61,6 +67,12 @@ describe "tcpsnitch" do
 
     it "should print usage dialog" do
       assert_match(/Usage/, tcpsnitch_output('-h', ''))
+    end
+  end
+
+  describe "when -v is set" do
+    it "should show verbose output" do
+      assert_match(/[pid \d*] [a-z]*()/, tcpsnitch_output("-v", cmd))
     end
   end
 

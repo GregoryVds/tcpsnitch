@@ -90,11 +90,11 @@ def run_pkt_script(script, env='')
 end
 
 def tcpsnitch(options='', cmd='')
-  system("#{EXECUTABLE} #{options} #{cmd}")
+  system("#{EXECUTABLE} #{options} #{cmd} >/dev/null 2>&1")
 end
 
 def tcpsnitch_output(options='', cmd='')
-  `#{EXECUTABLE} #{options} #{cmd}`
+  `#{EXECUTABLE} #{options} #{cmd} 2>&1`
 end
 
 def run_c_program(name)
