@@ -33,9 +33,9 @@ describe "libc overrides" do
 
   SOCKET_SYSCALLS.each do |syscall|
     describe "when calling #{syscall}()" do
-      stream  = "#{syscall}_stream.out"
-      dgram   = "#{syscall}_dgram.out"
-      failing = "#{syscall}_fail.out"
+      stream  = "#{syscall}"
+      dgram   = "#{syscall}_dgram"
+      failing = "#{syscall}_fail"
 
       it "#{stream} should not crash" do
         assert run_c_program(stream)
@@ -48,7 +48,7 @@ describe "libc overrides" do
 
       it "should be in JSON with #{stream}" do
         run_c_program(stream)
-        assert_event_present("#{syscall}()")
+        ssert_event_present(syscall)
       end
 
       # LISTEN: Cannot listen() on DGRAM socket
@@ -77,14 +77,14 @@ describe "libc overrides" do
       unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
-          assert_event_present("#{syscall}()", false)
+          assert_event_present(syscall, false)
         end
       end
     end
   end
 
   describe "when calling fork()" do
-    prog = "fork.out"
+    prog = "fork"
 
     it "#{prog} should not crash" do
       assert run_c_program(prog)
@@ -115,8 +115,8 @@ describe "libc overrides" do
       run_c_program(prog)
       dir0 = process_dirs[0]
       dir1 = process_dirs[1]
-      assert_event_present("socket()", true, File.read(dir0+"/0/"+JSON_FILE))
-      assert_event_present("socket()", true, File.read(dir1+"/0/"+JSON_FILE))
+      assert_event_present("socket", true, File.read(dir0+"/0/"+JSON_FILE))
+      assert_event_present("socket", true, File.read(dir1+"/0/"+JSON_FILE))
     end
   end
 end

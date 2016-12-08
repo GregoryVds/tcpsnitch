@@ -1,7 +1,7 @@
 require './lib/cprog.rb'
 require './lib/webserver.rb'
 
-SOCKET_STREAM = CProg.new(<<-EOT, "socket_stream")
+SOCKET = CProg.new(<<-EOT, "socket")
   int sock;
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
@@ -28,8 +28,8 @@ def sockaddr_in(port)
 EOT
 end
 
-BIND_STREAM = CProg.new(<<-EOT, "bind_stream")
-#{SOCKET_STREAM}
+BIND = CProg.new(<<-EOT, "bind")
+#{SOCKET}
 #{sockaddr_in(55555)}
   if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
@@ -43,14 +43,14 @@ BIND_DGRAM = CProg.new(<<-EOT, "bind_dgram")
 EOT
 
 BIND_FAIL = CProg.new(<<-EOT, "bind_fail")
-#{SOCKET_STREAM}
+#{SOCKET}
 #{sockaddr_in(WebServer::PORT)}
   if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != -1)
     return(EXIT_FAILURE);
 EOT
 
-CONNECT_STREAM = CProg.new(<<-EOT, "connect_stream")
-#{SOCKET_STREAM}
+CONNECT = CProg.new(<<-EOT, "connect")
+#{SOCKET}
 #{sockaddr_in(WebServer::PORT)}
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
@@ -64,14 +64,14 @@ CONNECT_DGRAM = CProg.new(<<-EOT, "connect_dgram")
 EOT
 
 CONNECT_FAIL = CProg.new(<<-EOT, "connect_fail")
-#{SOCKET_STREAM}
+#{SOCKET}
 #{sockaddr_in(1234)}
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != -1)
     return(EXIT_FAILURE);
 EOT
 
-SHUTDOWN_STREAM = CProg.new(<<-EOT, "shutdown_stream")
-#{CONNECT_STREAM}
+SHUTDOWN = CProg.new(<<-EOT, "shutdown")
+#{CONNECT}
   if (shutdown(sock, SHUT_WR) < 0)
     return(EXIT_FAILURE);
 EOT
@@ -83,25 +83,25 @@ SHUTDOWN_DGRAM = CProg.new(<<-EOT, "shutdown_dgram")
 EOT
 
 SHUTDOWN_FAIL = CProg.new(<<-EOT, "shutdown_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   if (shutdown(sock, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
-LISTEN_STREAM = CProg.new(<<-EOT, "listen_stream")
-#{SOCKET_STREAM}
+LISTEN = CProg.new(<<-EOT, "listen")
+#{SOCKET}
   if (listen(sock, 10) < 0)
     return(EXIT_FAILURE);
 EOT
 
 LISTEN_FAIL = CProg.new(<<-EOT, "listen_fail")
-#{SOCKET_STREAM}
+#{SOCKET}
   if (listen(42, 10) != -1)
     return(EXIT_FAILURE);
 EOT
 
-SETSOCKOPT_STREAM = CProg.new(<<-EOT, "setsockopt_stream")
-#{SOCKET_STREAM}
+SETSOCKOPT = CProg.new(<<-EOT, "setsockopt")
+#{SOCKET}
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
     return(EXIT_FAILURE);
@@ -115,14 +115,14 @@ SETSOCKOPT_DGRAM = CProg.new(<<-EOT, "setsockopt_dgram")
 EOT
 
 SETSOCKOPT_FAIL = CProg.new(<<-EOT, "setsockopt_fail")
-#{SOCKET_STREAM}
+#{SOCKET}
   int optval = 1;
   if (setsockopt(sock, -42, SO_REUSEADDR, &optval, sizeof(optval)) != -1)
     return(EXIT_FAILURE);
 EOT
 
-SEND_STREAM = CProg.new(<<-EOT, "send_stream")
-#{CONNECT_STREAM}
+SEND = CProg.new(<<-EOT, "send")
+#{CONNECT}
   int data = 42;
   if (send(sock, &data, sizeof(data), 0) < 0)
     return(EXIT_FAILURE); 
@@ -136,7 +136,7 @@ SEND_DGRAM = CProg.new(<<-EOT, "send_dgram")
 EOT
 
 SEND_FAIL = CProg.new(<<-EOT, "send_fail")
-#{SOCKET_STREAM}
+#{SOCKET}
   int data = 42;
   if (send(sock, &data, sizeof(data), -1) != -1)
     return(EXIT_FAILURE); 
@@ -149,8 +149,8 @@ def send_http_get
 EOT
 end
 
-RECV_STREAM = CProg.new(<<-EOT, "recv_stream")
-#{CONNECT_STREAM}
+RECV = CProg.new(<<-EOT, "recv")
+#{CONNECT}
 #{send_http_get}
   char buf[42];
   if (recv(sock, &buf, sizeof(buf), 0) < 0)
@@ -166,15 +166,15 @@ RECV_DGRAM = CProg.new(<<-EOT, "recv_dgram")
 EOT
 
 RECV_FAIL = CProg.new(<<-EOT, "recv_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
   if (recv(sock, &buf, sizeof(buf), 0) != -1)
     return(EXIT_FAILURE); 
 EOT
 
-SENDTO_STREAM = CProg.new(<<-EOT, "sendto_stream")
-#{CONNECT_STREAM}
+SENDTO = CProg.new(<<-EOT, "sendto")
+#{CONNECT}
   int data = 42;
   if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr, 
              sizeof(addr)) < 0) {
@@ -193,7 +193,7 @@ SENDTO_DGRAM = CProg.new(<<-EOT, "sendto_dgram")
 EOT
 
 SENDTO_FAIL = CProg.new(<<-EOT, "sendto_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   int data = 42;
   if (sendto(sock, &data, sizeof(data), -1, (struct sockaddr *)&addr,
              sizeof(addr)) != -1) {
@@ -201,8 +201,8 @@ SENDTO_FAIL = CProg.new(<<-EOT, "sendto_fail")
   }
 EOT
 
-RECVFROM_STREAM = CProg.new(<<-EOT, "recvfrom_stream")
-#{CONNECT_STREAM}
+RECVFROM = CProg.new(<<-EOT, "recvfrom")
+#{CONNECT}
 #{send_http_get}
   char buf[42];
   socklen_t fromlen = sizeof(buf);
@@ -224,7 +224,7 @@ RECVFROM_DGRAM = CProg.new(<<-EOT, "recvfrom_dgram")
 EOT
 
 RECVFROM_FAIL = CProg.new(<<-EOT, "recvfrom_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
   socklen_t fromlen = sizeof(buf);
@@ -256,8 +256,8 @@ SEND_MSGHDR = <<-EOT
   msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
 EOT
 
-SENDMSG_STREAM = CProg.new(<<-EOT, "sendmsg_stream")
-#{CONNECT_STREAM}
+SENDMSG = CProg.new(<<-EOT, "sendmsg")
+#{CONNECT}
 #{SEND_MSGHDR}
   if (sendmsg(sock, &msg, 0) < 0)
     return(EXIT_FAILURE);
@@ -271,7 +271,7 @@ SENDMSG_DGRAM = CProg.new(<<-EOT, "sendmsg_dgram")
 EOT
 
 SENDMSG_FAIL = CProg.new(<<-EOT, "sendmsg_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
 #{SEND_MSGHDR}
   if (sendmsg(sock, &msg, -1) != -1)
     return(EXIT_FAILURE);
@@ -299,8 +299,8 @@ RECV_MSGHDR = <<-EOT
   msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
 EOT
 
-RECVMSG_STREAM = CProg.new(<<-EOT, "recvmsg_stream")
-#{CONNECT_STREAM}
+RECVMSG = CProg.new(<<-EOT, "recvmsg")
+#{CONNECT}
 #{send_http_get}
 #{RECV_MSGHDR} 
   if (recvmsg(sock, &msg, 0) < 0)
@@ -316,15 +316,15 @@ RECVMSG_DGRAM = CProg.new(<<-EOT, "recvmsg_dgram")
 EOT
 
 RECVMSG_FAIL = CProg.new(<<-EOT, "recvmsg_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
 #{send_http_get}
 #{RECV_MSGHDR} 
   if (recvmsg(sock, &msg, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
-WRITE_STREAM = CProg.new(<<-EOT, "write_stream")
-#{CONNECT_STREAM}
+WRITE = CProg.new(<<-EOT, "write")
+#{CONNECT}
   int data = 42;
   if (write(sock, &data, sizeof(data)) < 0)
     return(EXIT_FAILURE);
@@ -338,14 +338,14 @@ WRITE_DGRAM = CProg.new(<<-EOT, "write_dgram")
 EOT
 
 WRITE_FAIL = CProg.new(<<-EOT, "write_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   int data = 42;
   if (write(sock, &data, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
-READ_STREAM = CProg.new(<<-EOT, "read_stream")
-#{CONNECT_STREAM}
+READ = CProg.new(<<-EOT, "read")
+#{CONNECT}
 #{send_http_get}
   char buf[42];
   if (read(sock, &buf, sizeof(buf)) < 0)
@@ -361,15 +361,15 @@ READ_DGRAM = CProg.new(<<-EOT, "read_dgram")
 EOT
 
 READ_FAIL = CProg.new(<<-EOT, "read_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
   if (read(sock, &buf, -1) != -1)
     return(EXIT_FAILURE); 
 EOT
 
-CLOSE_STREAM = CProg.new(<<-EOT, "close_stream")
-#{SOCKET_STREAM}
+CLOSE = CProg.new(<<-EOT, "close")
+#{SOCKET}
   if (close(sock) < 0)
     return(EXIT_FAILURE);
 EOT
@@ -386,20 +386,20 @@ CLOSE_FAIL = CProg.new(<<-EOT, "close_fail")
 EOT
 
 FORK = CProg.new(<<-EOT, "fork")
-#{SOCKET_STREAM}
+#{SOCKET}
   pid_t pid;
   pid = fork();
   if (pid == -1) return (EXIT_FAILURE);
   if (pid == 0) { // Child
-  #{SOCKET_STREAM}
+  #{SOCKET}
   } else { // Parent
     int status;
     waitpid(pid, &status, 0);
   }
 EOT
 
-WRITEV_STREAM = CProg.new(<<-EOT, "writev_stream")
-#{CONNECT_STREAM}
+WRITEV = CProg.new(<<-EOT, "writev")
+#{CONNECT}
 #{WRITE_IOV}
   if (writev(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
@@ -413,14 +413,14 @@ WRITEV_DGRAM = CProg.new(<<-EOT, "writev_dgram")
 EOT
 
 WRITEV_FAIL = CProg.new(<<-EOT, "writev_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
 #{WRITE_IOV}
   if (writev(sock, iov, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
-READV_STREAM = CProg.new(<<-EOT, "readv_stream")
-#{CONNECT_STREAM}
+READV = CProg.new(<<-EOT, "readv")
+#{CONNECT}
 #{send_http_get}
 #{READ_IOV} 
   if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
@@ -436,7 +436,7 @@ READV_DGRAM = CProg.new(<<-EOT, "readv_dgram")
 EOT
 
 READV_FAIL = CProg.new(<<-EOT, "readv_fail")
-#{CONNECT_STREAM}
+#{CONNECT}
 #{send_http_get}
 #{READ_IOV} 
   if (readv(sock, iov, -1) != -1)

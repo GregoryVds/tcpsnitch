@@ -468,11 +468,9 @@ void tcp_stop_capture(TcpConnection *con) {
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket()", "bind()",       "connect()", "shutdown()",
-            "listen()", "setsockopt()", "send()",    "recv()",
-            "sendto()", "recvfrom()",   "sendmsg()", "recvmsg()",
-            "write()",  "read()",       "close()",   "writev()",
-            "readv()",  "tcp_info"};
+            "socket", "bind", "connect", "shutdown", "listen",  "setsockopt",
+            "send",   "recv", "sendto",  "recvfrom", "sendmsg", "recvmsg",
+            "write",  "read", "close",   "writev",   "readv",   "tcp_info"};
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }

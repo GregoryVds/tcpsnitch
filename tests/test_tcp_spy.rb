@@ -2,13 +2,14 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 def json(con_id=1)
-  read_json("packetdrill", con_id)
+  puts Dir[TEST_DIR+"/*packetdrill*"]  
+  File.read(Dir[TEST_DIR+"/*packetdrill*"].last+"/#{con_id}/"+JSON_FILE)
+# read_json("packetdrill", con_id)
 end
 
 describe "tcp_spy" do
@@ -18,7 +19,7 @@ describe "tcp_spy" do
 
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
-      run_pkt_script(PKT_SOCKET_STREAM)
+      run_c_program(TCP_EV_SOCKET)
       pattern = {
         app_name: String,
         bytes_received: Fixnum,
@@ -32,9 +33,9 @@ describe "tcp_spy" do
         successful_pcap: Boolean,
         timestamp: Fixnum,
       }
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
-
+=begin
     it "should have the proper bytes count" do
       run_pkt_script(<<-EOT)
         #{PKT_CONNECTED_SOCK_STREAM}
@@ -49,7 +50,7 @@ describe "tcp_spy" do
         bytes_received: 210,
         bytes_sent: 190,
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
@@ -79,8 +80,8 @@ describe "tcp_spy" do
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern1, json(1))
-      assert_json_match(pattern2, json(2))
+      assert_json_match(pattern1, read_json(1))
+      assert_json_match(pattern2, read_json(2))
     end
 
     it "should properly handle 2 interleaved connections" do
@@ -108,14 +109,15 @@ describe "tcp_spy" do
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern1, json(1))
-      assert_json_match(pattern2, json(2))
+      assert_json_match(pattern1, read_json(1))
+      assert_json_match(pattern2, read_json(2))
     end
+=end
   end
 
   describe "an event" do
     it "should have the correct shared fields" do
-      run_pkt_script(PKT_SOCKET_STREAM)
+      run_c_program("socket")
       pattern = {
         events: [
           {
@@ -130,13 +132,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
  
   describe "a #{TCP_EV_SOCKET} event" do
     it "#{TCP_EV_SOCKET}should have the correct JSON fields" do
-      run_pkt_script(PKT_SOCKET_STREAM)
+      run_c_program(TCP_EV_SOCKET)
       pattern = {
         events: [
           {
@@ -151,13 +153,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_BIND} event" do
     it "#{TCP_EV_BIND} should have the correct JSON fields" do
-      run_pkt_script(PKT_BIND_STREAM)
+      run_c_program(TCP_EV_BIND)
       pattern = {
         events: [
           {
@@ -174,13 +176,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_CONNECT} event" do
     it "#{TCP_EV_CONNECT} should have the correct JSON fields" do
-      run_pkt_script(PKT_CONNECT_STREAM)
+      run_c_program(TCP_EV_CONNECT)
       pattern = {
         events: [
           {
@@ -196,13 +198,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_SHUTDOWN} event" do
     it "#{TCP_EV_SHUTDOWN} should have the correct JSON fields" do
-      run_pkt_script(PKT_SHUTDOWN_STREAM)
+      run_c_program(TCP_EV_SHUTDOWN)
       pattern = {
         events: [
           {
@@ -214,13 +216,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_LISTEN} event" do
     it "#{TCP_EV_LISTEN} should have the correct JSON fields" do
-      run_pkt_script(PKT_LISTEN_STREAM)
+      run_c_program(TCP_EV_LISTEN)
       pattern = {
         events: [
           {
@@ -231,31 +233,33 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_SETSOCKOPT} event" do
     it "#{TCP_EV_SETSOCKOPT} should have the correct JSON fields" do
-      run_pkt_script(PKT_SETSOCKOPT_STREAM)
+      run_c_program(TCP_EV_SETSOCKOPT)
       pattern = {
         events: [
           {
             type: TCP_EV_SETSOCKOPT,
             details: {
-              level: String,
-              optname: String
+              level: Fixnum,
+              level_str: String,
+              optname: Fixnum,
+              optname_str: String
             }
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_SEND} event" do
     it "#{TCP_EV_SEND} should have the correct JSON fields" do
-      run_pkt_script(PKT_SEND_STREAM)
+      run_c_program(TCP_EV_SEND)
       pattern = {
         events: [
           {
@@ -275,13 +279,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_RECV} event" do
     it "#{TCP_EV_RECV} should have the correct JSON fields" do
-      run_pkt_script(PKT_RECV_STREAM)
+      run_c_program(TCP_EV_RECV)
       pattern = {
         events: [
           {
@@ -301,13 +305,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_SENDTO} event" do
     it "#{TCP_EV_SENDTO} should have the correct JSON fields" do
-      run_pkt_script(PKT_SENDTO_STREAM)
+      run_c_program(TCP_EV_SENDTO)
       pattern = {
         events: [
           {
@@ -327,14 +331,14 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
  
     end
   end
 
   describe "a #{TCP_EV_RECVFROM} event" do
     it "#{TCP_EV_RECVFROM} should have the correct JSON fields" do
-      run_pkt_script(PKT_RECVFROM_STREAM)
+      run_c_program(TCP_EV_RECVFROM)
       pattern = {
         events: [
           {
@@ -354,14 +358,14 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
  
     end
   end
 
   describe "a #{TCP_EV_WRITE} event" do
     it "#{TCP_EV_WRITE} should have the correct JSON fields" do
-      run_pkt_script(PKT_WRITE_STREAM)
+      run_c_program(TCP_EV_WRITE)
       pattern = {
         events: [
           {
@@ -372,14 +376,14 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
  
     end
   end
 
   describe "a #{TCP_EV_READ} event" do
     it "#{TCP_EV_READ} should have the correct JSON fields" do
-      run_pkt_script(PKT_READ_STREAM)
+      run_c_program(TCP_EV_READ)
       pattern = {
         events: [
           {
@@ -390,13 +394,13 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_CLOSE} event" do
     it "#{TCP_EV_CLOSE} should have the correct JSON fields" do
-      run_pkt_script(PKT_CLOSE_STREAM)
+      run_c_program(TCP_EV_CLOSE)
       pattern = {
         events: [
           {
@@ -407,13 +411,55 @@ describe "tcp_spy" do
           }.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      assert_json_match(pattern, json)
+      assert_json_match(pattern, read_json)
     end
   end
 
   describe "a #{TCP_EV_TCP_INFO} event" do
     it "#{TCP_EV_TCP_INFO} should have the correct JSON fields" do
-      skip
+      tcpsnitch("-u 0 -b 0 -d #{TEST_DIR}", "./c_programs/*socket.out")
+      pattern = {
+        events: [
+          {
+            type: TCP_EV_TCP_INFO,
+            details: {
+              state: Fixnum,
+              ca_state: Fixnum,
+              retransmits: Fixnum,
+              probes: Fixnum,
+              backoff: Fixnum,
+              options: Fixnum,
+              snd_wscale: Fixnum,
+              rcv_wscale: Fixnum,
+              rto: Fixnum,
+              ato: Fixnum,
+              snd_mss: Fixnum,
+              rcv_mss: Fixnum,
+              unacked: Fixnum,
+              sacked: Fixnum,
+              lost: Fixnum,
+              retrans: Fixnum,
+              fackets: Fixnum,
+              last_data_sent: Fixnum,
+              last_ack_sent: Fixnum,
+              last_data_recv: Fixnum,
+              last_ack_recv: Fixnum,
+              pmtu: Fixnum,
+              rcv_ssthresh: Fixnum,
+              rtt: Fixnum,
+              rttvar: Fixnum,
+              snd_ssthresh: Fixnum,
+              snd_cwnd: Fixnum,
+              advmss: Fixnum,
+              reordering: Fixnum,
+              rcv_rtt: Fixnum,
+              rcv_space: Fixnum,
+              total_retrans: Fixnum,
+            }
+          }.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern, read_json)
     end
   end
 end

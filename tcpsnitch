@@ -6,7 +6,8 @@ set -o nounset
 NAME="tcpsnitch"
 VERSION=0.1.0
 VERSION_STR="${NAME} version ${VERSION}"
-MAX_VERBOSITY=1
+UNAME_FILE="uname.txt"
+SYSCTL_FILE="sysctl_net.txt"
 
 # Option default values
 OPT_B=4096
@@ -129,13 +130,13 @@ if [[ -z "$OPT_D" ]]; then
 fi
 
 # Save network config
-NET_CONFIG_PATH="$OPT_D/sysctl_net.txt"
+NET_CONFIG_PATH="${OPT_D}/${SYSCTL_FILE}"
 if [[ ! -e "$NET_CONFIG_PATH" ]]; then
         sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
 fi
 
 # Save os config
-OS_CONFIG_PATH="$OPT_D/uname.txt"
+OS_CONFIG_PATH="${OPT_D}/${UNAME_FILE}"
 if [[ ! -e "$OS_CONFIG_PATH" ]]; then
         uname -a > "$OS_CONFIG_PATH"
 fi

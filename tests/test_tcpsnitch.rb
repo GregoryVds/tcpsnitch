@@ -1,0 +1,107 @@
+# Purpose: test bash interface & initialization (init.c) of Netspy lib.
+require 'minitest/autorun'
+require 'minitest/spec'
+require 'minitest/reporters'
+require './common.rb'
+
+Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+
+describe "tcpsnitch" do
+		
+  let(:cmd) { "./c_programs/00_socket.out" } 
+
+  describe "when no option is set" do
+    it "should not crash" do
+      assert tcpsnitch('', cmd)
+    end
+  end
+
+  describe "when no command is passed" do
+    it "should report 'too few arguments'" do
+      assert_match(/too few arguments/, tcpsnitch_output('', '')) 
+      assert_match(/too few arguments/, tcpsnitch_output('-b 42', ''))
+    end
+  end
+  
+  ["-b", "-f", "-l", "-u"].each do |opt|
+    describe "when #{opt} is set" do
+      it "should report 'invalid #{opt} argument'" do
+        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
+        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} foo", cmd))
+      end
+   
+      it "should not crash with a valid arg" do
+        assert tcpsnitch("#{opt} 5", cmd)
+      end
+    end
+  end
+
+  describe "when -d is set" do
+    it "should report 'invalid argument' with invalid dir" do
+      assert_match(/invalid -d argument/, tcpsnitch_output("-d 1234", cmd))
+      assert_match(/invalid -d argument/, tcpsnitch_output("-d /crazy/path", cmd))
+    end
+
+    it "should not crash with a valid arg" do
+      assert tcpsnitch("-d #{TEST_DIR}", cmd)
+    end
+
+    it "should write to a valid dir" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert !dir_empty?(TEST_DIR)
+    end
+  end
+ 
+  describe "when -l is set" do
+    it "should show logs at 3" do
+      assert_match(/[INFO]/, tcpsnitch_output("-l 3", cmd))
+    end
+  end
+ 
+  describe "when -h is set" do
+    it "should not crash" do
+      assert tcpsnitch("-h", '')
+    end
+
+    it "should print usage dialog" do
+      assert_match(/Usage/, tcpsnitch_output('-h', ''))
+    end
+  end
+
+  describe "when -v is set" do
+    it "should show verbose output" do
+      assert_match(/[pid \d*] [a-z]*()/, tcpsnitch_output("-v", cmd))
+    end
+  end
+
+  describe "when --version is set" do
+    it "should not crash" do
+      assert tcpsnitch("--version", '')
+    end
+
+    it "should print version" do
+      assert_match(/version/, tcpsnitch_output('--version', ''))
+    end
+  end
+
+  describe "for any run" do
+    it "should save the os version" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert contains?(TEST_DIR, "uname.txt")  
+    end
+
+    it "should save the network config" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert contains?(TEST_DIR, "sysctl_net.txt") 
+    end
+
+    it "should save the init log file" do
+      reset_dir(TEST_DIR)
+      tcpsnitch("-d #{TEST_DIR}", cmd)
+      assert contains?(TEST_DIR, LOG_FILE) 
+    end
+  end
+end

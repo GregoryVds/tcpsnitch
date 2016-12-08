@@ -1,10 +1,9 @@
 require 'json_expressions/minitest'
 require 'tempfile'
-require 'packetfu'
 require './constants.rb'
 
 # Create Boolean module as suggested by Jansson library.
-# http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean#answer-3028378
+# http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean
 module Boolean; end
 class TrueClass; include Boolean; end
 class FalseClass; include Boolean; end
@@ -99,7 +98,7 @@ end
 
 def run_c_program(name)
   reset_dir(TEST_DIR) 
-  tcpsnitch("-d #{TEST_DIR}", "./c_programs/*#{name} 2>/dev/null")
+  tcpsnitch("-d #{TEST_DIR}", "./c_programs/*#{name}.out")
 end
 
 def run_curl

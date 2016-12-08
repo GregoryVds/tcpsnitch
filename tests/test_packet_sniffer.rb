@@ -2,7 +2,7 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-
+require 'packetfu'
 require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
