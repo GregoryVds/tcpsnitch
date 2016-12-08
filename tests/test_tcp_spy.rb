@@ -332,7 +332,6 @@ describe "tcp_spy" do
         ].ignore_extra_values!
       }.ignore_extra_keys!
       assert_json_match(pattern, read_json)
- 
     end
   end
 
@@ -359,9 +358,75 @@ describe "tcp_spy" do
         ].ignore_extra_values!
       }.ignore_extra_keys!
       assert_json_match(pattern, read_json)
- 
     end
   end
+
+  describe "a #{TCP_EV_SENDMSG} event" do
+    it "#{TCP_EV_SENDMSG} should have the correct JSON fields" do
+      run_c_program(TCP_EV_SENDMSG)
+      pattern = {
+        events: [
+          {
+            type: TCP_EV_SENDMSG,
+            details: {
+              bytes: Fixnum,
+              flags: {
+                msg_confirm: Boolean,
+                msg_dontroute: Boolean,
+                msg_dontwait: Boolean,
+                msg_eor: Boolean,
+                msg_more: Boolean,
+                msg_nosignal: Boolean,
+                msg_oob: Boolean
+              },
+              msghdr: {
+                control_data: Boolean,
+                iovec: {
+                  iovec_count: Fixnum,
+                  iovec_sizes: Array
+                }
+              }
+            }
+          }.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern, read_json)
+    end
+  end
+
+  describe "a #{TCP_EV_RECVMSG} event" do
+    it "#{TCP_EV_RECVMSG} should have the correct JSON fields" do
+      run_c_program(TCP_EV_RECVMSG)
+      pattern = {
+        events: [
+          {
+            type: TCP_EV_RECVMSG,
+            details: {
+              bytes: Fixnum,
+              flags: {
+                msg_cmsg_cloexec: Boolean,
+                msg_dontwait: Boolean,
+                msg_errqueue: Boolean,
+                msg_oob: Boolean,
+                msg_peek: Boolean,
+                msg_trunc: Boolean,
+                msg_waitall: Boolean
+              },
+              msghdr: {
+                control_data: Boolean,
+                iovec: {
+                  iovec_count: Fixnum,
+                  iovec_sizes: Array
+                }
+              }
+            }
+          }.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
+      assert_json_match(pattern, read_json)
+    end
+  end
+
 
   describe "a #{TCP_EV_WRITE} event" do
     it "#{TCP_EV_WRITE} should have the correct JSON fields" do
