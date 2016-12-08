@@ -28,12 +28,6 @@ FILE *_stderr;
 static bool initialized = false;
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
-static char *get_conf_opt_d(void);
-static bool config_init_logger(void);
-static char *create_logs_dir(void);
-static void tcp_snitch_free(void);
-static void cleanup(void);
- 
 /* Private functions */
 
 static char *get_conf_opt_d(void) {

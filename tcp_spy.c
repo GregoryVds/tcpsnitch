@@ -23,42 +23,12 @@
 #include "tcp_spy_json.h"
 #include "verbose_mode.h"
 
-///////////////////////////////////////////////////////////////////////////////
-
-/*
-  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
- |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
-  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
-  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
- |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
-
-*/
-
-// Variables
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 static int connections_count = 0;
 
-// Private functions
-static TcpConnection *alloc_connection(void);
-static TcpEvent *alloc_event(TcpEventType type, int return_value, int err);
-static void free_events_list(TcpEventNode *head);
-static void free_addr(TcpAddr *addr);
-static void free_event(TcpEvent *ev);
-static void push_event(TcpConnection *con, TcpEvent *ev);
-
-static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len);
-static void fill_send_flags(TcpSendFlags *s, int flags);
-static void fill_recv_flags(TcpRecvFlags *s, int flags);
-static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2);
-static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
-                            int iovec_count);
-
-static void tcp_dump_json(TcpConnection *con);
-static int force_bind(int fd, TcpConnection *con, bool IPV6);
-static bool should_dump_tcp_info(const TcpConnection *con);
-
-///////////////////////////////////////////////////////////////////////////////
+/* Private functions */
 
 static TcpConnection *alloc_connection(void) {
         TcpConnection *con;
@@ -173,16 +143,6 @@ error:
         return NULL;
 }
 
-static void free_events_list(TcpEventNode *head) {
-        TcpEventNode *tmp;
-        while (head != NULL) {
-                free_event(head->data);
-                tmp = head;
-                head = head->next;
-                free(tmp);
-        }
-}
-
 static void free_addr(TcpAddr *addr) {
         free(addr->ip);
         free(addr->port);
@@ -214,6 +174,16 @@ static void free_event(TcpEvent *ev) {
         free(ev);
 }
 
+static void free_events_list(TcpEventNode *head) {
+        TcpEventNode *tmp;
+        while (head != NULL) {
+                free_event(head->data);
+                tmp = head;
+                head = head->next;
+                free(tmp);
+        }
+}
+
 static void push_event(TcpConnection *con, TcpEvent *ev) {
         TcpEventNode *node = (TcpEventNode *)my_malloc(sizeof(TcpEventNode));
         if (!node) goto error;
@@ -231,8 +201,6 @@ error:
         LOG_FUNC_FAIL;
         return;
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
         memcpy(&(a->addr_sto), addr, len);
@@ -261,12 +229,6 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
         s->msg_waitall = (flags & MSG_WAITALL);
 }
 
-static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
-        memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
-        m1->control_data = (m2->msg_control != NULL);
-        return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
-}
-
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
                             int iovec_count) {
         iov1->iovec_count = iovec_count;
@@ -286,7 +248,11 @@ error:
         return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
+        memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
+        m1->control_data = (m2->msg_control != NULL);
+        return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
+}
 
 static void tcp_dump_json(TcpConnection *con) {
         if (con->directory == NULL) goto error1;
@@ -366,16 +332,7 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
         return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ____  _   _ ____  _     ___ ____      _    ____ ___
- |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
- | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
- |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
- |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
+/* Public functions */
 
 void free_connection(TcpConnection *con) {
         if (!con) return;  // NULL
@@ -435,8 +392,6 @@ void tcp_stop_capture(TcpConnection *con) {
         stop_capture(con->capture_switch, con->rtt * 2);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 #define FAIL_IF_NULL(var, ev_type_cons) \
         if (!var) {                     \
                 LOG_FUNC_FAIL;          \
@@ -474,8 +429,6 @@ const char *string_from_tcp_event_type(TcpEventType type) {
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
@@ -713,8 +666,6 @@ void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
 
         TCP_EV_POSTLUDE(TCP_EV_TCP_INFO);
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 void tcp_close_unclosed_connections(void) {
         for (long i = 0; i < ra_get_size(); i++)

@@ -12,10 +12,9 @@
 #include "logger.h"
 #include "string_helpers.h"
 
-///////////////////////////////////////////////////////////////////////////////
-
-#define ADDR_WIDTH 40  // Include null byte
 char *alloc_ip_str(const struct sockaddr *addr) {
+        static const int ADDR_WIDTH = 40;
+
         char *addr_str = (char *)my_calloc(sizeof(char), ADDR_WIDTH);
         if (!addr_str) goto error_out;
 
@@ -45,8 +44,9 @@ error_out:
         return NULL;
 }
 
-#define PORT_WIDTH 6  // Include null byte
 char *alloc_port_str(const struct sockaddr *addr) {
+        static const int PORT_WIDTH = 6;
+
         char *port_str = (char *)my_calloc(sizeof(char), PORT_WIDTH);
         if (!port_str) goto error_out;
 
@@ -81,7 +81,7 @@ error_out:
 }
 
 char *alloc_addr_str(const struct sockaddr *addr) {
-        static int n = 46;  // ADDR:PORT\0
+        static const int n = 46;  // ADDR:PORT\0
 
         char *addr_str, *host_str, *port_str;
         if (!(addr_str = (char *)my_calloc(sizeof(char), n))) goto error_out;
@@ -118,7 +118,6 @@ error_out:
         LOG_FUNC_FAIL;
         return false;
 }
-///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_concat_path(const char *path1, const char *path2) {
         if (!path1) goto error1;
@@ -151,8 +150,6 @@ error:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
-///////////////////////////////////////////////////////////////////////////////
 
 char *alloc_base_dirname_str(void) {
         // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
@@ -274,19 +271,15 @@ error_out:
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
         int cons;
         const char str[30];
 } IntStrPair;
 
-/* Socket domains */
 static const IntStrPair SOCKET_DOMAINS[] = {
     {AF_UNIX, "AF_UNIX"}, {AF_INET, "AF_INET"},       {AF_INET6, "AF_INET6"},
     {AF_IPX, "AF_IPX"},   {AF_NETLINK, "AF_NETLINK"}, {AF_PACKET, "AF_PACKET"}};
 
-/* Socket types */
 static const IntStrPair SOCKET_TYPES[] = {{SOCK_STREAM, "SOCK_STREAM"},
                                           {SOCK_DGRAM, "SOCK_DGRAM"},
                                           {SOCK_RAW, "SOCK_RAW"},
@@ -295,7 +288,6 @@ static const IntStrPair SOCKET_TYPES[] = {{SOCK_STREAM, "SOCK_STREAM"},
                                           {SOCK_DCCP, "SOCK_DCCP"},
                                           {SOCK_PACKET, "SOCK_PACKET"}};
 
-/* Socket options */
 static const IntStrPair SOCKET_OPTIONS[] = {
     // Socket-level options (asm-generic/socket.h)
     {SO_DEBUG, "SO_DEBUG"},
@@ -397,8 +389,6 @@ char *alloc_sock_optname_str(int optname) {
         return alloc_string_from_cons(optname, SOCKET_OPTIONS, map_size);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 char *alloc_error_str(int err) {
         char *ori_str = strerror(err);
         size_t str_len = strlen(ori_str) + 1;
@@ -410,5 +400,3 @@ error:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
-//////////////////////////////////////////////////////////////////////////////

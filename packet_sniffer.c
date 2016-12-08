@@ -11,23 +11,20 @@
 #include "packet_sniffer.h"
 #include "string_helpers.h"
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
- |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
-  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
-  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
- |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
-
 #define BUFFER_SIZE 8*100000 // In MB = 8MB
-static pcap_t *get_capture_handle(void);
-static void *capture_thread(void *params);
-static void *delayed_stop_thread(void *params);
 
-///////////////////////////////////////////////////////////////////////////////
+typedef struct {
+        pcap_t *handle;
+        pcap_dumper_t *dump;
+        bool *switch_flag;
+} CaptureThreadArgs;
+
+typedef struct {
+        bool *switch_flag;
+        int delay_ms;
+} DelayStopThreadArgs;
+
+/* Internal functions */
 
 static pcap_t *get_capture_handle(void) {
         char err_buf[PCAP_ERRBUF_SIZE];
@@ -46,17 +43,8 @@ error:
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-        pcap_t *handle;
-        pcap_dumper_t *dump;
-        bool *switch_flag;
-} CaptureThreadArgs;
-
 /* This thread captures packets indefinitely until the boolean pointed by
- * switch_flag is turned to false. */
-
+   switch_flag is turned to false. */
 static void *capture_thread(void *params) {
         LOG(INFO, "Capture thread started.");
         CaptureThreadArgs *args = (CaptureThreadArgs *)params;
@@ -78,17 +66,9 @@ static void *capture_thread(void *params) {
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-        bool *switch_flag;
-        int delay_ms;
-} DelayStopThreadArgs;
-
 /* The sole purpose of this thread if to wait delay_ms before setting the
  * switch flag to false. We don't want to hang the main thread, we thus do this
  * in another thread to delay the end of the packet capture. */
-
 static void *delayed_stop_thread(void *params) {
         LOG(INFO, "Delayed stop thread started.");
         DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
@@ -99,23 +79,15 @@ static void *delayed_stop_thread(void *params) {
         return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ____  _   _ ____  _     ___ ____      _    ____ ___
- |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
- | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
- |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
- |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
-#define PORT_FILTER "port %s"
-#define SINGLE_FILTER "host %s and port %s"
-#define DOUBLE_FILTER "port %s and host %s and port %s"
+/* Public functions */
 
 // TODO: Bind to specific IP on host to filter on addr1 host too.
 char *build_capture_filter(const struct sockaddr *addr1,
                            const struct sockaddr *addr2) {
+        static const char *PORT_FILTER = "port %s";
+        static const char *SINGLE_FILTER = "host %s and port %s";
+        static const char *DOUBLE_FILTER = "port %s and host %s and port %s";
+        
         // Build string rep of hosts/ports
         char *port1 = NULL, *port2 = NULL, *ip1 = NULL, *ip2 = NULL;
         if (addr1) {
@@ -157,10 +129,6 @@ error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
-/* Start a capture with the given filters & save raw data to file at path.
- *
- * Return a pcap_t * on success, on NULL on error. */
 
 bool *start_capture(const char *filter_str, const char *path) {
         // Get handle

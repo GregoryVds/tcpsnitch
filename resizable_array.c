@@ -7,31 +7,12 @@
 #include "resizable_array.h"
 #include "tcp_spy.h"
 
-///////////////////////////////////////////////////////////////////////////////
-
-/*
-  ___ _   _ _____ _____ ____  _   _    _    _          _    ____ ___
- |_ _| \ | |_   _| ____|  _ \| \ | |  / \  | |        / \  |  _ \_ _|
-  | ||  \| | | | |  _| | |_) |  \| | / _ \ | |       / _ \ | |_) | |
-  | || |\  | | | | |___|  _ <| |\  |/ ___ \| |___   / ___ \|  __/| |
- |___|_| \_| |_| |_____|_| \_\_| \_/_/   \_\_____| /_/   \_\_|  |___|
-
-*/
-
-// Variables
 static pthread_mutex_t main_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 static ELEM_TYPE *array = NULL; // Array of elements.
 static pthread_mutex_t *mutex_array = NULL; // Array of mutexes.
 static int size = 0;
 
 // Private functions
-static bool allocate_arrays(ELEM_TYPE **a_ptr, pthread_mutex_t **mutex_a_ptr,
-                            int _size);
-static bool init(int init_size);
-static bool double_size(int index);
-static bool is_index_in_bounds(int index);
-
-///////////////////////////////////////////////////////////////////////////////
 
 static bool allocate_arrays(ELEM_TYPE **a_ptr, pthread_mutex_t **mutex_a_ptr,
                             int _size) {
@@ -108,16 +89,7 @@ static bool is_index_in_bounds(int index) {
         return index < size;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-/*
-  ____  _   _ ____  _     ___ ____      _    ____ ___
- |  _ \| | | | __ )| |   |_ _/ ___|    / \  |  _ \_ _|
- | |_) | | | |  _ \| |    | | |       / _ \ | |_) | |
- |  __/| |_| | |_) | |___ | | |___   / ___ \|  __/| |
- |_|    \___/|____/|_____|___\____| /_/   \_\_|  |___|
-
-*/
-///////////////////////////////////////////////////////////////////////////////
+/* Public functions */
 
 bool ra_put_elem(int index, ELEM_TYPE elem) {
         mutex_lock(&main_mutex);

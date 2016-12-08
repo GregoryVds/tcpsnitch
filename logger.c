@@ -42,15 +42,6 @@ static FILE *log_file = NULL;
 static LogLevel stderr_lvl = 0;
 static LogLevel file_lvl = 0;
 
-static const char *log_level_str(LogLevel lvl);
-static void fill_timestamp(Timestamp *timestamp);
-static void log_to_stream(LogLevel log_lvl, const char *formated_str,
-                          const char *file, int line, FILE *stream);
-static void set_log_path(const char *path);
-static void unbuffered_stderr(const char *str);
-static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
-                          int line);
-
 /* Private functions */
 
 static const char *log_level_str(LogLevel lvl) {
@@ -92,23 +83,6 @@ static void log_to_stream(LogLevel log_lvl, const char *formated_str,
                 ANSI_COLOR_RESET);
 }
 
-static void set_log_path(const char *path) {
-        if (log_file != NULL) fclose(log_file);
-
-        if (!path) {
-                log_file = NULL;
-                return;
-        }
-
-        log_file = fopen(path, "a");
-        if (!log_file) {
-                char str[1024];
-                snprintf(str, sizeof(str), "fopen() failed on %s. %s.", path,
-                         strerror(errno));
-                log_to_stderr(ERROR, str, __FILE__, __LINE__);
-        }
-}
-
 static void unbuffered_stderr(const char *str) {
         char *msg = malloc(sizeof(char) * (strlen(str) + 2));
         if (msg) {
@@ -128,7 +102,24 @@ static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
                 unbuffered_stderr(str);
 }
 
-/* Exposed functions */
+static void set_log_path(const char *path) {
+        if (log_file != NULL) fclose(log_file);
+
+        if (!path) {
+                log_file = NULL;
+                return;
+        }
+
+        log_file = fopen(path, "a");
+        if (!log_file) {
+                char str[1024];
+                snprintf(str, sizeof(str), "fopen() failed on %s. %s.", path,
+                         strerror(errno));
+                log_to_stderr(ERROR, str, __FILE__, __LINE__);
+        }
+}
+
+/* Public functions */
 
 void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
         set_log_path(path);
