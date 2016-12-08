@@ -443,4 +443,23 @@ READV_FAIL = CProg.new(<<-EOT, "readv_fail")
     return(EXIT_FAILURE);
 EOT
 
+CONSECUTIVE_CONNECTIONS = CProg.new(<<-EOT, "consecutive_connections")
+  int sock1, sock2;
+  if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    return(EXIT_FAILURE);
+  close(sock1);
+  if ((sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    return(EXIT_FAILURE);
+  close(sock2);
+EOT
+
+CONCURRENT_CONNECTIONS = CProg.new(<<-EOT, "concurrent_connections")
+  int sock1, sock2;
+  if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    return(EXIT_FAILURE);
+  if ((sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    return(EXIT_FAILURE);
+  close(sock1);
+  close(sock2);
+EOT
 

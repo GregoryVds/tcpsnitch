@@ -6,10 +6,8 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-def json(con_id=1)
-  puts Dir[TEST_DIR+"/*packetdrill*"]  
+def pkt_json(con_id=1)
   File.read(Dir[TEST_DIR+"/*packetdrill*"].last+"/#{con_id}/"+JSON_FILE)
-# read_json("packetdrill", con_id)
 end
 
 describe "tcp_spy" do
@@ -35,10 +33,10 @@ describe "tcp_spy" do
       }
       assert_json_match(pattern, read_json)
     end
-=begin
+
     it "should have the proper bytes count" do
       run_pkt_script(<<-EOT)
-        #{PKT_CONNECTED_SOCK_STREAM}
+        #{PKT_CONNECTED_SOCKET}
         +0 send(3, ..., 80, 0) = 80
         +0 send(3, ..., 110, 0) = 110
         +0 < P. 1:101(100) ack 1 win 1000
@@ -50,69 +48,50 @@ describe "tcp_spy" do
         bytes_received: 210,
         bytes_sent: 190,
       }.ignore_extra_keys!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, pkt_json)
     end
   end
 
   describe "2 TCP connections" do
-    it "should properly handle 2 subsequent connections" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 listen(3, 1) = 0
-        +0 close(3) = 0
-        +0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
-        +0 close(3) = 0
-      EOT
+    it "should properly handle 2 consecutive connections" do
+      run_c_program("consecutive_connections")
+      pattern0 = {
+        id: 0,
+          events: [
+            {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+            {type: TCP_EV_CLOSE}.ignore_extra_keys!
+          ].ignore_extra_values
+      }.ignore_extra_keys!
       pattern1 = {
-        id: 1, # id 0 is taken by a Packetdrill connection.
+        id: 1,
         events: [
           {type: TCP_EV_SOCKET}.ignore_extra_keys!,
-          {type: TCP_EV_LISTEN}.ignore_extra_keys!,
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      pattern2 = {
-        id: 2,
-        events: [
-          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
-          {type: TCP_EV_SETSOCKOPT}.ignore_extra_keys!,
-          {type: TCP_EV_CLOSE}.ignore_extra_keys!
-        ].ignore_extra_values!
-      }.ignore_extra_keys!
+      assert_json_match(pattern0, read_json(0))
       assert_json_match(pattern1, read_json(1))
-      assert_json_match(pattern2, read_json(2))
     end
 
-    it "should properly handle 2 interleaved connections" do
-      run_pkt_script(<<-EOT)
-        0 socket(..., SOCK_STREAM, 0) = 3 
-        +0 socket(..., SOCK_STREAM, 0) = 4 
-        +0 listen(3, 1) = 0
-        +0 setsockopt(4, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
-        +0 close(3) = 0
-        +0 close(4) = 0
-     EOT
+    it "should properly handle 2 concurrent connections" do
+      run_c_program("concurrent_connections")
+      pattern0 = {
+        id: 0,
+        events: [
+          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
+          {type: TCP_EV_CLOSE}.ignore_extra_keys!
+        ].ignore_extra_values!
+      }.ignore_extra_keys!
       pattern1 = {
-        id: 1, # id 0 is taken by a Packetdrill connection.
+        id: 1,
         events: [
           {type: TCP_EV_SOCKET}.ignore_extra_keys!,
-          {type: TCP_EV_LISTEN}.ignore_extra_keys!,
           {type: TCP_EV_CLOSE}.ignore_extra_keys!
         ].ignore_extra_values!
       }.ignore_extra_keys!
-      pattern2 = {
-        id: 2,
-        events: [
-          {type: TCP_EV_SOCKET}.ignore_extra_keys!,
-          {type: TCP_EV_SETSOCKOPT}.ignore_extra_keys!,
-          {type: TCP_EV_CLOSE}.ignore_extra_keys!
-        ].ignore_extra_values!
-      }.ignore_extra_keys!
+      assert_json_match(pattern0, read_json(0))
       assert_json_match(pattern1, read_json(1))
-      assert_json_match(pattern2, read_json(2))
     end
-=end
   end
 
   describe "an event" do
@@ -520,7 +499,6 @@ describe "tcp_spy" do
       assert_json_match(pattern, read_json)
     end
   end
-
 
   describe "a #{TCP_EV_TCP_INFO} event" do
     it "#{TCP_EV_TCP_INFO} should have the correct JSON fields" do

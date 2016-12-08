@@ -82,8 +82,7 @@ def run_pkt_script(script, env='')
   file = Tempfile.new("foo")
   file.write(script)
   file.close
-  cmd = env + " #{LD_PRELOAD} #{PACKET_DRILL} #{file.path} >/dev/null 2>&1" 
-  rc = system(cmd) 
+  rc = tcpsnitch("-d #{TEST_DIR}", "#{PACKET_DRILL} #{file.path}")
   file.unlink
   rc
 end
@@ -110,3 +109,14 @@ def errors_in_log?(log_file=log_file_str)
   system("grep \"#{LOG_LVL_ERROR}\" #{log_file}")
 end
 
+#######################
+# Packetdrill helpers #
+#######################
+
+PKT_CONNECTED_SOCKET = <<-EOT
+  0 socket(..., SOCK_STREAM, IPPROTO_TCP) = 3
+  0.0...0.1 connect(3, ..., ...) = 0
+  *  > S  0:0(0) <...>
+  +0 < S. 0:0(0) ack 1 win 1000
+  *  > .  1:1(0) ack 1
+EOT
