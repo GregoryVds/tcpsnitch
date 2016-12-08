@@ -7,12 +7,8 @@ require './common.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-def pcap_present?
-  contains?(con_dir_str("curl", 0), PCAP_FILE)
-end
-
 def get_pcap
-  PacketFu::PcapFile.file_to_array(pcap_file_str("curl", 0))
+  PacketFu::PcapFile.file_to_array(pcap_file_str)
 end
 
 def get_packet(pcap, pkt_id)
@@ -20,23 +16,17 @@ def get_packet(pcap, pkt_id)
 end
 
 describe "packet_sniffer.c" do
-  
-  before do
-    reset_dir(DEFAULT_PATH) 
-  end
-
   it "should create a PCAP file on CONNECT" do
-    run_curl
-    assert pcap_present?
+    run_c_program(TCP_EV_CONNECT)
+    assert contains?(con_dir_str, PCAP_FILE) 
   end
   
-  # Cannot capture trace on a single interface with Packetdrill?
-  # In the meantime, use Curl instead.
+  # Need to capture on a single interface to use packetfu
+  # Otherwises issues with layer 2 header.
   it "should capture the 3-way handshake on CONNECT" do
-    run_curl
+    skip
+    run_c_program(TCP_EV_CONNECT)
     cap = get_pcap
     assert cap.size >= 3
   end
-
 end
-
