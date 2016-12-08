@@ -1,8 +1,3 @@
-/* tcp_spy.h exposes a set of functions to record all "events" that happened
-
- * for a given TCP connection.
- */
-
 #ifndef TCP_SPY_H
 #define TCP_SPY_H
 

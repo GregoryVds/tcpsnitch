@@ -1,14 +1,14 @@
-#include "packet_sniffer.h"
 #include <pcap.h>
-#include "logger.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "init.h"
 #include "config.h"
+#include "init.h"
 #include "lib.h"
 #include "logger.h"
+#include "logger.h"
+#include "packet_sniffer.h"
 #include "string_helpers.h"
 
 ///////////////////////////////////////////////////////////////////////////////

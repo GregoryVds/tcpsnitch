@@ -1,10 +1,10 @@
 #define _GNU_SOURCE
 
-#include "resizable_array.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include "lib.h"
 #include "logger.h"
+#include "resizable_array.h"
 #include "tcp_spy.h"
 
 ///////////////////////////////////////////////////////////////////////////////

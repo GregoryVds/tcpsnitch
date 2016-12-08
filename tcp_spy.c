@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 
-#include "tcp_spy.h"
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
@@ -20,6 +19,7 @@
 #include "packet_sniffer.h"
 #include "resizable_array.h"
 #include "string_helpers.h"
+#include "tcp_spy.h"
 #include "tcp_spy_json.h"
 #include "verbose_mode.h"
 

@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 
-#include "string_helpers.h"
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -11,6 +10,7 @@
 #include "config.h"
 #include "lib.h"
 #include "logger.h"
+#include "string_helpers.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 

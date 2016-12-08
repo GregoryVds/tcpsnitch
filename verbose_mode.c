@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #include "config.h"
 #include "init.h"
 #include "lib.h"

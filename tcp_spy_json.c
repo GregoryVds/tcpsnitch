@@ -1,10 +1,10 @@
-#include "tcp_spy_json.h"
 #include <jansson.h>
 #include <netdb.h>
+#include "init.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
-#include "init.h"
+#include "tcp_spy_json.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -1,6 +1,5 @@
 #define _GNU_SOURCE  // For program_invocation_name
 
-#include "lib.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -13,6 +12,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 

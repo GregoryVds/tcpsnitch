@@ -1,11 +1,9 @@
-#include "logger.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -13,6 +11,7 @@
 #include "config.h"
 #include "init.h"
 #include "lib.h"
+#include "logger.h"
 #include "tcp_spy.h"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"

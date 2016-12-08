@@ -1,9 +1,9 @@
 #ifndef PACKET_SNIFFER_H
 #define PACKET_SNIFFER_H
 
+#include <netinet/in.h>
 #include <pcap.h>
 #include <pthread.h>
-#include <netinet/in.h>
 #include <stdbool.h>
 
 char *build_capture_filter(const struct sockaddr *addr1,

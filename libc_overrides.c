@@ -30,7 +30,6 @@
 
 #define _GNU_SOURCE
 
-#include "lib.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -45,6 +44,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "init.h"
+#include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 #include "tcp_spy.h"
