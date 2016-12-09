@@ -12,11 +12,18 @@ Tcpsnitch is a program that helps investigate the interactions between an applic
 
 ## Intallation
 
-Install the required dependencies:
-- jansson library (https://jansson.readthedocs.io)
+### Requirements
+
+Require the following libraries:
+- jansson library (www.digip.org/jansson)
 - pcap library (http://www.tcpdump.org/)
 
-Then run `make install` & `sudo make install`.
+Require the `pcap.h` header file (available with the `libpcap-dev` package).
+- Run `sudo apt-get install libcap-dev` to install it.
+
+### Installation
+
+Run `make install` & `sudo make install`.
 
 ## Usage
 

@@ -19,9 +19,15 @@ INSTALL_PATH=/usr/local
 LIB_PATH=$(INSTALL_PATH)/lib
 BIN_PATH=$(INSTALL_PATH)/bin
 
+MISSING_LIB=Missing library dependency
+EJANSSON="$(MISSING_LIB) libjansson (see www.digip.org/jansson)"
+ELIBPCAP="$(MISSING_LIB) pcap (see www.tcpdump.org)"
+
 default: tcpsnitch
 
 tcpsnitch: $(HEADERS) $(SOURCES)
+	@(ldconfig -p | grep libjansson >/dev/null) || (echo $(EJANSSON) && false)
+	@(ldconfig -p | grep libpcap >/dev/null) || (echo $(ELIBPCAP) && false)
 	$(CC) -g -Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -fPIC \
 		-Wpointer-arith -Wcast-align -Wstrict-prototypes \
 		-Wwrite-strings -Waggregate-return -Wcast-qual \
