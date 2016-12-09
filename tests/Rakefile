@@ -1,7 +1,6 @@
 require 'rake/testtask'
 require 'webrick'
-require './lib/webserver.rb'
-require './lib/constants.rb'
+require './lib/lib.rb'
 
 task default: [:test]
 

@@ -7,7 +7,9 @@ require './lib/lib.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 describe "tcpsnitch" do
-		
+	before do WebServer.start end
+  MiniTest::Unit.after_tests { WebServer.stop }
+	
   let(:cmd) { "./c_programs/00_socket.out" } 
 
   describe "when no option is set" do
@@ -47,7 +49,7 @@ describe "tcpsnitch" do
     end
 
     it "should not capture without -c" do
-      run_c_program(TCP_EV_SEND)
+      assert run_c_program(TCP_EV_SEND)
       assert !contains?(con_dir_str, PCAP_FILE)
     end
     # Rest is tested in test_packet_sniffer.rb
@@ -83,7 +85,7 @@ describe "tcpsnitch" do
 
   describe "when -l is set" do
     it "should show logs at 3" do
-      assert_match(/[INFO]/, tcpsnitch_output("-l 3", cmd))
+      assert_match(/#{LOG_LABEL_INFO}/, tcpsnitch_output("-l 3", cmd))
     end
   end
  

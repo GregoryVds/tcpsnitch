@@ -11,6 +11,9 @@ def pkt_json(con_id=1)
 end
 
 describe "tcp_spy" do
+	before do WebServer.start end
+  MiniTest::Unit.after_tests { WebServer.stop }
+	
   before do
     reset_dir(DEFAULT_PATH) 
   end

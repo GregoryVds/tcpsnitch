@@ -4,7 +4,6 @@ require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
 require './lib/lib.rb'
-require './lib/webserver.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
@@ -25,10 +24,7 @@ def assert_event_present(type, success=true, json=read_json)
 end
 
 describe "libc overrides" do
-  before do 
-    WebServer.start  # Memoization done in WebServer
-  end
-
+	before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
 
   SOCKET_SYSCALLS.each do |syscall|

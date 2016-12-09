@@ -16,6 +16,9 @@ def get_packet(pcap, pkt_id)
 end
 
 describe "packet_sniffer.c" do
+	before do WebServer.start end
+  MiniTest::Unit.after_tests { WebServer.stop }
+	
   it "should create a PCAP file on CONNECT" do
     run_c_program(TCP_EV_CONNECT, "-c")
     assert contains?(con_dir_str, PCAP_FILE) 

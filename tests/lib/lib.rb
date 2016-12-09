@@ -1,6 +1,7 @@
 require 'json_expressions/minitest'
 require 'tempfile'
 require './lib/constants.rb'
+require './lib/webserver.rb'
 
 # Create Boolean module as suggested by Jansson library.
 # http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean
@@ -106,7 +107,7 @@ def run_curl
 end
 
 def errors_in_log?(log_file=log_file_str)
-  system("grep \"#{LOG_LVL_ERROR}\" #{log_file}")
+  system("grep \"#{LOG_LABEL_ERROR}\" #{log_file}")
 end
 
 #######################

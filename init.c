@@ -144,15 +144,6 @@ void reset_tcpsnitch(void) {
 
         tcp_snitch_free();
         logger_init(NULL, 0, 0);
-        conf_opt_b = 0;
-        conf_opt_c = 0;
-        conf_opt_d = NULL;
-        conf_opt_f = 0;
-        conf_opt_i = NULL;
-        conf_opt_l = 0;
-        conf_opt_p = 0;
-        conf_opt_u = 0;
-        conf_opt_v = 0;
         initialized = false;
         mutex_init(&init_mutex);
 
