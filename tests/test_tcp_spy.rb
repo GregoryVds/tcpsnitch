@@ -2,7 +2,7 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-require './common.rb'
+require './lib/lib.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
@@ -17,7 +17,7 @@ describe "tcp_spy" do
 
   describe "a TcpConnection" do
     it "should have correct top level JSON fields" do
-      run_c_program(TCP_EV_CONNECT)
+      run_c_program(TCP_EV_CONNECT, "-c")
       pattern = {
         app_name: String,
         bytes_received: Fixnum,

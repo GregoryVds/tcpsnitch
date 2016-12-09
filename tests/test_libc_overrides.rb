@@ -3,7 +3,7 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-require './common.rb'
+require './lib/lib.rb'
 require './lib/webserver.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new

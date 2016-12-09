@@ -1,6 +1,6 @@
 require 'json_expressions/minitest'
 require 'tempfile'
-require './constants.rb'
+require './lib/constants.rb'
 
 # Create Boolean module as suggested by Jansson library.
 # http://stackoverflow.com/questions/3028243/check-if-ruby-object-is-a-boolean
@@ -95,9 +95,9 @@ def tcpsnitch_output(options='', cmd='')
   `#{EXECUTABLE} #{options} #{cmd} 2>&1`
 end
 
-def run_c_program(name)
+def run_c_program(name, opts='')
   reset_dir(TEST_DIR) 
-  tcpsnitch("-d #{TEST_DIR}", "./c_programs/*#{name}.out")
+  tcpsnitch("-d #{TEST_DIR} #{opts}", "./c_programs/*#{name}.out")
 end
 
 def run_curl

@@ -2,7 +2,7 @@
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
-require './common.rb'
+require './lib/lib.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
@@ -34,6 +34,23 @@ describe "tcpsnitch" do
         assert tcpsnitch("#{opt} 5", cmd)
       end
     end
+  end
+  
+  describe "option -c" do
+    it "should not crash with -c" do
+      assert tcpsnitch("-c", cmd)
+    end
+
+    it "should capture with -c" do
+      run_c_program(TCP_EV_SEND, "-c")
+      assert contains?(con_dir_str, PCAP_FILE)
+    end
+
+    it "should not capture without -c" do
+      run_c_program(TCP_EV_SEND)
+      assert !contains?(con_dir_str, PCAP_FILE)
+    end
+    # Rest is tested in test_packet_sniffer.rb
   end
 
   describe "when -d is set" do

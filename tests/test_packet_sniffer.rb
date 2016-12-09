@@ -3,7 +3,7 @@ require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
 require 'packetfu'
-require './common.rb'
+require './lib/lib.rb'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
@@ -17,7 +17,7 @@ end
 
 describe "packet_sniffer.c" do
   it "should create a PCAP file on CONNECT" do
-    run_c_program(TCP_EV_CONNECT)
+    run_c_program(TCP_EV_CONNECT, "-c")
     assert contains?(con_dir_str, PCAP_FILE) 
   end
   
@@ -25,7 +25,7 @@ describe "packet_sniffer.c" do
   # Otherwises issues with layer 2 header.
   it "should capture the 3-way handshake on CONNECT" do
     skip
-    run_c_program(TCP_EV_CONNECT)
+    run_c_program(TCP_EV_CONNECT, "-c")
     cap = get_pcap
     assert cap.size >= 3
   end
