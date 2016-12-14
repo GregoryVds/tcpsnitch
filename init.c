@@ -52,19 +52,6 @@ error_out:
         return NULL;
 }
 
-static bool config_init_logger(void) {
-        const char *init_logs_path =
-            alloc_concat_path(conf_opt_d, INIT_LOG_FILE);
-        if (init_logs_path)
-                logger_init(init_logs_path, DEBUG, DEBUG);
-        else
-                goto error;
-        return true;
-error:
-        LOG_FUNC_FAIL;
-        return false;
-}
-
 static char *create_logs_dir(void) {
         char *base_path, *path;
         DIR *dir;
@@ -155,6 +142,8 @@ void init_tcpsnitch(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
+	logger_init(NULL, WARN, WARN);
+
         /* We need a way to unweave the main process and tcpsnitch standard 
          * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
          * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
@@ -165,24 +154,17 @@ void init_tcpsnitch(void) {
         if (!(_stderr = fdopen(STDERR_FD, "w")))
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
         
-        conf_opt_d = get_conf_opt_d();
-        if (!conf_opt_d) goto exit1;
-        
-        config_init_logger();
-        /* At this point we have initialization logs to file */
-
         atexit(cleanup);
 
-        /* Fetch other ENV variables */
         conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);
         conf_opt_c = get_long_env_or_defaultval(ENV_OPT_C, 0);
-        // conf_opt_d is fetched earlier
         conf_opt_f = get_long_env_or_defaultval(ENV_OPT_F, WARN);
         conf_opt_i = get_str_env(ENV_OPT_I);
         conf_opt_l = get_long_env_or_defaultval(ENV_OPT_L, WARN);
         conf_opt_p = get_long_env_or_defaultval(ENV_OPT_P, 0); 
         conf_opt_u = get_long_env_or_defaultval(ENV_OPT_U, 0);
         conf_opt_v = get_long_env_or_defaultval(ENV_OPT_V, 0); 
+        if (!(conf_opt_d = get_conf_opt_d())) goto exit1;
 
         /* Create dir containing log, pcap and json files for this process */
         if (!(conf_opt_d = create_logs_dir())) goto exit1;

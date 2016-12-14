@@ -144,7 +144,7 @@ fi
 # Create temp dir if option -d not used
 if [[ -z "$OPT_D" ]]; then
         OPT_D=$(mktemp -d)
-        chmod 555 "$OPT_D"
+        chmod 777 "$OPT_D"
 fi
 
 # Save network config
@@ -168,6 +168,6 @@ TCPSNITCH_OPT_L=$OPT_L \
 TCPSNITCH_OPT_P=$OPT_P \
 TCPSNITCH_OPT_U=$OPT_U \
 TCPSNITCH_OPT_V=$OPT_V \
-LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 4>&2 1>/dev/null 2>&1
+LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 4>&2 1>/dev/null
 
 echo "tcpsnitch data saved in $OPT_D"
