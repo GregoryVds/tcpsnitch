@@ -4,10 +4,12 @@ set -o nounset
 # set -o xtrace
 
 NAME="tcpsnitch"
-VERSION=0.1.0
+VERSION=1.0
 VERSION_STR="${NAME} version ${VERSION}"
 UNAME_FILE="uname.txt"
 SYSCTL_FILE="sysctl_net.txt"
+LIB_32="/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.${VERSION}"
+LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
 
 # Option default values
 OPT_B=4096
@@ -149,15 +151,15 @@ fi
 
 # Save network config
 NET_CONFIG_PATH="${OPT_D}/${SYSCTL_FILE}"
-if [[ ! -e "$NET_CONFIG_PATH" ]]; then
-        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
-fi
+#if [[ ! -e "$NET_CONFIG_PATH" ]]; then
+#        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
+#fi
 
 # Save os config
 OS_CONFIG_PATH="${OPT_D}/${UNAME_FILE}"
-if [[ ! -e "$OS_CONFIG_PATH" ]]; then
-        uname -a > "$OS_CONFIG_PATH"
-fi
+#if [[ ! -e "$OS_CONFIG_PATH" ]]; then
+##       uname -a > "$OS_CONFIG_PATH"
+#fi
 
 TCPSNITCH_OPT_B=$OPT_B \
 TCPSNITCH_OPT_C=$OPT_C \
@@ -168,6 +170,6 @@ TCPSNITCH_OPT_L=$OPT_L \
 TCPSNITCH_OPT_P=$OPT_P \
 TCPSNITCH_OPT_U=$OPT_U \
 TCPSNITCH_OPT_V=$OPT_V \
-LD_PRELOAD=/usr/local/lib/libtcpsnitch.so $@ 3>&1 4>&2 1>/dev/null
+LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 3>&1 4>&2 1>/dev/null
 
 echo "tcpsnitch data saved in $OPT_D"
