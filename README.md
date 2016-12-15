@@ -14,7 +14,7 @@ Tcpsnitch is a program that helps investigate the interactions between an applic
 
 Comptabible with Linux only (tested on Ubuntu & Elementary only).
 
-The following applications have been tested and are compatible: Firefox, Epiphany, VLC, Steam.
+The following applications have been tested and are compatible: Firefox, Epiphany, VLC, Steam, Transmission, QbitTorrent, Spotify, Dropbox, x2goclient..
 
 The following applications are NOT compatible: Chrome, any Chromium based app such as Opera, Electron..
 
