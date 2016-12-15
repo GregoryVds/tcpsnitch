@@ -26,8 +26,6 @@ Require the following libraries (both 32 bits and 64 bits versions):
 - jansson library (www.digip.org/jansson)
 - pcap library (http://www.tcpdump.org/)
 
-### Installation
-
 ### Ubuntu Linux x64
 
 #### Multiarch
@@ -40,9 +38,9 @@ Then Run `sudo apt-get update` to refresh the package cache with the newly added
 
 #### Libs
 
-For libjansson, simply install both versions with: `sudo apt-get install libjansson-dev libjansson-dev:i386`.
+For `libjansson`, simply install both versions with: `sudo apt-get install libjansson-dev libjansson-dev:i386`.
 
-For libpcap, a bit more work is needed as this library is not multiarch compatible. The devel package of one architecture conflicts with the package of the other architecture, so we CANNOT simply perform `sudo apt-get install libpcap0.8-dev libpcap0.8-dev:i386`. A trick is to install the devel version for one architecture, and the regular lib version for the other architecture. We then need to manually create the symlink for the "linker name" of the library:
+For `libpcap`, a bit more work is needed as this library is not multiarch compatible. The devel package of one architecture conflicts with the package of the other architecture, so we CANNOT simply perform `sudo apt-get install libpcap0.8-dev libpcap0.8-dev:i386`. A trick is to install the devel version for one architecture, and the regular lib version for the other architecture. We then need to manually create the symlink for the "linker name" of the library:
 
 Run `sudo apt-get install libpcap0.8-dev libpcap0.8:i386`.
 Then `sudo ln -s /usr/lib/i386-linux-gnu/libpcap.so.0.8 /usr/lib/i386-linux-gnu/libpcap.so`.
@@ -57,7 +55,7 @@ Finally run `make install` & `sudo make install`.
 
 To run tcpsnitch with curl and defaults options: `sudo tcpsnitch curl google.com`. 
 
-To see verbose output and choose the log directory: `sudo tcpsnitch -v 4 -d /path curl google.com`.
+To see verbose output and choose the log directory: `sudo tcpsnitch -v -d <path> curl google.com`.
 
 See `tcpsnitch -h` for more information about the options.
 
@@ -68,9 +66,9 @@ See `tcpsnitch -h` for more information about the options.
 ### What are these ELF errors that get thrown?
 
 When running tcpsnitch, you will get the following errors:
-`ERROR: ld.so: object '/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.1.0' from LD_PRELOAD cannot be preloaded (wrong ELF class: ELFCLASS32): ignored.`
+`ERROR: ld.so: object '/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.1.0' from `LD\_PRELOAD` cannot be preloaded (wrong ELF class: ELFCLASS32): ignored.`
 
-On a x64 machine, tcpsnitch must support both 32 bits and 64 bits executables. For instance, a 32 bits application such as Steam might fork and execute 64 bits applications. We thus always add both versions of the library in the LD\_PRELOAD variable to support both cases. This means that for any process running with tcpsnitch, there will always be one library which is not supported, and one which is supported.
+On a x64 machine, tcpsnitch must support both 32 bits and 64 bits executables. For instance, a 32 bits application such as Steam might fork and execute 64 bits applications. We thus always add both versions of the library in the `LD\_PRELOAD` variable to support both cases. This means that for any process running with tcpsnitch, there will always be one library which is not supported, and one which is supported.
 
 ## Contact
 
