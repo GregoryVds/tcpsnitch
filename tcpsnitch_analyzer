@@ -2,9 +2,16 @@
 
 require 'optparse'
 require 'ostruct'
+require 'yajl' 
+require 'pp'
 
 EXECUTABLE = "tcpsnitch_analyzer"
 VERSION = '0.1.0'
+
+def error(msg)
+  puts "#{EXECUTABLE}: #{msg}."
+  puts "Try '#{EXECUTABLE} -h' for more information."
+end
 
 class OptParser 
   def self.parse(args)
@@ -33,10 +40,9 @@ class OptParser
           exit
         end
       end.parse!(args) # OptionParser
-    rescue OptionParser::InvalidOption => e
-      puts "#{EXECUTABLE}: #{e}."
-      puts "Try '#{EXECUTABLE} -h' for more information."
-      exit 
+    rescue Exception => e 
+      error(e)
+      exit 1 
     end
 
     options
@@ -46,6 +52,34 @@ end
 options = OptParser.parse(ARGV)
 files = ARGV
 
-p options
-p files
+# We probably don't want to read the entire JSON files into memory, nor do we 
+# want to build a Ruby object for the entire file. We should probably do this
+# in chunks, see yajl-ruby.
+files.each do |file|
+  begin
+    json = File.read(file)
+  rescue Exception => e
+    error(e)
+    exit 1
+  end
+
+  begin
+    hash = Yajl::Parser.new.parse(json)
+  rescue Exception => e
+    error(e)
+    exit 1
+  end
+
+  events = {}
+  hash['events'].each do |ev|
+    type = ev['type']
+    if events.key?(type) then
+      events[type] += 1
+    else
+      events[type] = 1  
+    end
+  end
+
+  pp events
+end
 
