@@ -49,7 +49,8 @@ error:
         return NULL;
 }
 
-static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
+static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
+                             int id) {
         bool success;
         TcpEvent *ev;
         switch (type) {
@@ -132,6 +133,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err) {
         ev->return_value = return_value;
         ev->success = success;
         ev->error_str = success ? NULL : alloc_error_str(err);
+        ev->id = id;
         return ev;
 error:
         LOG_FUNC_FAIL;
@@ -190,6 +192,7 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
         else
                 con->tail->next = node;
         con->tail = node;
+        con->events_count++;
         return;
 error:
         LOG_FUNC_FAIL;
@@ -248,7 +251,7 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
-static void tcp_dump_json(TcpConnection *con) {
+static void tcp_dump_json(TcpConnection *con, bool final) {
         if (con->directory == NULL) goto error1;
         char *json_str, *json_file_str;
 
@@ -259,11 +262,17 @@ static void tcp_dump_json(TcpConnection *con) {
 
         TcpEventNode *tmp, *cur = con->head;
         while (cur != NULL) {
-                if (!(json_str = alloc_tcp_ev_json(cur->data))) goto error_out;
-                if (fputs(json_str, fp) == EOF) goto error2;
-                if (fputs("\n", fp) == EOF) goto error2;
-                free(json_str);
+                TcpEvent *ev = cur->data;
+                if (!(json_str = alloc_tcp_ev_json(ev))) goto error_out;
 
+                if (ev->id == 0) my_fputs("[\n", fp);
+                my_fputs(json_str, fp);
+                if (final && ev->id+1 == con->events_count)
+                        my_fputs("\n", fp);
+                else
+                        my_fputs(",\n", fp);
+
+                free(json_str);
                 free_event(cur->data);
                 tmp = cur;
                 cur = cur->next;
@@ -272,14 +281,11 @@ static void tcp_dump_json(TcpConnection *con) {
         con->head = NULL;
         con->tail = NULL;
 
-        if (fclose(fp) == EOF) goto error3;
+        if (final) my_fputs("]", fp);
+        if (fclose(fp) == EOF) goto error2;
         return;
-error3:
-        LOG(ERROR, "fclose() failed. %s.", strerror(errno));
-        goto error_out;
 error2:
-        LOG(ERROR, "fputs() failed. %s.", strerror(errno));
-        free(cur);
+        LOG(ERROR, "fclose() failed. %s.", strerror(errno));
         goto error_out;
 error1:
         LOG(ERROR, "con->directory is NULL.");
@@ -395,12 +401,13 @@ error_out:
                 return;                 \
         }
 
-#define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        TcpConnection *con = ra_get_and_lock_elem(fd);                         \
-        FAIL_IF_NULL(con, ev_type_cons);                                       \
-        const char *ev_name = string_from_tcp_event_type(ev_type_cons);        \
-        LOG(INFO, "%s on connection %d.", ev_name, con->id);                   \
-        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err); \
+#define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                 \
+        TcpConnection *con = ra_get_and_lock_elem(fd);                        \
+        FAIL_IF_NULL(con, ev_type_cons);                                      \
+        const char *ev_name = string_from_tcp_event_type(ev_type_cons);       \
+        LOG(INFO, "%s on connection %d.", ev_name, con->id);                  \
+        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err, \
+                                             con->events_count);              \
         FAIL_IF_NULL(ev, ev_type_cons);
 
 #define TCP_EV_POSTLUDE(ev_type_cons)                         \
@@ -416,7 +423,7 @@ error_out:
                 int _e = errno;                               \
                 tcp_ev_tcp_info(fd, _r, _e, &_i);             \
         }                                                     \
-        tcp_dump_json(con);                                   \
+        tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);     \
         errno = err;
 
 const char *string_from_tcp_event_type(TcpEventType type) {
@@ -624,10 +631,8 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
 
         // Cleanup
         if (!(con = ra_get_and_lock_elem(fd))) goto error;
-        tcp_dump_json(con);  // Must be done after POSTLUDE (which add event)
         free_connection(con);
         ra_unlock_elem(fd);
-
         ra_put_elem(fd, NULL);
         return;
 error:

@@ -39,6 +39,7 @@ typedef struct {
         int return_value;
         bool success;
         char *error_str;
+        long id;
 } TcpEvent;
 
 typedef struct {
@@ -204,6 +205,7 @@ typedef struct {
         TcpEventNode *tail;  // Tail for list of events.
         // Others
         int id;
+        long events_count;
         unsigned long bytes_sent;      // Total bytes sent.
         unsigned long bytes_received;  // Total bytes received.
         long last_info_dump_micros;  // Time of last info dump in microseconds.

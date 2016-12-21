@@ -232,6 +232,16 @@ error:
         return NULL;
 }
 
+int my_fputs(const char *s, FILE *stream) {
+        int ret = fputs(s, stream);
+        if (ret == EOF) goto error;
+        return ret;
+error:
+        LOG(ERROR, "fputs() failed. %s.", strerror(errno));
+        LOG_FUNC_FAIL;
+        return ret;
+}
+
 char *create_numbered_dir_in_path(char *path, int dir_number) {
         char *dirname, *dir_path;
         int n;
