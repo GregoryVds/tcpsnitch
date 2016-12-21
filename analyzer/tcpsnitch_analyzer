@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'ostruct'
+require 'pp'
+require 'oj'
+
+require './lib.rb'
+require './tcp_events.rb'
+require './opt_parser.rb'
+
+EXECUTABLE = "tcpsnitch_analyzer"
+VERSION = '0.1.0'
+
+options = OptParser.parse(ARGV)
+files = ARGV
+
+# We DO NOT want to read the entire JSON files into memory as they can be huge.
+# We DO NOT want to build a Ruby object for the entire JSON array in the file 
+# as this array will also be huge. Instead, we want to the file line by line, 
+# where each line consists of a single event. This way we can instantiate 
+# each event individually and discard them as we go through the file, thus 
+# giving O(1) memory consumption.
+
+files.each do |file|
+  File.open(file).each_with_index do |line, index|
+    next if index == 0 # First line is opening '[' of JSON Array
+    next if line.eql? "]" # Last line is closing ']' of JSON Array
+
+    begin 
+      hash = Oj.load(line.chomp(",\n")) # Remove ',\n' after JSON object
+      class_name = 'TcpEv' + camelize(hash['type'])
+      Object.const_get(class_name).new hash
+    rescue Exception => e 
+      error(e)
+    end
+  end
+end
+
+TcpEvent.print_events
