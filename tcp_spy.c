@@ -282,6 +282,7 @@ static void tcp_dump_json(TcpConnection *con, bool final) {
         }
         con->head = NULL;
         con->tail = NULL;
+        con->last_json_dump_evcount = con->events_count;
 
         if (final) my_fputs("]", fp);
         if (fclose(fp) == EOF) goto error2;

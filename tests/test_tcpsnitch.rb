@@ -72,6 +72,25 @@ describe "tcpsnitch" do
     end
   end
 
+  describe "option -e" do
+    cmd = "./c_programs/09_shutdown.out" # script has 4 syscalls
+    
+    it "should dump json 3 times with -e 1" do
+      out = tcpsnitch_output("-e 1 -l 5", cmd)
+      assert_equal(4, out.scan(/tcp_dump_json/).count) 
+    end
+  
+    it "should dump json 2 times with -e 2" do
+      out = tcpsnitch_output("-e 2 -l 5", cmd)
+      assert_equal(2, out.scan(/tcp_dump_json/).count) 
+    end
+
+    it "should dump json 1 time without -e" do # defaults to 1000
+      out = tcpsnitch_output("-l 5", cmd)
+      assert_equal(1, out.scan(/tcp_dump_json/).count) 
+    end
+  end
+
   describe "option -i" do
     it "should not crash with valid iface" do
       assert tcpsnitch("-i lo", cmd)
