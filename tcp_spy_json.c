@@ -124,6 +124,7 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
 #define BUILD_EV_PRELUDE()                                  \
         json_t *json_ev = json_object();                    \
         if (!json_ev) {                                     \
+                LOG(ERROR, "json_object() failed.");        \
                 LOG_FUNC_FAIL;                              \
                 return NULL;                                \
         }                                                   \
@@ -356,7 +357,7 @@ static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
         return json_ev;
 }
 
-static json_t *build_event(const TcpEvent *ev) {
+static json_t *build_tcp_ev(const TcpEvent *ev) {
         json_t *r;
         switch (ev->type) {
                 case TCP_EV_SOCKET:
@@ -418,57 +419,17 @@ static json_t *build_event(const TcpEvent *ev) {
         return r;
 }
 
-static json_t *build_tcp_ev_connection(const TcpConnection *con) {
-        json_t *json_con = json_object();
-        if (!json_con) goto error1;
-
-        json_t *events = json_array();
-        if (!events) goto error2;
-
-        add(json_con, "app_name", json_string(con->app_name));
-        add(json_con, "cmdline", json_string(con->cmdline));
-        add(json_con, "directory", json_string(con->directory));
-        add(json_con, "kernel", json_string(con->kernel));
-        add(json_con, "timestamp", json_integer(con->timestamp));
-        add(json_con, "id", json_integer(con->id));
-        add(json_con, "events_count", json_integer(con->events_count));
-        add(json_con, "bytes_sent", json_integer(con->bytes_sent));
-        add(json_con, "bytes_received", json_integer(con->bytes_received));
-        add(json_con, "capture_filter", json_string(con->capture_filter));
-        add(json_con, "successful_pcap", json_boolean(con->successful_pcap));
-
-        /* Loop through all events to build JSON */
-        add(json_con, "events", events);
-        json_t *json_event;
-        TcpEventNode *cur = con->head;
-        while (cur != NULL) {
-                json_event = build_event(cur->data);
-                json_array_append_new(events, json_event);
-                cur = cur->next;
-        }
-
-        return json_con;
-error1:
-        LOG(ERROR, "json_con is NULL.");
-        goto error_out;
-error2:
-        LOG(ERROR, "events is NULL.");
-error_out:
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
 /* Public functions */
 
-char *alloc_tcp_ev_connection_json(const TcpConnection *con) {
-        json_t *json_con = build_tcp_ev_connection(con);
-        if (!json_con) goto error;
+char *alloc_tcp_ev_json(const TcpEvent *ev) {
+        json_t *json_ev = build_tcp_ev(ev);
+        if (!json_ev) goto error;
         size_t flags = conf_opt_p ? JSON_INDENT(2) : 0; 
-        char *json_string = json_dumps(json_con, flags);
-        json_decref(json_con);
+        char *json_string = json_dumps(json_ev, flags);
+        json_decref(json_ev);
         return json_string;
 error:
-        LOG(ERROR, "json_object() failed.");
         LOG_FUNC_FAIL;
         return NULL;
 }
+

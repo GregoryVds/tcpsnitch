@@ -198,25 +198,19 @@ struct TcpEventNode {
 };
 
 typedef struct {
-        const char *app_name;      // Application name with args.
         // To be freed
-        char *cmdline;       // Cmdline (app name + args).
-        char *kernel;        // Kernel version.
         char *directory;     // Directory for all logging purpose.
-        char *capture_filter;
         TcpEventNode *head;  // Head for list of events.
         TcpEventNode *tail;  // Tail for list of events.
         // Others
-        int id;                        // Connection id, starting at 0.
-        int events_count;              // List of events size.
+        int id;
         unsigned long bytes_sent;      // Total bytes sent.
         unsigned long bytes_received;  // Total bytes received.
-        bool successful_pcap;        // Successfully captured packets on handle.
         long last_info_dump_micros;  // Time of last info dump in microseconds.
         long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
-        time_t timestamp;  // When tcp_spy started tracking the connection.
         bool force_bind;
-        TcpEvBind *bind_ev;
+        bool bound;
+        struct sockaddr_storage bound_addr; 
         int rtt;
         bool *capture_switch;
 } TcpConnection;

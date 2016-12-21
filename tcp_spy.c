@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "tcp_spy.h"
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
@@ -19,7 +20,6 @@
 #include "packet_sniffer.h"
 #include "resizable_array.h"
 #include "string_helpers.h"
-#include "tcp_spy.h"
 #include "tcp_spy_json.h"
 #include "verbose_mode.h"
 
@@ -34,11 +34,6 @@ static TcpConnection *alloc_connection(void) {
         TcpConnection *con;
         if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1)))
                 goto error;
-
-        con->cmdline = alloc_cmdline_str();
-        con->app_name = get_app_name();
-        con->timestamp = get_time_sec();
-        con->kernel = alloc_kernel_str();
 
         // Get & increment connections_count
         mutex_lock(&connections_count_mutex);
@@ -195,7 +190,6 @@ static void push_event(TcpConnection *con, TcpEvent *ev) {
         else
                 con->tail->next = node;
         con->tail = node;
-        con->events_count++;
         return;
 error:
         LOG_FUNC_FAIL;
@@ -256,21 +250,36 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 
 static void tcp_dump_json(TcpConnection *con) {
         if (con->directory == NULL) goto error1;
-
         char *json_str, *json_file_str;
-        if (!(json_str = alloc_tcp_ev_connection_json(con))) goto error_out;
-        if (!(json_file_str = alloc_json_path_str(con))) goto error2;
 
-        if (append_string_to_file((const char *)json_str, json_file_str))
-                goto error3;
-
-        free(json_str);
+        if (!(json_file_str = alloc_json_path_str(con))) goto error_out;
+        FILE *fp = fopen(json_file_str, "a");
         free(json_file_str);
+        if (!fp) goto error_out;
+
+        TcpEventNode *tmp, *cur = con->head;
+        while (cur != NULL) {
+                if (!(json_str = alloc_tcp_ev_json(cur->data))) goto error_out;
+                if (fputs(json_str, fp) == EOF) goto error2;
+                if (fputs("\n", fp) == EOF) goto error2;
+                free(json_str);
+
+                free_event(cur->data);
+                tmp = cur;
+                cur = cur->next;
+                free(tmp);
+        }
+        con->head = NULL;
+        con->tail = NULL;
+
+        if (fclose(fp) == EOF) goto error3;
         return;
 error3:
-        free(json_file_str);
+        LOG(ERROR, "fclose() failed. %s.", strerror(errno));
+        goto error_out;
 error2:
-        free(json_str);
+        LOG(ERROR, "fputs() failed. %s.", strerror(errno));
+        free(cur);
         goto error_out;
 error1:
         LOG(ERROR, "con->directory is NULL.");
@@ -337,10 +346,7 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
 void free_connection(TcpConnection *con) {
         if (!con) return;  // NULL
         free_events_list(con->head);
-        free(con->cmdline);
-        free(con->kernel);
         free(con->directory);
-        free(con->capture_filter);
         free(con);
 }
 
@@ -352,13 +358,12 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         // the source port and use a more specific filter for the capture.
         // Before forcing the bind, we unlock the mutex in order to avoid
         // having to use recusive mutexes (since it will trigger a bind()).
-        TcpEvBind *bind_ev = con->bind_ev;  // Is already bound?
-        if (!ra_unlock_elem(fd)) goto error1;
-        if (bind_ev == NULL &&
-            force_bind(fd, con, addr_to->sa_family == AF_INET6)) {
-                LOG(INFO, "force_bind() failed. Filter DEST IP/PORT only.");
+        if (!con->bound) {
+                if (!ra_unlock_elem(fd)) goto error_out;
+                if (force_bind(fd, con, addr_to->sa_family == AF_INET6))
+                        LOG(INFO, "Filter dest IP/PORT only.");
+                if (!(con = ra_get_and_lock_elem(fd))) goto error_out;
         }
-        if (!(con = ra_get_and_lock_elem(fd))) goto error1;
 
         // Build pcap file path
         char *pcap_file_path = alloc_pcap_path_str(con);
@@ -366,15 +371,11 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
 
         // Build capture filter
         const struct sockaddr *addr_from =
-            (con->bind_ev)
-                ? (const struct sockaddr *)&con->bind_ev->addr.addr_sto
-                : NULL;
+            (con->bound) ? (const struct sockaddr *)&con->bound_addr : NULL;
 
-        if (!(con->capture_filter = build_capture_filter(addr_from, addr_to)))
-                goto error2;
-
-        con->capture_switch =
-            start_capture(con->capture_filter, pcap_file_path);
+        const char *capture_filter = build_capture_filter(addr_from, addr_to);
+        if (!capture_filter) goto error2;
+        con->capture_switch = start_capture(capture_filter, pcap_file_path);
 
         free(pcap_file_path);
         ra_unlock_elem(fd);
@@ -415,6 +416,7 @@ error_out:
                 int _e = errno;                               \
                 tcp_ev_tcp_info(fd, _r, _e, &_i);             \
         }                                                     \
+        tcp_dump_json(con);                                   \
         errno = err;
 
 const char *string_from_tcp_event_type(TcpEventType type) {
@@ -462,8 +464,12 @@ void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
         TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
 
         fill_addr(&(ev->addr), addr, len);
-        con->bind_ev = ev;
         ev->force_bind = con->force_bind;
+        if (!return_value) {
+                con->bound = true;
+                memcpy(&con->bound_addr, &ev->addr.addr_sto,
+                       sizeof(struct sockaddr_storage));
+        }
 
         TCP_EV_POSTLUDE(TCP_EV_BIND)
 }
@@ -517,8 +523,8 @@ void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
         // Instantiate local vars TcpConnection *con & TcpEvSend *ev
         TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
 
-        con->bytes_sent += bytes;
         ev->bytes = bytes;
+        con->bytes_sent += bytes;
         fill_send_flags(&(ev->flags), flags);
 
         TCP_EV_POSTLUDE(TCP_EV_SEND)
@@ -528,8 +534,8 @@ void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
         // Instantiate local vars TcpConnection *con & TcpEvRecv *ev
         TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
 
-        con->bytes_received += bytes;
         ev->bytes = bytes;
+        con->bytes_received += bytes;
         fill_recv_flags(&(ev->flags), flags);
 
         TCP_EV_POSTLUDE(TCP_EV_RECV)
@@ -540,8 +546,8 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
         // Instantiate local vars TcpConnection *con & TcpEvSendto *ev
         TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
 
-        con->bytes_sent += bytes;
         ev->bytes = bytes;
+        con->bytes_sent += bytes;
         fill_send_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
 
@@ -553,8 +559,8 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         // Instantiate local vars TcpConnection *con & TcpEvRecvfrom *ev
         TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
 
-        con->bytes_received += bytes;
         ev->bytes = bytes;
+        con->bytes_received += bytes;
         fill_recv_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
 
@@ -589,8 +595,8 @@ void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
         TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
 
-        con->bytes_sent += bytes;
         ev->bytes = bytes;
+        con->bytes_sent += bytes;
 
         TCP_EV_POSTLUDE(TCP_EV_WRITE)
 }
@@ -599,8 +605,8 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvRead *ev
         TCP_EV_PRELUDE(TCP_EV_READ, TcpEvRead);
 
-        con->bytes_received += bytes;
         ev->bytes = bytes;
+        con->bytes_received += bytes;
 
         TCP_EV_POSTLUDE(TCP_EV_READ)
 }
