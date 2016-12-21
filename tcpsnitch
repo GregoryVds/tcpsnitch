@@ -15,6 +15,7 @@ LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
 OPT_B=4096
 OPT_C=0
 OPT_D=""
+OPT_E=1000
 OPT_F=2
 OPT_I=""
 OPT_L=0
@@ -23,20 +24,23 @@ OPT_U=0
 OPT_V=0
 
 usage() {
-        echo "Usage: tcpsnitch [-chpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
-        echo "                 [ -i <iface> ] [ -l <lvl> ] [ -u <msec> ]"
-        echo "                 [ --version ] <command>"
+        echo "Usage: tcpsnitch [-chpv] [ -b <bytes> ] [ -d <dir>]" 
+        echo "                 [ -e <events> ] [ -f <lvl> ] [ -i <iface> ]" 
+        echo "                 [ -l <lvl> ] [ -u <usec> ] [ --version ] "
+        echo "                 <command> <args>"
         echo ""
         echo "<command>   command to spy on."
+        echo "<args>      args to command to spy on."
         echo "-c          capture pcap trace."
         echo "-b <bytes>  dump tcp_info max once every <bytes> (def. 4096)."
+        echo "-e <events> dump to JSON file every <events> (def. 1000)."
         echo "-d <dir>    dir to save traces (defaults to random dir in /tmp)."
         echo "-f <lvl>    logs to file verbosity (0 to 5, defaults to 2)."
         echo "-h          show this help text."
         echo "-i <iface>  add interface name to capture filter." 
         echo "-l <lvl>    logs to stderr verbosity (0 to 5, defaults to 0)."  
         echo "-p          pretty print JSON in json files."
-        echo "-u <msec>   dump tcp_info max once every <msec> (def. 0)."
+        echo "-u <usec>   dump tcp_info max once every <usec> microsecs (def. 0)."
         echo "-v          verbose output."  
         echo "--version   print tcpsnitch version." 
 }
@@ -60,7 +64,7 @@ error() {
 }
 
 # Parse options
-while getopts ":chpvb:d:f:i:l:u:-:" opt; do
+while getopts ":chpvb:d:e:f:i:l:u:-:" opt; do
         case $opt in
                 -) # Trick to parse long options with getopts.
                         case "$OPTARG" in
@@ -87,6 +91,10 @@ while getopts ":chpvb:d:f:i:l:u:-:" opt; do
                                 exit 1
                         fi
                         OPT_D=$OPTARG
+                        ;;
+                e)
+                        assert_int "$OPTARG" "invalid -e argument: '$OPTARG'" 
+                        OPT_E=$OPTARG
                         ;;
                 f)
                         assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
@@ -164,6 +172,7 @@ fi
 TCPSNITCH_OPT_B=$OPT_B \
 TCPSNITCH_OPT_C=$OPT_C \
 TCPSNITCH_OPT_D=$OPT_D \
+TCPSNITCH_OPT_E=$OPT_E \
 TCPSNITCH_OPT_F=$OPT_F \
 TCPSNITCH_OPT_I=$OPT_I \
 TCPSNITCH_OPT_L=$OPT_L \

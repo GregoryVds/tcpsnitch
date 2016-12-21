@@ -20,4 +20,6 @@ void logger(LogLevel lvl, const char *str, const char *file, int line);
 
 #define LOG_FUNC_FAIL LOG(ERROR, "%s failed.", __func__)
 
+#define LOG_FUNC_D D("%s", __func__)
+
 #endif

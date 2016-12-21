@@ -253,6 +253,8 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 
 static void tcp_dump_json(TcpConnection *con, bool final) {
         if (con->directory == NULL) goto error1;
+        LOG_FUNC_D;
+
         char *json_str, *json_file_str;
 
         if (!(json_file_str = alloc_json_path_str(con))) goto error_out;
@@ -267,7 +269,7 @@ static void tcp_dump_json(TcpConnection *con, bool final) {
 
                 if (ev->id == 0) my_fputs("[\n", fp);
                 my_fputs(json_str, fp);
-                if (final && ev->id+1 == con->events_count)
+                if (final && ev->id + 1 == con->events_count)
                         my_fputs("\n", fp);
                 else
                         my_fputs(",\n", fp);
@@ -347,6 +349,10 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
         return true;
 }
 
+static bool should_dump_json(const TcpConnection *con) {
+        return con->events_count - con->last_json_dump_evcount >= conf_opt_e;
+}
+
 /* Public functions */
 
 void free_connection(TcpConnection *con) {
@@ -410,20 +416,21 @@ error_out:
                                              con->events_count);              \
         FAIL_IF_NULL(ev, ev_type_cons);
 
-#define TCP_EV_POSTLUDE(ev_type_cons)                         \
-        push_event(con, (TcpEvent *)ev);                      \
-        output_event((TcpEvent *)ev);                         \
-        bool should_dump = should_dump_tcp_info(con) &&       \
-                           ev_type_cons != TCP_EV_TCP_INFO && \
-                           ev_type_cons != TCP_EV_CLOSE;      \
-        ra_unlock_elem(fd);                                   \
-        if (should_dump) {                                    \
-                struct tcp_info _i;                           \
-                int _r = fill_tcpinfo(fd, &_i);               \
-                int _e = errno;                               \
-                tcp_ev_tcp_info(fd, _r, _e, &_i);             \
-        }                                                     \
-        tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);     \
+#define TCP_EV_POSTLUDE(ev_type_cons)                              \
+        push_event(con, (TcpEvent *)ev);                           \
+        output_event((TcpEvent *)ev);                              \
+        bool should_dump = should_dump_tcp_info(con) &&            \
+                           ev_type_cons != TCP_EV_TCP_INFO &&      \
+                           ev_type_cons != TCP_EV_CLOSE;           \
+        ra_unlock_elem(fd);                                        \
+        if (should_dump) {                                         \
+                struct tcp_info _i;                                \
+                int _r = fill_tcpinfo(fd, &_i);                    \
+                int _e = errno;                                    \
+                tcp_ev_tcp_info(fd, _r, _e, &_i);                  \
+        }                                                          \
+        if (should_dump_json(con) || ev_type_cons == TCP_EV_CLOSE) \
+                tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);  \
         errno = err;
 
 const char *string_from_tcp_event_type(TcpEventType type) {
@@ -666,6 +673,7 @@ void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
         // Instantiate local vars TcpConnection *con & TcpEvTcpInfo
         // *ev
         TCP_EV_PRELUDE(TCP_EV_TCP_INFO, TcpEvTcpInfo);
+        LOG_FUNC_D;
 
         memcpy(&(ev->info), &info, sizeof(struct tcp_info));
         con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;

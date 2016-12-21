@@ -25,7 +25,7 @@ describe "tcpsnitch" do
     end
   end
   
-  ["-b", "-f", "-l", "-u"].each do |opt|
+  ["-b", "-e", "-f", "-l", "-u"].each do |opt|
     describe "when #{opt} is set" do
       it "should report 'invalid #{opt} argument'" do
         assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
@@ -71,7 +71,7 @@ describe "tcpsnitch" do
       assert !dir_empty?(TEST_DIR)
     end
   end
-  
+
   describe "option -i" do
     it "should not crash with valid iface" do
       assert tcpsnitch("-i lo", cmd)

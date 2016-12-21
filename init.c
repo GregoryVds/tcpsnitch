@@ -16,6 +16,7 @@
 long conf_opt_b;
 long conf_opt_c;
 char *conf_opt_d;
+long conf_opt_e;
 long conf_opt_f;
 char *conf_opt_i;
 long conf_opt_l;
@@ -158,6 +159,7 @@ void init_tcpsnitch(void) {
 
         conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);
         conf_opt_c = get_long_env_or_defaultval(ENV_OPT_C, 0);
+        conf_opt_e = get_long_env_or_defaultval(ENV_OPT_E, 1000);
         conf_opt_f = get_long_env_or_defaultval(ENV_OPT_F, WARN);
         conf_opt_i = get_str_env(ENV_OPT_I);
         conf_opt_l = get_long_env_or_defaultval(ENV_OPT_L, WARN);
