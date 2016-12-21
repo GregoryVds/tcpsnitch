@@ -151,15 +151,15 @@ fi
 
 # Save network config
 NET_CONFIG_PATH="${OPT_D}/${SYSCTL_FILE}"
-#if [[ ! -e "$NET_CONFIG_PATH" ]]; then
-#        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
-#fi
+if [[ ! -e "$NET_CONFIG_PATH" ]]; then
+        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
+fi
 
 # Save os config
 OS_CONFIG_PATH="${OPT_D}/${UNAME_FILE}"
-#if [[ ! -e "$OS_CONFIG_PATH" ]]; then
-##       uname -a > "$OS_CONFIG_PATH"
-#fi
+if [[ ! -e "$OS_CONFIG_PATH" ]]; then
+       uname -a > "$OS_CONFIG_PATH"
+fi
 
 TCPSNITCH_OPT_B=$OPT_B \
 TCPSNITCH_OPT_C=$OPT_C \

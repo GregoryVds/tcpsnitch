@@ -105,12 +105,14 @@ describe "tcpsnitch" do
     end
 
     it "should pretty print the JSON with -p" do
+      skip
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR} -p", cmd)
       assert system("test $(wc -l < #{json_file_str}) -gt 0") 
     end
 
     it "should not pretty print the JSON without -p" do
+      skip
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR}", cmd)
       assert system("test $(wc -l < #{json_file_str}) -eq 0") 
@@ -144,12 +146,6 @@ describe "tcpsnitch" do
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR}", cmd)
       assert contains?(TEST_DIR, "sysctl_net.txt") 
-    end
-
-    it "should save the init log file" do
-      reset_dir(TEST_DIR)
-      tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert contains?(TEST_DIR, LOG_FILE) 
     end
   end
 end

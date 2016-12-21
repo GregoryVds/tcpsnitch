@@ -12,14 +12,12 @@ def no_error_log(log_file=log_file_str)
 end
 
 def assert_event_present(type, success=true, json=read_json)
-  pattern = {
-    events: [
-      {
-        type: type,
-        success: success
-      }.ignore_extra_keys!
-    ].ignore_extra_values!
-  }.ignore_extra_keys!
+  pattern =  [
+    {
+      type: type,
+      success: success
+    }.ignore_extra_keys!
+  ].ignore_extra_values!
   assert_json_match(pattern, json)
 end
 

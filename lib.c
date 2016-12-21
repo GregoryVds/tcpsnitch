@@ -15,7 +15,6 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
-
 bool is_fd(int fd) { return fcntl(fd, F_GETFD) != -1 || errno != EBADF; }
 
 bool is_socket(int fd) {

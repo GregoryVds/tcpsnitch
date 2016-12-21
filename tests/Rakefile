@@ -22,7 +22,6 @@ end
 
 task :verify_cprogs do
   WebServer.start
-  sleep 0.1 # Wait for WebServer to start
   Dir.glob('./c_programs/*.out') do |c_file|
     if !system(c_file) then puts "#{c_file} failed!" end
   end
