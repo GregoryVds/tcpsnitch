@@ -28,9 +28,9 @@ L_FLAGS=-Wl,-soname,$(SONAME)
 
 
 DEPS=-ljansson -ldl -lpthread -lpcap 
-HEADERS=lib.h tcp_spy.h string_helpers.h tcp_spy_json.h packet_sniffer.h \
+HEADERS=lib.h tcp_events.h string_helpers.h tcp_events_json.h packet_sniffer.h \
 	logger.h init.h resizable_array.h verbose_mode.h
-SOURCES=libc_overrides.c lib.c tcp_spy.c string_helpers.c tcp_spy_json.c \
+SOURCES=libc_overrides.c lib.c tcp_events.c string_helpers.c tcp_events_json.c \
 	packet_sniffer.c logger.c init.c resizable_array.c verbose_mode.c 
 
 # Error messages

@@ -4,7 +4,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
-#include "tcp_spy.h"
+#include "tcp_events.h"
 
 char *alloc_ip_str(const struct sockaddr *addr);
 char *alloc_port_str(const struct sockaddr *addr);

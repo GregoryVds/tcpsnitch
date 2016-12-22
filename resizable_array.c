@@ -5,7 +5,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "resizable_array.h"
-#include "tcp_spy.h"
+#include "tcp_events.h"
 
 static pthread_mutex_t main_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 static ELEM_TYPE *array = NULL; // Array of elements.

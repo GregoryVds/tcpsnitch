@@ -11,7 +11,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
-#include "tcp_spy.h"
+#include "tcp_events.h"
 
 long conf_opt_b;
 long conf_opt_c;

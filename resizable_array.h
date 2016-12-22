@@ -1,7 +1,7 @@
 #ifndef RESIABLZE_ARRAY_H
 #define RESIABLZE_ARRAY_H
 
-#include "tcp_spy.h"
+#include "tcp_events.h"
 
 /* This module provides a resizable array data structure with support for 
  * multithreaded applications. The caller may "lock" a given position of the

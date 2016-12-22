@@ -47,7 +47,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
-#include "tcp_spy.h"
+#include "tcp_events.h"
 
 /*
  Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
