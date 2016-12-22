@@ -1,0 +1,4 @@
+class ProcessStats
+  @@stats = {}
+
+end
