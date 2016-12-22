@@ -9,7 +9,7 @@
 #include "logger.h"
 #include "logger.h"
 #include "packet_sniffer.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 
 #define BUFFER_SIZE 8*100000 // In MB = 8MB
 

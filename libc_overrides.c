@@ -46,7 +46,7 @@
 #include <sys/types.h>
 #include "init.h"
 #include "logger.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 #include "tcp_events.h"
 
 /*

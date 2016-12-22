@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "lib.h"
 #include "logger.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 
 char *alloc_ip_str(const struct sockaddr *addr) {
         static const int ADDR_WIDTH = 40;

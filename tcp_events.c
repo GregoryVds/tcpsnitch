@@ -19,7 +19,7 @@
 #include "logger.h"
 #include "packet_sniffer.h"
 #include "resizable_array.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 #include "tcp_events_json.h"
 #include "verbose_mode.h"
 

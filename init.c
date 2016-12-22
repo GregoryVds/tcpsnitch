@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "lib.h"
 #include "logger.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 #include "tcp_events.h"
 
 long conf_opt_b;

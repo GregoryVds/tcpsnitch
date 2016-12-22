@@ -3,7 +3,7 @@
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
-#include "string_helpers.h"
+#include "string_builders.h"
 #include "tcp_events_json.h"
 
 /* Save reference to pointer with shorter name */
