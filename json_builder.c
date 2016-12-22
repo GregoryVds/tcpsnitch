@@ -4,7 +4,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
-#include "tcp_events_json.h"
+#include "json_builder.h"
 
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);

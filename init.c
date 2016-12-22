@@ -143,8 +143,6 @@ void init_tcpsnitch(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
-	logger_init(NULL, WARN, WARN);
-
         /* We need a way to unweave the main process and tcpsnitch standard 
          * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
          * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
@@ -154,7 +152,9 @@ void init_tcpsnitch(void) {
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
         if (!(_stderr = fdopen(STDERR_FD, "w")))
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
-        
+ 
+	logger_init(NULL, WARN, WARN);
+       
         atexit(cleanup);
 
         conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);

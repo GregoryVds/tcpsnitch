@@ -20,7 +20,7 @@
 #include "packet_sniffer.h"
 #include "resizable_array.h"
 #include "string_builders.h"
-#include "tcp_events_json.h"
+#include "json_builder.h"
 #include "verbose_mode.h"
 
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
@@ -444,9 +444,9 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
-        /* Check if connection already exits and was not properly closed. */
         init_tcpsnitch();
         LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
+        /* Check if connection already exits and was not properly closed. */
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
