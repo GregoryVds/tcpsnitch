@@ -4,20 +4,21 @@ require 'optparse'
 require 'ostruct'
 require 'pp'
 require 'oj'
-
 require './lib.rb'
 require './opt_parser.rb'
 require './filter.rb'
-require './proportion_handler.rb'
-
-Oj.default_options = { symbol_keys: true }
 
 EXECUTABLE = "tcpsnitch_analyzer"
 VERSION = '0.1.0'
 
+Oj.default_options = { symbol_keys: true }
 options = OptParser.parse(ARGV)
 files = ARGV
-handler = ProportionHandler
+
+if files.empty? then 
+  error("missing argument, must provide at least 1 file")
+  exit 1
+end
 
 # We DO NOT want to read the entire JSON files into memory.
 # We also DO NOT want to build a Ruby object for the entire JSON array.
@@ -34,7 +35,7 @@ files.each do |file|
     begin 
       hash = Oj.load(line.chomp(",\n")) # Remove ',\n' after JSON object
       if filter(hash, options.filter) then 
-        handler.new(node_val(hash, options.node_path))
+        options.stat.new(node_val(hash, options.node_path))
       end
     rescue Exception => e 
       error(e)
@@ -42,4 +43,4 @@ files.each do |file|
   end
 end
 
-handler.print
+options.stat.print

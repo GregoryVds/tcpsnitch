@@ -1,4 +1,0 @@
-class ProcessStats
-  @@stats = {}
-
-end
