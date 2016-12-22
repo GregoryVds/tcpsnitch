@@ -431,8 +431,7 @@ error_out:
                 tcp_ev_tcp_info(fd, _r, _e, &_i);                  \
         }                                                          \
         if (should_dump_json(con) || ev_type_cons == TCP_EV_CLOSE) \
-                tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);  \
-        errno = err;
+                tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
