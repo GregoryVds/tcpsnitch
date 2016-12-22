@@ -41,3 +41,5 @@ files.each do |file|
     end
   end
 end
+
+handler.print
