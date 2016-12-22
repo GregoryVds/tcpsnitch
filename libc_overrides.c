@@ -30,6 +30,7 @@
 
 #define _GNU_SOURCE
 
+#include "lib.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -44,7 +45,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "init.h"
-#include "lib.h"
 #include "logger.h"
 #include "string_helpers.h"
 #include "tcp_events.h"
@@ -72,10 +72,11 @@
    Returns a file descriptor for the new socket, or -1 for errors.  */
 
 typedef int (*orig_socket_type)(int __domain, int __type, int __protocol);
+orig_socket_type orig_socket;
 
 int socket(int __domain, int __type, int __protocol) {
-        orig_socket_type orig_socket;
-        orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
+        if (!orig_socket)
+                orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
 
         int fd = orig_socket(__domain, __type, __protocol);
         if (is_tcp_socket(fd)) tcp_ev_socket(fd, __domain, __type, __protocol);
@@ -87,10 +88,10 @@ int socket(int __domain, int __type, int __protocol) {
 
 typedef int (*orig_bind_type)(int __fd, const struct sockaddr *__addr,
                               socklen_t __len);
+orig_bind_type orig_bind;
 
 int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-        orig_bind_type orig_bind;
-        orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
+        if (!orig_bind) orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
         int ret = orig_bind(__fd, __addr, __len);
         int err = errno;
@@ -106,10 +107,11 @@ int bind(int __fd, const struct sockaddr *__addr, socklen_t __len) {
 
 typedef int (*orig_connect_type)(int __fd, const struct sockaddr *__addr,
                                  socklen_t __len);
+orig_connect_type orig_connect;
 
 int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
-        orig_connect_type orig_connect;
-        orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
+        if (!orig_connect)
+                orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
 
         if (is_tcp_socket(__fd) && conf_opt_c) tcp_start_capture(__fd, __addr);
         int ret = orig_connect(__fd, __addr, __len);
@@ -127,10 +129,12 @@ int connect(int __fd, const struct sockaddr *__addr, socklen_t __len) {
    Returns 0 on success, -1 for errors.  */
 
 typedef int (*orig_shutdown_type)(int __fd, int __how);
+orig_shutdown_type orig_shutdown;
 
 int shutdown(int __fd, int __how) {
-        orig_shutdown_type orig_shutdown;
-        orig_shutdown = (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
+        if (!orig_shutdown)
+                orig_shutdown =
+                    (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
 
         int ret = orig_shutdown(__fd, __how);
         int err = errno;
@@ -144,10 +148,11 @@ int shutdown(int __fd, int __how) {
    Returns 0 on success, -1 for errors.  */
 
 typedef int (*orig_listen_type)(int __fd, int __n);
+orig_listen_type orig_listen;
 
 int listen(int __fd, int __n) {
-        orig_listen_type orig_listen;
-        orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
+        if (!orig_listen)
+                orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
 
         int ret = orig_listen(__fd, __n);
         int err = errno;
@@ -161,11 +166,13 @@ int listen(int __fd, int __n) {
    Returns 0 on success, -1 for errors.  */
 typedef int (*orig_setsockopt_type)(int __fd, int __level, int __optname,
                                     const void *__optval, socklen_t __optlen);
+orig_setsockopt_type orig_setsockopt;
 
 int setsockopt(int __fd, int __level, int __optname, const void *__optval,
                socklen_t __optlen) {
-        orig_setsockopt_type orig_setsockopt;
-        orig_setsockopt = (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
+        if (!orig_setsockopt)
+                orig_setsockopt =
+                    (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
 
         int ret = orig_setsockopt(__fd, __level, __optname, __optval, __optlen);
         int err = errno;
@@ -179,10 +186,10 @@ int setsockopt(int __fd, int __level, int __optname, const void *__optval,
 
 typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
                                   int __flags);
+orig_send_type orig_send;
 
 ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
-        orig_send_type orig_send;
-        orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
+        if (!orig_send) orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
 
         ssize_t ret = orig_send(__fd, __buf, __n, __flags);
         int err = errno;
@@ -196,10 +203,10 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
 
 typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
                                   int __flags);
+orig_recv_type orig_recv;
 
 ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
-        orig_recv_type orig_recv;
-        orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
+        if (!orig_recv) orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
 
         ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
         int err = errno;
@@ -214,11 +221,12 @@ ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
 typedef ssize_t (*orig_sendto_type)(int __fd, const void *__buf, size_t __n,
                                     int __flags, const struct sockaddr *__addr,
                                     socklen_t __addr_len);
+orig_sendto_type orig_sendto;
 
 ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
                const struct sockaddr *__addr, socklen_t __addr_len) {
-        orig_sendto_type orig_sendto;
-        orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
+        if (!orig_sendto)
+                orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
 
         ssize_t ret =
             orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -238,11 +246,13 @@ typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
                                       size_t __n, int __flags,
                                       struct sockaddr *__addr,
                                       socklen_t *__restrict __addr_len);
+orig_recvfrom_type orig_recvfrom;
 
 ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
                  struct sockaddr *__addr, socklen_t *__addr_len) {
-        orig_recvfrom_type orig_recvfrom;
-        orig_recvfrom = (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
+        if (!orig_recvfrom)
+                orig_recvfrom =
+                    (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
 
         ssize_t ret =
             orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
@@ -259,10 +269,11 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 
 typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
                                      int __flags);
+orig_sendmsg_type orig_sendmsg;
 
 ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
-        orig_sendmsg_type orig_sendmsg;
-        orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
+        if (!orig_sendmsg)
+                orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
 
         ssize_t ret = orig_sendmsg(__fd, __message, __flags);
         int err = errno;
@@ -277,10 +288,11 @@ ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
 
 typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
                                      int __flags);
+orig_recvmsg_type orig_recvmsg;
 
 ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
-        orig_recvmsg_type orig_recvmsg;
-        orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
+        if (!orig_recvmsg)
+                orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
 
         ssize_t ret = orig_recvmsg(__fd, __message, __flags);
         int err = errno;
@@ -306,10 +318,11 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 /* Write N bytes of BUF to FD.  Return the number written, or -1. */
 
 typedef ssize_t (*orig_write_type)(int __fd, const void *__buf, size_t __n);
+orig_write_type orig_write;
 
 ssize_t write(int __fd, const void *__buf, size_t __n) {
-        orig_write_type orig_write;
-        orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
+        if (!orig_write)
+                orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
 
         int ret = orig_write(__fd, __buf, __n);
         int err = errno;
@@ -322,10 +335,10 @@ ssize_t write(int __fd, const void *__buf, size_t __n) {
    number read, -1 for errors or 0 for EOF. */
 
 typedef ssize_t (*orig_read_type)(int __fd, void *__buf, size_t __nbytes);
+orig_read_type orig_read;
 
 ssize_t read(int __fd, void *__buf, size_t __nbytes) {
-        orig_read_type orig_read;
-        orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
+        if (!orig_read) orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
 
         int ret = orig_read(__fd, __buf, __nbytes);
         int err = errno;
@@ -337,10 +350,11 @@ ssize_t read(int __fd, void *__buf, size_t __nbytes) {
 /* Close the file descriptor FD. */
 
 typedef int (*orig_close_type)(int __fd);
+orig_close_type orig_close;
 
 int close(int __fd) {
-        orig_close_type orig_close;
-        orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
+        if (!orig_close)
+                orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
 
         bool is_tcp = is_tcp_socket(__fd);
         int ret = orig_close(__fd);
@@ -355,10 +369,10 @@ int close(int __fd) {
    and the process ID of the new process to the old process.  */
 
 typedef pid_t (*orig_fork_type)(void);
+orig_fork_type orig_fork;
 
 pid_t fork(void) {
-        orig_fork_type orig_fork;
-        orig_fork = (orig_fork_type)dlsym(RTLD_NEXT, "fork");
+        if (!orig_fork) orig_fork = (orig_fork_type)dlsym(RTLD_NEXT, "fork");
         LOG(INFO, "fork() called.");
 
         pid_t ret = orig_fork();
@@ -388,10 +402,11 @@ pid_t fork(void) {
 
 typedef ssize_t (*orig_writev_type)(int __fd, const struct iovec *__iovec,
                                     int __count);
+orig_writev_type orig_writev;
 
 ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
-        orig_writev_type orig_writev;
-        orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
+        if (!orig_writev)
+                orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
 
         int ret = orig_writev(__fd, __iovec, __count);
         int err = errno;
@@ -409,10 +424,11 @@ ssize_t writev(int __fd, const struct iovec *__iovec, int __count) {
 
 typedef ssize_t (*orig_readv_type)(int __fd, const struct iovec *__iovec,
                                    int __count);
+orig_readv_type orig_readv;
 
 ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
-        orig_readv_type orig_readv;
-        orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
+        if (!orig_readv)
+                orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
 
         int ret = orig_readv(__fd, __iovec, __count);
         int err = errno;
@@ -441,10 +457,12 @@ ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
 
 typedef ssize_t (*orig_sendfile_type)(int __out_fd, int __in_fd,
                                       off_t *__offset, size_t __count);
+orig_sendfile_type orig_sendfile;
 
 ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
-        orig_sendfile_type orig_sendfile;
-        orig_sendfile = (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
+        if (!orig_sendfile)
+                orig_sendfile =
+                    (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
         if (is_tcp_socket(__out_fd))
                 LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", __out_fd);
@@ -472,10 +490,10 @@ ssize_t sendfile(int __out_fd, int __in_fd, off_t *__offset, size_t __count) {
 
 typedef int (*orig_poll_type)(struct pollfd *__fds, nfds_t __nfds,
                               int __timeout);
+orig_poll_type orig_poll;
 
 int poll(struct pollfd *__fds, nfds_t __nfds, int __timeout) {
-        orig_poll_type orig_poll;
-        orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
+        if (!orig_poll) orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
 
         unsigned long ndfs = __nfds;
         int i;
