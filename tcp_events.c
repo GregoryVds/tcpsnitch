@@ -15,12 +15,12 @@
 #include <sys/types.h>
 #include "constants.h"
 #include "init.h"
+#include "json_builder.h"
 #include "lib.h"
 #include "logger.h"
 #include "packet_sniffer.h"
 #include "resizable_array.h"
 #include "string_builders.h"
-#include "json_builder.h"
 #include "verbose_mode.h"
 
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
@@ -372,10 +372,12 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         // Before forcing the bind, we unlock the mutex in order to avoid
         // having to use recusive mutexes (since it will trigger a bind()).
         if (!con->bound) {
-                if (!ra_unlock_elem(fd)) goto error_out;
+                con = NULL;
+                ra_unlock_elem(fd);
                 if (force_bind(fd, con, addr_to->sa_family == AF_INET6))
                         LOG(INFO, "Filter dest IP/PORT only.");
-                if (!(con = ra_get_and_lock_elem(fd))) goto error_out;
+                con = ra_get_and_lock_elem(fd);
+                if (!con) goto error_out;
         }
 
         // Build pcap file path
@@ -391,7 +393,6 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         con->capture_switch = start_capture(capture_filter, pcap_file_path);
 
         free(pcap_file_path);
-        ra_unlock_elem(fd);
         return;
 error2:
         free(pcap_file_path);
@@ -402,36 +403,35 @@ error_out:
         return;
 }
 
-#define FAIL_IF_NULL(var, ev_type_cons) \
-        if (!var) {                     \
-                LOG_FUNC_FAIL;          \
-                return;                 \
-        }
-
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                 \
         TcpConnection *con = ra_get_and_lock_elem(fd);                        \
-        FAIL_IF_NULL(con, ev_type_cons);                                      \
+        if (!con) {                                                           \
+                LOG_FUNC_FAIL;                                                \
+                return;                                                       \
+        }                                                                     \
         const char *ev_name = string_from_tcp_event_type(ev_type_cons);       \
         LOG(INFO, "%s on connection %d.", ev_name, con->id);                  \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err, \
                                              con->events_count);              \
-        FAIL_IF_NULL(ev, ev_type_cons);
+        if (!ev) {                                                            \
+                LOG_FUNC_FAIL;                                                \
+                ra_unlock_elem(fd);                                           \
+                return;                                                       \
+        }
 
-#define TCP_EV_POSTLUDE(ev_type_cons)                              \
-        push_event(con, (TcpEvent *)ev);                           \
-        output_event((TcpEvent *)ev);                              \
-        bool should_dump = should_dump_tcp_info(con) &&            \
-                           ev_type_cons != TCP_EV_TCP_INFO &&      \
-                           ev_type_cons != TCP_EV_CLOSE;           \
-        ra_unlock_elem(fd);                                        \
-        if (should_dump) {                                         \
-                struct tcp_info _i;                                \
-                int _r = fill_tcpinfo(fd, &_i);                    \
-                int _e = errno;                                    \
-                tcp_ev_tcp_info(fd, _r, _e, &_i);                  \
-        }                                                          \
-        if (should_dump_json(con) || ev_type_cons == TCP_EV_CLOSE) \
-                tcp_dump_json(con, ev_type_cons == TCP_EV_CLOSE);
+#define TCP_EV_POSTLUDE(ev_type_cons)                                     \
+        push_event(con, (TcpEvent *)ev);                                  \
+        output_event((TcpEvent *)ev);                                     \
+        bool dump_tcp_info =                                              \
+            should_dump_tcp_info(con) && ev_type_cons != TCP_EV_TCP_INFO; \
+        if (should_dump_json(con)) tcp_dump_json(con, false);             \
+        ra_unlock_elem(fd);                                               \
+        if (dump_tcp_info) {                                              \
+                struct tcp_info _i;                                       \
+                int _r = fill_tcpinfo(fd, &_i);                           \
+                int _e = errno;                                           \
+                tcp_ev_tcp_info(fd, _r, _e, &_i);                         \
+        }
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
@@ -446,18 +446,17 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
         LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
+
         /* Check if connection already exits and was not properly closed. */
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
 
         /* Create new connection */
         TcpConnection *new_con = alloc_connection();
         if (!new_con) goto error;
-        if (!ra_put_elem(fd, new_con)) goto error;
 
-        /* Create event */
-        int return_value = fd;
-        int err = 0;
-        TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
+        /* Create new event */
+        TcpEvSocket *ev = (TcpEvSocket *)alloc_event(TCP_EV_SOCKET, fd, 0, 0);
+        if (!ev) goto error;
 
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
@@ -465,7 +464,9 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->sock_cloexec = type & SOCK_CLOEXEC;
         ev->sock_nonblock = type & SOCK_NONBLOCK;
 
-        TCP_EV_POSTLUDE(TCP_EV_SOCKET)
+        push_event(new_con, (TcpEvent *)ev);
+        output_event((TcpEvent *)ev);
+        if (!ra_put_elem(fd, new_con)) goto error;
         return;
 error:
         LOG_FUNC_FAIL;
@@ -626,21 +627,23 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
 }
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected) {
-        // Instantiate local vars TcpConnection *con & TcpEvClose
-        // *ev
-        TCP_EV_PRELUDE(TCP_EV_CLOSE, TcpEvClose);
+        TcpConnection *con = ra_remove_elem(fd);
+        if (!con) goto error;
+
+        LOG(INFO, "close on connection %d.", con->id);
+        TcpEvClose *ev = (TcpEvClose *)alloc_event(TCP_EV_CLOSE, return_value,
+                                                   err, con->events_count);
+        if (!ev) goto error;
 
         ev->detected = detected;
         if (con->capture_switch != NULL)
                 stop_capture(con->capture_switch, con->rtt * 2);
 
-        TCP_EV_POSTLUDE(TCP_EV_CLOSE)
+        push_event(con, (TcpEvent *)ev);
+        output_event((TcpEvent *)ev);
+        tcp_dump_json(con, true);
 
-        // Cleanup
-        if (!(con = ra_get_and_lock_elem(fd))) goto error;
         free_connection(con);
-        ra_unlock_elem(fd);
-        ra_put_elem(fd, NULL);
         return;
 error:
         LOG_FUNC_FAIL;

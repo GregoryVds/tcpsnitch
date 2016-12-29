@@ -1,48 +1,33 @@
 #define _GNU_SOURCE
 
+#include "resizable_array.h"
+#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include "lib.h"
 #include "logger.h"
-#include "resizable_array.h"
 #include "tcp_events.h"
 
-static pthread_mutex_t main_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
-static ELEM_TYPE *array = NULL; // Array of elements.
-static pthread_mutex_t *mutex_array = NULL; // Array of mutexes.
+typedef struct {
+        ELEM_TYPE elem;
+        pthread_mutex_t mutex;
+} ElemWrapper;
+
+static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+static ElemWrapper **array = NULL;
 static int size = 0;
 
 // Private functions
 
-static bool allocate_arrays(ELEM_TYPE **a_ptr, pthread_mutex_t **mutex_a_ptr,
-                            int _size) {
-        // Allocate new array for elements
-        *a_ptr = (ELEM_TYPE *)my_calloc(1, sizeof(ELEM_TYPE) * _size);
-        if (!*a_ptr) goto error;
-
-        // Allocate new array for mutexes
-        *mutex_a_ptr =
-            (pthread_mutex_t *)my_malloc(sizeof(pthread_mutex_t) * _size);
-        if (!*mutex_a_ptr) goto error;
-
-        return true;
-error:
-        LOG_FUNC_FAIL;
-        return false;
+ElemWrapper **allocate_array(int _size) {
+        return (ElemWrapper **)my_calloc(1, sizeof(ElemWrapper *) * _size);
 }
 
 static bool init(int init_size) {
-        // Init to max(init_size, MIN_INIT_SIZE)
         if (init_size < MIN_INIT_SIZE) init_size = MIN_INIT_SIZE;
         LOG(INFO, "Resizable array initialized to size %d.", init_size);
-
-        // Allocate new arrays
-        if (!allocate_arrays(&array, &mutex_array, init_size)) goto error;
-
-        // Initialize new mutexes
-        for (int i = 0; i < init_size; i++)
-                if (!mutex_init(&mutex_array[i])) goto error;
-
+        if (!(array = allocate_array(init_size))) goto error;
         size = init_size;
         return true;
 error:
@@ -53,31 +38,16 @@ error:
 static bool double_size(int index) {
         // Compute new size
         int new_size, normal_new_size = size * GROWTH_FACTOR;
-        new_size = normal_new_size > index+1 ? normal_new_size : index+1;
+        new_size = normal_new_size > index + 1 ? normal_new_size : index + 1;
         LOG(INFO, "Resizable array doubling size to %d.", new_size);
 
-        // Allocate new arrays
-        ELEM_TYPE *new_a;
-        pthread_mutex_t *new_mutex_a;
-        if (!allocate_arrays(&new_a, &new_mutex_a, new_size)) goto error;
+        ElemWrapper **new_a;
+        if (!(new_a = allocate_array(new_size))) goto error;
 
-        // Copy elements
-        for (int i = 0; i < size; i++) {
-                new_a[i] = array[i];
-                new_mutex_a[i] = mutex_array[i];
-        }
+        for (int i = 0; i < size; i++) new_a[i] = array[i];
 
-        // Initialize new mutexes
-        for (int i = size; i < new_size; i++)
-                if (!mutex_init(&new_mutex_a[i])) goto error;
-
-        // Free old array
         free(array);
-        free(mutex_array);
-
-        // Replace by new ones
         array = new_a;
-        mutex_array = new_mutex_a;
         size = new_size;
         return true;
 error:
@@ -85,93 +55,123 @@ error:
         return false;
 }
 
-static bool is_index_in_bounds(int index) {
-        return index < size;
-}
+static bool is_index_in_bounds(int index) { return index < size; }
 
 /* Public functions */
 
 bool ra_put_elem(int index, ELEM_TYPE elem) {
-        mutex_lock(&main_mutex);
-        if (!array && !init(index + 1)) goto error; // If NULL, initialize.
-        if (index > size - 1 && !double_size(index)) goto error; // Should grow?
-        mutex_lock(&mutex_array[index]);
-        array[index] = elem;
-        mutex_unlock(&mutex_array[index]);
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_wrlock(&rwlock);
+        if (!array && !init(index + 1)) goto error;  // If NULL, initialize.
+        if (index > size - 1 && !double_size(index))
+                goto error;  // Should grow?
+
+        ElemWrapper *ew = (ElemWrapper *) my_malloc(sizeof(ElemWrapper));
+        if (!ew) goto error;
+        mutex_init(&ew->mutex); 
+        ew->elem = elem;
+
+        array[index] = ew;
+        pthread_rwlock_unlock(&rwlock);
         return true;
 error:
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
         LOG_FUNC_FAIL;
         return false;
 }
 
-TcpConnection *ra_get_and_lock_elem(int index) {
-        mutex_lock(&main_mutex);
+ELEM_TYPE ra_get_and_lock_elem(int index) {
+        pthread_rwlock_rdlock(&rwlock);
         if (!is_index_in_bounds(index)) goto error;
-        mutex_lock(&mutex_array[index]);
-        TcpConnection *el = array[index];
-        mutex_unlock(&main_mutex);
-        return el;
+        if (!array[index]) {
+                pthread_rwlock_unlock(&rwlock);
+                return NULL;
+        }
+        ElemWrapper *ew = array[index];
+        mutex_lock(&ew->mutex);
+        return ew->elem;
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
         LOG_FUNC_FAIL;
         return NULL;
 }
 
-bool ra_unlock_elem(int index) {
-        mutex_lock(&main_mutex);
+void ra_unlock_elem(int index) {
+        if (!is_index_in_bounds(index)) goto error1;
+        if (!array[index]) goto error2;
+        mutex_unlock(&(array[index]->mutex));
+        pthread_rwlock_unlock(&rwlock);
+        return;
+error1:
+        LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
+        goto error_out;
+error2:
+        LOG(ERROR, "No item at index %d.", index);
+error_out:
+        pthread_rwlock_unlock(&rwlock);
+        LOG_FUNC_FAIL;
+}
+
+ELEM_TYPE ra_remove_elem(int index) {
+        pthread_rwlock_wrlock(&rwlock);
         if (!is_index_in_bounds(index)) goto error;
-        mutex_unlock(&mutex_array[index]);
-        mutex_unlock(&main_mutex);
-        return true;
+        if (!array[index]) {
+                pthread_rwlock_unlock(&rwlock);
+                return NULL;
+        }
+        ElemWrapper *ew = array[index];
+        // No need to lock it. Having the rwlock in write mode means no other
+        // thread has a valid el or will be able to acquire one.
+        mutex_destroy(&ew->mutex);
+        ELEM_TYPE el = ew->elem;
+        array[index] = NULL;
+        free(ew);
+        pthread_rwlock_unlock(&rwlock);
+        return el;
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
         LOG_FUNC_FAIL;
-        return false;
+        return NULL;
 }
 
 bool ra_is_present(int index) {
-        mutex_lock(&main_mutex);
-        if (!array) goto out_false;
+        pthread_rwlock_rdlock(&rwlock);
         if (!is_index_in_bounds(index)) goto out_false;
-        mutex_lock(&mutex_array[index]);
-        bool ret = array[index];
-        mutex_unlock(&mutex_array[index]);
-        mutex_unlock(&main_mutex);
+        bool ret = (array[index] != NULL);
+        pthread_rwlock_unlock(&rwlock);
         return ret;
 out_false:
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
         return false;
 }
 
 int ra_get_size(void) {
-        mutex_lock(&main_mutex);
+        pthread_rwlock_rdlock(&rwlock);
         int ret = size;
-        mutex_unlock(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
         return ret;
 }
 
 void ra_free() {
-        mutex_lock(&main_mutex);
+        pthread_rwlock_rdlock(&rwlock);
         for (int i = 0; i < size; i++) {
-                mutex_lock(&mutex_array[i]);
-                FREE_ELEM(array[i]);
-                mutex_unlock(&mutex_array[i]);
-                mutex_destroy(&mutex_array[i]);
+                if (array[i]) {
+                        mutex_destroy(&array[i]->mutex);
+                        FREE_ELEM(array[i]->elem);
+                        free(array[i]);
+                }
         }
         free(array);
-        free(mutex_array);
-        mutex_unlock(&main_mutex);
-        mutex_destroy(&main_mutex);
+        pthread_rwlock_unlock(&rwlock);
+        pthread_rwlock_destroy(&rwlock);
 }
 
 void ra_reset(void) {
-        mutex_init(&main_mutex);
+        if (pthread_rwlock_init(&rwlock, NULL)) {
+                LOG(ERROR, "pthread_rwlock_init() failed. %s.",
+                    strerror(errno));
+        }
         array = NULL;
-        mutex_array = NULL;
         size = 0;
 }
-
