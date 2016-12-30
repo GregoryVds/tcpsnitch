@@ -82,7 +82,7 @@ static void *delayed_stop_thread(void *params) {
 /* Public functions */
 
 // TODO: Bind to specific IP on host to filter on addr1 host too.
-char *build_capture_filter(const struct sockaddr *addr1,
+char *alloc_capture_filter(const struct sockaddr *addr1,
                            const struct sockaddr *addr2) {
         static const char *PORT_FILTER = "port %s";
         static const char *SINGLE_FILTER = "host %s and port %s";

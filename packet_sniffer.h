@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-char *build_capture_filter(const struct sockaddr *addr1,
+char *alloc_capture_filter(const struct sockaddr *addr1,
 			   const struct sockaddr *addr2);
 
 bool *start_capture(const char *filters, const char *path);

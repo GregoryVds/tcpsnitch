@@ -61,13 +61,13 @@ static bool is_index_in_bounds(int index) { return index < size; }
 
 bool ra_put_elem(int index, ELEM_TYPE elem) {
         pthread_rwlock_wrlock(&rwlock);
-        if (!array && !init(index + 1)) goto error;  // If NULL, initialize.
+        if (!array && !init(index + 1)) goto error;
         if (index > size - 1 && !double_size(index))
-                goto error;  // Should grow?
+                goto error;
 
-        ElemWrapper *ew = (ElemWrapper *) my_malloc(sizeof(ElemWrapper));
+        ElemWrapper *ew = (ElemWrapper *)my_malloc(sizeof(ElemWrapper));
         if (!ew) goto error;
-        mutex_init(&ew->mutex); 
+        mutex_init(&ew->mutex);
         ew->elem = elem;
 
         array[index] = ew;

@@ -388,7 +388,7 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         const struct sockaddr *addr_from =
             (con->bound) ? (const struct sockaddr *)&con->bound_addr : NULL;
 
-        const char *capture_filter = build_capture_filter(addr_from, addr_to);
+        const char *capture_filter = alloc_capture_filter(addr_from, addr_to);
         if (!capture_filter) goto error2;
         con->capture_switch = start_capture(capture_filter, pcap_file_path);
 
