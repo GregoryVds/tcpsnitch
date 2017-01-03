@@ -55,4 +55,5 @@ files.each do |file|
   end
 end
 
-options.stat.print
+puts_options_header(options)
+options.stat.print(options)

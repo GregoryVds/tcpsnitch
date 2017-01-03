@@ -26,3 +26,10 @@ end
 def node_val(hash, path)
   val_for(hash, keys_from_path(path))
 end
+
+def puts_options_header(options)
+  puts "JSON node:".ljust(15) + "#{options.node_path}"
+  puts "Type filter:".ljust(15) + "#{options.filter ? options.filter : "/"}" 
+  puts ""
+end
+
