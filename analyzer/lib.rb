@@ -33,3 +33,6 @@ def puts_options_header(options)
   puts ""
 end
 
+def no_data_error
+  puts "No data matching options."
+end

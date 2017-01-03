@@ -19,6 +19,11 @@ if files.empty? then
   exit 1
 end
 
+if options.stat == TimeSerieStat and files.size > 1 then
+  error("invalid argument: time serie analysis has no meaning on multiple files")
+  exit 1
+end
+
 # We DO NOT want to read the entire JSON files into memory.
 # We also DO NOT want to build a Ruby object for the entire JSON array.
 #
@@ -51,7 +56,11 @@ files.each do |file|
     end
 
     # Compute on value
-    options.stat.add_val(val)
+    if options.stat == TimeSerieStat
+      options.stat.add_point(node_val(hash, 'timestamp'), val)
+    else
+      options.stat.add_val(val)
+    end
   end
 end
 
