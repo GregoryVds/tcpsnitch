@@ -12,7 +12,7 @@ class OptParser
       
     begin
       OptionParser.new do |opts|
-        opts.banner = "Usage: #{EXECUTABLE} [-afhnv] [options] file..."
+        opts.banner = "Usage: #{EXECUTABLE} [-hv] [options] file..."
         opts.separator ""
         opts.separator "Analyze tcpsnitch JSON traces."
         opts.separator ""
@@ -33,7 +33,7 @@ class OptParser
           end
         end
  
-        opts.on("-f", "--filter [EVENT]", "filter on events of type EVENT") do |ev|
+        opts.on("-e", "--event [EVENT]", "filter on events of type EVENT") do |ev|
           options.filter = ev          
         end
 

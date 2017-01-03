@@ -12,9 +12,9 @@ class ProportionStat
 
     @@hash.sort_by { |val, count| -count }.each do |val, count|
       pc = ((count.to_f/@@count) * 100).round(2)
-      puts "#{val}".ljust(20) + "#{pc}%".ljust(7) + "(#{count})"
+      puts "#{pc}%".ljust(7) + "(#{count})".ljust(10) + "#{val}"
     end
-    puts "TOTAL".ljust(20) + "100%".ljust(7) + "(#{@@count})" 
+    puts "100%".ljust(7) + "(#{@@count})" 
   end
 
 end
