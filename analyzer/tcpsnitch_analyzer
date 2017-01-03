@@ -6,7 +6,6 @@ require 'pp'
 require 'oj'
 require './lib.rb'
 require './opt_parser.rb'
-require './filter.rb'
 
 EXECUTABLE = "tcpsnitch_analyzer"
 VERSION = '0.1.0'
@@ -32,14 +31,27 @@ files.each do |file|
   File.open(file).each_with_index do |line, index|
     next if index == 0 # First line is opening '[' of JSON Array
     next if line.eql? "]" # Last line is closing ']' of JSON Array
+
+    # Parse JSON object
     begin 
       hash = Oj.load(line.chomp(",\n")) # Remove ',\n' after JSON object
-      if filter(hash, options.filter) then 
-        options.stat.new(node_val(hash, options.node_path))
-      end
     rescue Exception => e 
       error(e)
     end
+   
+    # Skip if filter does not match
+    next unless filter(hash, options.filter)  
+
+    # Extract value
+    begin
+      val = node_val(hash, options.node_path)
+    rescue Exception => e
+      error("invalid -n argument: '#{options.node_path}'")
+      exit 1
+    end
+
+    # Compute on value
+    options.stat.add_val(val)
   end
 end
 

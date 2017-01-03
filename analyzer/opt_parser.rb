@@ -1,4 +1,4 @@
-require './aggregate_stat.rb'
+require './descriptive_stat.rb'
 require './proportion_stat.rb'
 require './time_serie_stat.rb'
 
@@ -18,10 +18,11 @@ class OptParser
         opts.separator ""
         opts.separator "Options:"
         
-        opts.on("-a", "--analysis [TYPE]", "TYPE of stat analysis") do |type|
+        opts.on("-a", "--analysis [TYPE]", "TYPE of statistic analysis: 
+                descriptive, proportion or timeserie.") do |type|
           case type.downcase
-          when /^a.*/
-            options.stat = AggregateStat
+          when /^d.*/
+            options.stat = DescriptiveStat
           when /^p.*/
             options.stat = ProportionStat
           when /^t.*/
