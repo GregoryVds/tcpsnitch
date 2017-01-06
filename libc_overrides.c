@@ -37,6 +37,7 @@
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <poll.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,7 +64,8 @@
  sys/socket.h - Internet Protocol family
 
  functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(),
- send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
+ send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(), sendmmsg(),
+ recvmmsg().
 
 */
 
@@ -269,6 +271,45 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
         return ret;
 }
 
+typedef int (*orig_sendmmsg_type)(int __fd, struct mmsghdr *__vmessages,
+                                  unsigned int __vlen, int __flags);
+
+orig_sendmmsg_type orig_sendmmsg;
+
+int sendmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
+             int __flags) {
+        if (!orig_sendmmsg)
+                orig_sendmmsg =
+                    (orig_sendmmsg_type)dlsym(RTLD_NEXT, "sendmmsg");
+
+        int ret = orig_sendmmsg(__fd, __vmessages, __vlen, __flags);
+        int err = errno;
+        if (is_tcp_socket(__fd)) LOG(WARN, "sendmmsg() not implemented.");
+
+        errno = err;
+        return ret;
+}
+
+typedef int (*orig_recvmmsg_type)(int __fd, struct mmsghdr *__vmessages,
+                                  unsigned int __vlen, int __flags,
+                                  struct timespec *__tmo);
+
+orig_recvmmsg_type orig_recvmmsg;
+
+int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
+             int __flags, struct timespec *__tmo) {
+        if (!orig_recvmmsg)
+                orig_recvmmsg =
+                    (orig_recvmmsg_type)dlsym(RTLD_NEXT, "recvmmsg");
+
+        int ret = orig_recvmmsg(__fd, __vmessages, __vlen, __flags, __tmo);
+        int err = errno;
+        if (is_tcp_socket(__fd)) LOG(WARN, "recvmmsg() not implemented.");
+
+        errno = err;
+        return ret;
+}
+
 /*
   _   _ _   _ ___ ____ _____ ____       _    ____ ___
  | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
@@ -278,7 +319,7 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
 
  unistd.h - standard symbolic constants and types
 
- functions: write(), read(), close(), fork().
+ functions: write(), read(), close(), fork(), syscall().
 
 */
 
