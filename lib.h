@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define UNUSED(x) (void)(x)
+
 bool is_fd(int fd);
 bool is_socket(int fd);
 bool is_inet_socket(int fd);

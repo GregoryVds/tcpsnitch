@@ -284,7 +284,8 @@ int sendmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
         int ret = orig_sendmmsg(__fd, __vmessages, __vlen, __flags);
         int err = errno;
-        if (is_tcp_socket(__fd)) LOG(WARN, "sendmmsg() not implemented.");
+        if (is_tcp_socket(__fd)) 
+                tcp_ev_sendmmsg(__fd, ret, err, __vmessages, __vlen, __flags);
 
         errno = err;
         return ret;
@@ -304,7 +305,8 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
         int ret = orig_recvmmsg(__fd, __vmessages, __vlen, __flags, __tmo);
         int err = errno;
-        if (is_tcp_socket(__fd)) LOG(WARN, "recvmmsg() not implemented.");
+        if (is_tcp_socket(__fd)) 
+                tcp_ev_recvmmsg(__fd, ret, err, __vmessages, __vlen, __flags, __tmo);
 
         errno = err;
         return ret;

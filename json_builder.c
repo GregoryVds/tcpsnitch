@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <jansson.h>
 #include <netdb.h>
 #include "init.h"
@@ -265,6 +267,16 @@ static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_sendmmsg(const TcpEvSendmmsg *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
@@ -396,6 +408,12 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         break;
                 case TCP_EV_RECVMSG:
                         r = build_tcp_ev_recvmsg((const TcpEvRecvmsg *)ev);
+                        break;
+                case TCP_EV_SENDMMSG:
+                        r = build_tcp_ev_sendmmsg((const TcpEvSendmmsg *)ev);
+                        break;
+                case TCP_EV_RECVMMSG:
+                        r = build_tcp_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((const TcpEvWrite *)ev);

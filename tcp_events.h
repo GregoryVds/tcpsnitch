@@ -22,6 +22,8 @@ typedef enum TcpEventType {
         TCP_EV_RECVFROM,
         TCP_EV_SENDMSG,
         TCP_EV_RECVMSG,
+        TCP_EV_SENDMMSG,
+        TCP_EV_RECVMMSG,
         // unistd.h
         TCP_EV_WRITE,
         TCP_EV_READ,
@@ -57,7 +59,7 @@ typedef struct {
         char *port;
         char *name;
         char *serv;
-} TcpAddr; 
+} TcpAddr;
 
 typedef struct {
         TcpEvent super;
@@ -161,6 +163,27 @@ typedef struct {
 } TcpEvRecvmsg;
 
 typedef struct {
+        TcpMsghdr msghdr;
+        unsigned int msg_len;
+} TcpMmsghdr;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+        TcpSendFlags flags;
+        int mmsghdr_count;
+        TcpMmsghdr **msghdr;
+} TcpEvSendmmsg;
+
+typedef struct {
+        TcpEvent super;
+        size_t bytes;
+        TcpRecvFlags flags;
+        int mmsghdr_count;
+        TcpMmsghdr **msghdr;
+} TcpEvRecvmmsg;
+
+typedef struct {
         TcpEvent super;
         size_t bytes;
 } TcpEvWrite;
@@ -213,7 +236,7 @@ typedef struct {
         long last_json_dump_evcount;
         bool force_bind;
         bool bound;
-        struct sockaddr_storage bound_addr; 
+        struct sockaddr_storage bound_addr;
         int rtt;
         bool *capture_switch;
 } TcpConnection;
@@ -261,6 +284,13 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
 void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
                     int flags);
 
+void tcp_ev_sendmmsg(int fd, int return_value, int err,
+                     struct mmsghdr *vmessages, unsigned int vlen, int flags);
+
+void tcp_ev_recvmmsg(int fd, int return_value, int err,
+                     struct mmsghdr *vmessages, unsigned int vlen, int flags,
+                     struct timespec *tmo);
+
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
 
 void tcp_ev_read(int fd, int return_value, int err, size_t bytes);
@@ -276,7 +306,7 @@ void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
 void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info);
 
 void tcp_close_unclosed_connections(void);
-void tcp_free(void); // Free state.
+void tcp_free(void);  // Free state.
 // Free state and restore to default state (called after fork()).
 void tcp_reset(void);
 

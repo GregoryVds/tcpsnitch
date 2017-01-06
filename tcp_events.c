@@ -102,6 +102,14 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmsg), 1);
                         break;
+                case TCP_EV_SENDMMSG:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmmsg), 1);
+                        break;
+                case TCP_EV_RECVMMSG:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmmsg), 1);
+                        break;
                 case TCP_EV_WRITE:
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvWrite), 1);
@@ -435,9 +443,10 @@ error_out:
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket", "bind", "connect", "shutdown", "listen",  "setsockopt",
-            "send",   "recv", "sendto",  "recvfrom", "sendmsg", "recvmsg",
-            "write",  "read", "close",   "writev",   "readv",   "tcp_info"};
+            "socket",     "bind",    "connect",  "shutdown", "listen",
+            "setsockopt", "send",    "recv",     "sendto",   "recvfrom",
+            "sendmsg",    "recvmsg", "sendmmsg", "recvmmsg", "write",
+            "read",       "close",   "writev",   "readv",    "tcp_info"};
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
@@ -486,7 +495,7 @@ void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
                        sizeof(struct sockaddr_storage));
         }
 
-        TCP_EV_POSTLUDE(TCP_EV_BIND)
+        TCP_EV_POSTLUDE(TCP_EV_BIND);
 }
 
 void tcp_ev_connect(int fd, int return_value, int err,
@@ -496,7 +505,7 @@ void tcp_ev_connect(int fd, int return_value, int err,
 
         fill_addr(&(ev->addr), addr, len);
 
-        TCP_EV_POSTLUDE(TCP_EV_CONNECT)
+        TCP_EV_POSTLUDE(TCP_EV_CONNECT);
 }
 
 void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
@@ -506,7 +515,7 @@ void tcp_ev_shutdown(int fd, int return_value, int err, int how) {
         ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
         ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
 
-        TCP_EV_POSTLUDE(TCP_EV_SHUTDOWN)
+        TCP_EV_POSTLUDE(TCP_EV_SHUTDOWN);
 }
 
 void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
@@ -515,7 +524,7 @@ void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
 
         ev->backlog = backlog;
 
-        TCP_EV_POSTLUDE(TCP_EV_LISTEN)
+        TCP_EV_POSTLUDE(TCP_EV_LISTEN);
 }
 
 void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
@@ -531,7 +540,7 @@ void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
         ev->optname = optname;
         ev->optname_str = alloc_sock_optname_str(ev->optname);
 
-        TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT)
+        TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT);
 }
 
 void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
@@ -542,7 +551,7 @@ void tcp_ev_send(int fd, int return_value, int err, size_t bytes, int flags) {
         con->bytes_sent += bytes;
         fill_send_flags(&(ev->flags), flags);
 
-        TCP_EV_POSTLUDE(TCP_EV_SEND)
+        TCP_EV_POSTLUDE(TCP_EV_SEND);
 }
 
 void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
@@ -553,7 +562,7 @@ void tcp_ev_recv(int fd, int return_value, int err, size_t bytes, int flags) {
         con->bytes_received += bytes;
         fill_recv_flags(&(ev->flags), flags);
 
-        TCP_EV_POSTLUDE(TCP_EV_RECV)
+        TCP_EV_POSTLUDE(TCP_EV_RECV);
 }
 
 void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
@@ -566,7 +575,7 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
         fill_send_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
 
-        TCP_EV_POSTLUDE(TCP_EV_SENDTO)
+        TCP_EV_POSTLUDE(TCP_EV_SENDTO);
 }
 
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
@@ -579,7 +588,7 @@ void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
         fill_recv_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
 
-        TCP_EV_POSTLUDE(TCP_EV_RECVFROM)
+        TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
 }
 
 void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
@@ -591,7 +600,7 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
         con->bytes_sent += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_SENDMSG)
+        TCP_EV_POSTLUDE(TCP_EV_SENDMSG);
 }
 
 void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
@@ -606,6 +615,28 @@ void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
         TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
 }
 
+void tcp_ev_sendmmsg(int fd, int return_value, int err,
+                     struct mmsghdr *vmessages, unsigned int vlen, int flags) {
+        // Instantiate local vars TcpConnection *con & TcpEvSendmmsg *ev
+        TCP_EV_PRELUDE(TCP_EV_SENDMMSG, TcpEvSendmmsg);
+        UNUSED(vmessages);
+        UNUSED(vlen);
+        UNUSED(flags);
+        TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
+}
+
+void tcp_ev_recvmmsg(int fd, int return_value, int err,
+                     struct mmsghdr *vmessages, unsigned int vlen, int flags,
+                     struct timespec *tmo) {
+        // Instantiate local vars TcpConnection *con & TcpEvRecvmmsg *ev
+        TCP_EV_PRELUDE(TCP_EV_RECVMMSG, TcpEvRecvmmsg);
+        UNUSED(vmessages);
+        UNUSED(vlen);
+        UNUSED(flags);
+        UNUSED(tmo);
+        TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
+}
+
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
         TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
@@ -613,7 +644,7 @@ void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         ev->bytes = bytes;
         con->bytes_sent += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_WRITE)
+        TCP_EV_POSTLUDE(TCP_EV_WRITE);
 }
 
 void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
@@ -623,7 +654,7 @@ void tcp_ev_read(int fd, int return_value, int err, size_t bytes) {
         ev->bytes = bytes;
         con->bytes_received += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_READ)
+        TCP_EV_POSTLUDE(TCP_EV_READ);
 }
 
 void tcp_ev_close(int fd, int return_value, int err, bool detected) {
@@ -658,7 +689,7 @@ void tcp_ev_writev(int fd, int return_value, int err, const struct iovec *iovec,
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_sent += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_WRITEV)
+        TCP_EV_POSTLUDE(TCP_EV_WRITEV);
 }
 
 void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
@@ -669,7 +700,7 @@ void tcp_ev_readv(int fd, int return_value, int err, const struct iovec *iovec,
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_received += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_READV)
+        TCP_EV_POSTLUDE(TCP_EV_READV);
 }
 
 void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
