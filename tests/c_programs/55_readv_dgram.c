@@ -19,13 +19,21 @@ int main(void) {
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     return(EXIT_FAILURE);
 
-  struct sockaddr_in addr;
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(8000);
-  inet_aton("127.0.0.1", &addr.sin_addr);
+  char iovec_buf0[20];
+  char iovec_buf1[30];
+  char iovec_buf2[40];
+  struct iovec iovec[3];
 
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    return(EXIT_FAILURE);
+  iovec[0].iov_base = iovec_buf0;
+  iovec[0].iov_len = sizeof(iovec_buf0);
+  iovec[1].iov_base = iovec_buf1;
+  iovec[1].iov_len = sizeof(iovec_buf1);
+  iovec[2].iov_base = iovec_buf2;
+  iovec[2].iov_len = sizeof(iovec_buf2);
+
+  fcntl(sock, F_SETFL, O_NONBLOCK);
+  if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) != -1)
+    return(EXIT_FAILURE); 
           
   return(EXIT_SUCCESS);
 }

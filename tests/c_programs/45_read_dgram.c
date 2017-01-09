@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -14,13 +15,14 @@
 #include <unistd.h>
 
 int main(void) {
-  int sock1, sock2;
-  if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  int sock;
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     return(EXIT_FAILURE);
-  if ((sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-    return(EXIT_FAILURE);
-  close(sock1);
-  close(sock2);
+
+  fcntl(sock, F_SETFL, O_NONBLOCK);
+  char buf[42];
+  if (read(sock, &buf, sizeof(buf)) != -1)
+    return(EXIT_FAILURE); 
           
   return(EXIT_SUCCESS);
 }

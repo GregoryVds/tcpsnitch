@@ -24,9 +24,9 @@ task :verify_cprogs do
   WebServer.start
   Dir.glob('./c_programs/*.out') do |c_file|
     if !system(c_file) then puts "#{c_file} failed!" end
+    sleep 0.01 # Throttle to avoid failed connect()
   end
   WebServer.stop
 end
 
 task :prepare_cprogs => [:write_cprogs, :compile_cprogs, :verify_cprogs]
-

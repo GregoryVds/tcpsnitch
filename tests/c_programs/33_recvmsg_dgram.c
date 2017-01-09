@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -26,23 +27,23 @@ int main(void) {
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
 
-  char buf0[20];
-  char buf1[30];
-  char buf2[40];
-  struct iovec iov[3];
+  char iovec_buf0[20];
+  char iovec_buf1[30];
+  char iovec_buf2[40];
+  struct iovec iovec[3];
 
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = sizeof(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = sizeof(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = sizeof(buf2);
+  iovec[0].iov_base = iovec_buf0;
+  iovec[0].iov_len = sizeof(iovec_buf0);
+  iovec[1].iov_base = iovec_buf1;
+  iovec[1].iov_len = sizeof(iovec_buf1);
+  iovec[2].iov_base = iovec_buf2;
+  iovec[2].iov_len = sizeof(iovec_buf2);
 
   struct msghdr msg;
   memset(&msg, '\0', sizeof(msg));
-  msg.msg_iov = iov;
-  msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
- 
+  msg.msg_iov = iovec;
+  msg.msg_iovlen = sizeof(iovec)/sizeof(struct iovec);
+
   fcntl(sock, F_SETFL, O_NONBLOCK);
   if (recvmsg(sock, &msg, 0) != -1)
     return(EXIT_FAILURE);

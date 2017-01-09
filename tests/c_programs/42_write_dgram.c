@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -15,7 +16,7 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     return(EXIT_FAILURE);
 
   struct sockaddr_in addr;
@@ -26,22 +27,8 @@ int main(void) {
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
 
-  char *req = "GET / HTTP/1.0\r\n\r\n";
-  send(sock, req, sizeof(char)*strlen(req), 0); 
-
-  char buf0[20];
-  char buf1[30];
-  char buf2[40];
-  struct iovec iov[3];
-
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = sizeof(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = sizeof(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = sizeof(buf2);
- 
-  if (readv(sock, iov, -1) != -1)
+  int data = 42;
+  if (write(sock, &data, sizeof(data)) < 0)
     return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);

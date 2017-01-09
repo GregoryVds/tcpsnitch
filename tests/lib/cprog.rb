@@ -11,6 +11,7 @@ class CProg
   
   def program
 <<-EOT  
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>

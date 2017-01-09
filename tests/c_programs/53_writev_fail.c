@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -26,10 +27,20 @@ int main(void) {
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
 
-  fcntl(sock, F_SETFL, O_NONBLOCK);
-  char buf[42];
-  if (read(sock, &buf, -1) != -1)
-    return(EXIT_FAILURE); 
+  char *iovec_buf0 = "short string\n";
+  char *iovec_buf1 = "This is a longer string\n";
+  char *iovec_buf2 = "This is the longest string in this example\n";
+
+  struct iovec iovec[3];
+  iovec[0].iov_base = iovec_buf0;
+  iovec[0].iov_len = strlen(iovec_buf0);
+  iovec[1].iov_base = iovec_buf1;
+  iovec[1].iov_len = strlen(iovec_buf1);
+  iovec[2].iov_base = iovec_buf2;
+  iovec[2].iov_len = strlen(iovec_buf2);
+
+  if (writev(sock, iovec, -1) != -1)
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

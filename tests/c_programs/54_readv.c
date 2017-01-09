@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -26,8 +27,22 @@ int main(void) {
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
 
-  int data = 42;
-  if (write(sock, &data, -1) != -1)
+  char *req = "GET / HTTP/1.0\r\n\r\n";
+  send(sock, req, sizeof(char)*strlen(req), 0); 
+
+  char iovec_buf0[20];
+  char iovec_buf1[30];
+  char iovec_buf2[40];
+  struct iovec iovec[3];
+
+  iovec[0].iov_base = iovec_buf0;
+  iovec[0].iov_len = sizeof(iovec_buf0);
+  iovec[1].iov_base = iovec_buf1;
+  iovec[1].iov_len = sizeof(iovec_buf1);
+  iovec[2].iov_base = iovec_buf2;
+  iovec[2].iov_len = sizeof(iovec_buf2);
+ 
+  if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);

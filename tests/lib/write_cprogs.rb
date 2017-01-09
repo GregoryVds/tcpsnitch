@@ -234,82 +234,90 @@ RECVFROM_FAIL = CProg.new(<<-EOT, "recvfrom_fail")
   }
 EOT
 
-WRITE_IOV = <<-EOT
-  char *buf0 = \"short string\\n\";
-  char *buf1 = \"This is a longer string\\n\";
-  char *buf2 = \"This is the longest string in this example\\n\";
+def write_iovec(iovec_name="iovec")
+<<-EOT
+  char *#{iovec_name}_buf0 = \"short string\\n\";
+  char *#{iovec_name}_buf1 = \"This is a longer string\\n\";
+  char *#{iovec_name}_buf2 = \"This is the longest string in this example\\n\";
 
-  struct iovec iov[3];
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = strlen(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = strlen(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = strlen(buf2);
+  struct iovec #{iovec_name}[3];
+  #{iovec_name}[0].iov_base = #{iovec_name}_buf0;
+  #{iovec_name}[0].iov_len = strlen(#{iovec_name}_buf0);
+  #{iovec_name}[1].iov_base = #{iovec_name}_buf1;
+  #{iovec_name}[1].iov_len = strlen(#{iovec_name}_buf1);
+  #{iovec_name}[2].iov_base = #{iovec_name}_buf2;
+  #{iovec_name}[2].iov_len = strlen(#{iovec_name}_buf2);
 EOT
+end
 
-SEND_MSGHDR = <<-EOT
-#{WRITE_IOV}
-  struct msghdr msg;
-  memset(&msg, '\\0', sizeof(msg));
-  msg.msg_iov = iov;
-  msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
+def send_msghdr(msghdr_name="msg", iovec_name="iovec")
+<<-EOT
+#{write_iovec(iovec_name)}
+  struct msghdr #{msghdr_name};
+  memset(&#{msghdr_name}, '\\0', sizeof(#{msghdr_name}));
+  #{msghdr_name}.msg_iov = #{iovec_name};
+  #{msghdr_name}.msg_iovlen = sizeof(#{iovec_name})/sizeof(struct iovec);
 EOT
+end
 
 SENDMSG = CProg.new(<<-EOT, "sendmsg")
 #{CONNECT}
-#{SEND_MSGHDR}
+#{send_msghdr}
   if (sendmsg(sock, &msg, 0) < 0)
     return(EXIT_FAILURE);
 EOT
 
 SENDMSG_DGRAM = CProg.new(<<-EOT, "sendmsg_dgram")
 #{CONNECT_DGRAM}
-#{SEND_MSGHDR}
+#{send_msghdr}
   if (sendmsg(sock, &msg, 0) < 0)
     return(EXIT_FAILURE);
 EOT
 
 SENDMSG_FAIL = CProg.new(<<-EOT, "sendmsg_fail")
 #{CONNECT}
-#{SEND_MSGHDR}
+#{send_msghdr}
   if (sendmsg(sock, &msg, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
-READ_IOV = <<-EOT
-  char buf0[20];
-  char buf1[30];
-  char buf2[40];
-  struct iovec iov[3];
+def read_iovec(iovec_name="iovec")
+<<-EOT
+  char #{iovec_name}_buf0[20];
+  char #{iovec_name}_buf1[30];
+  char #{iovec_name}_buf2[40];
+  struct iovec #{iovec_name}[3];
 
-  iov[0].iov_base = buf0;
-  iov[0].iov_len = sizeof(buf0);
-  iov[1].iov_base = buf1;
-  iov[1].iov_len = sizeof(buf1);
-  iov[2].iov_base = buf2;
-  iov[2].iov_len = sizeof(buf2);
+  #{iovec_name}[0].iov_base = #{iovec_name}_buf0;
+  #{iovec_name}[0].iov_len = sizeof(#{iovec_name}_buf0);
+  #{iovec_name}[1].iov_base = #{iovec_name}_buf1;
+  #{iovec_name}[1].iov_len = sizeof(#{iovec_name}_buf1);
+  #{iovec_name}[2].iov_base = #{iovec_name}_buf2;
+  #{iovec_name}[2].iov_len = sizeof(#{iovec_name}_buf2);
 EOT
+end
 
-RECV_MSGHDR = <<-EOT
-#{READ_IOV}
-  struct msghdr msg;
-  memset(&msg, '\\0', sizeof(msg));
-  msg.msg_iov = iov;
-  msg.msg_iovlen = sizeof(iov)/sizeof(struct iovec);
+def recv_msghdr(msghdr_name="msg", iovec_name="iovec")
+<<-EOT
+#{read_iovec(iovec_name)}
+  struct msghdr #{msghdr_name};
+  memset(&#{msghdr_name}, '\\0', sizeof(#{msghdr_name}));
+  #{msghdr_name}.msg_iov = #{iovec_name};
+  #{msghdr_name}.msg_iovlen = sizeof(#{iovec_name})/sizeof(struct iovec);
 EOT
+end
 
 RECVMSG = CProg.new(<<-EOT, "recvmsg")
 #{CONNECT}
 #{send_http_get}
-#{RECV_MSGHDR} 
+#{recv_msghdr}
   if (recvmsg(sock, &msg, 0) < 0)
     return(EXIT_FAILURE);
 EOT
 
 RECVMSG_DGRAM = CProg.new(<<-EOT, "recvmsg_dgram")
 #{CONNECT_DGRAM}
-#{RECV_MSGHDR} 
+#{recv_msghdr}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   if (recvmsg(sock, &msg, 0) != -1)
     return(EXIT_FAILURE);
@@ -318,9 +326,75 @@ EOT
 RECVMSG_FAIL = CProg.new(<<-EOT, "recvmsg_fail")
 #{CONNECT}
 #{send_http_get}
-#{RECV_MSGHDR} 
+#{recv_msghdr}
   if (recvmsg(sock, &msg, -1) != -1)
     return(EXIT_FAILURE);
+EOT
+
+MMSGHDR = <<-EOT
+	struct mmsghdr mmsg[2];
+	memset(mmsg, 0, sizeof(mmsg));
+	mmsg[0].msg_hdr = msg1;
+	mmsg[0].msg_len = 3;
+	mmsg[1].msg_hdr = msg2;
+	mmsg[1].msg_len = 3;
+EOT
+
+SENDMMSG = CProg.new(<<-EOT, "sendmmsg")
+#{CONNECT}
+#{send_msghdr("msg1", "iovec1")}
+#{send_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+	if (sendmmsg(sock, mmsg, 2, 0) < 0)
+		return(EXIT_FAILURE);
+EOT
+
+SENDMMSG_DGRAM = CProg.new(<<-EOT, "sendmmsg_dgram")
+#{CONNECT_DGRAM}
+#{send_msghdr("msg1", "iovec1")}
+#{send_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+	if (sendmmsg(sock, mmsg, 2, 0) < 0)
+		return(EXIT_FAILURE);
+EOT
+
+SENDMMSG_FAIL = CProg.new(<<-EOT, "sendmmsg_fail")
+#{CONNECT}
+#{send_msghdr("msg1", "iovec1")}
+#{send_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+	if (sendmmsg(sock, mmsg, 2, -1) != -1)
+		return(EXIT_FAILURE);
+EOT
+
+RECVMMSG = CProg.new(<<-EOT, "recvmmsg")
+#{CONNECT}
+#{recv_msghdr("msg1", "iovec1")}
+#{recv_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+#{send_http_get}
+	if (recvmmsg(sock, mmsg, 2, 0, NULL) < 0)
+		return(EXIT_FAILURE);
+EOT
+
+RECVMMSG_DGRAM = CProg.new(<<-EOT, "recvmmsg_dgram")
+#{CONNECT_DGRAM}
+#{recv_msghdr("msg1", "iovec1")}
+#{recv_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+  fcntl(sock, F_SETFL, O_NONBLOCK);
+	if (recvmmsg(sock, mmsg, 2, 0, NULL) != -1)
+		return(EXIT_FAILURE);
+EOT
+
+RECVMMSG_FAIL = CProg.new(<<-EOT, "recvmmsg_fail")
+#{CONNECT}
+#{recv_msghdr("msg1", "iovec1")}
+#{recv_msghdr("msg2", "iovec2")}
+#{MMSGHDR}
+#{send_http_get}
+	if (recvmmsg(sock, mmsg, 2, -1, NULL) != -1)
+		return(EXIT_FAILURE);
 EOT
 
 WRITE = CProg.new(<<-EOT, "write")
@@ -400,46 +474,46 @@ EOT
 
 WRITEV = CProg.new(<<-EOT, "writev")
 #{CONNECT}
-#{WRITE_IOV}
-  if (writev(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+#{write_iovec}
+  if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
 EOT
 
 WRITEV_DGRAM = CProg.new(<<-EOT, "writev_dgram")
 #{CONNECT_DGRAM}
-#{WRITE_IOV}
-  if (writev(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+#{write_iovec}
+  if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
 EOT
 
 WRITEV_FAIL = CProg.new(<<-EOT, "writev_fail")
 #{CONNECT}
-#{WRITE_IOV}
-  if (writev(sock, iov, -1) != -1)
+#{write_iovec}
+  if (writev(sock, iovec, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 
 READV = CProg.new(<<-EOT, "readv")
 #{CONNECT}
 #{send_http_get}
-#{READ_IOV} 
-  if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) < 0)
+#{read_iovec} 
+  if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
 EOT
 
 READV_DGRAM = CProg.new(<<-EOT, "readv_dgram")
 #{SOCKET_DGRAM}
-#{READ_IOV}
+#{read_iovec}
   fcntl(sock, F_SETFL, O_NONBLOCK);
-  if (readv(sock, iov, sizeof(iov)/sizeof(struct iovec)) != -1)
+  if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) != -1)
     return(EXIT_FAILURE); 
 EOT
 
 READV_FAIL = CProg.new(<<-EOT, "readv_fail")
 #{CONNECT}
 #{send_http_get}
-#{READ_IOV} 
-  if (readv(sock, iov, -1) != -1)
+#{read_iovec} 
+  if (readv(sock, iovec, -1) != -1)
     return(EXIT_FAILURE);
 EOT
 

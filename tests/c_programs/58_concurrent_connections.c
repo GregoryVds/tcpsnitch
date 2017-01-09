@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -14,22 +15,13 @@
 #include <unistd.h>
 
 int main(void) {
-  int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  int sock1, sock2;
+  if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
-
-  pid_t pid;
-  pid = fork();
-  if (pid == -1) return (EXIT_FAILURE);
-  if (pid == 0) { // Child
-    int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
-
-  } else { // Parent
-    int status;
-    waitpid(pid, &status, 0);
-  }
+  close(sock1);
+  close(sock2);
           
   return(EXIT_SUCCESS);
 }
