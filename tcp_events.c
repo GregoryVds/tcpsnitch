@@ -482,6 +482,7 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
 
         push_event(new_con, (TcpEvent *)ev);
         output_event((TcpEvent *)ev);
+        if (should_dump_json(new_con)) tcp_dump_json(new_con, false);
         if (!ra_put_elem(fd, new_con)) goto error;
         if (should_dump_tcp_info(new_con)) tcp_dump_tcp_info(fd);
         return;

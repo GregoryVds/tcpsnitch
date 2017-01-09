@@ -73,9 +73,9 @@ describe "tcpsnitch" do
   end
 
   describe "option -e" do
-    cmd = "./c_programs/09_shutdown.out" # script has 4 syscalls
+    cmd = "./c_programs/09_shutdown.out" # script has 4 syscalls (force_bind)
     
-    it "should dump json 3 times with -e 1" do
+    it "should dump json 4 times with -e 1" do
       out = tcpsnitch_output("-e 1 -l 5", cmd)
       assert_equal(4, out.scan(/tcp_dump_json/).count) 
     end
