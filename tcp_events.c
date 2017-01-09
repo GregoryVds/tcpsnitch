@@ -305,6 +305,13 @@ error_out:
         return;
 }
 
+static void tcp_dump_tcp_info(int fd) {
+        struct tcp_info info;
+        int ret = fill_tcpinfo(fd, &info);
+        int err = errno;
+        tcp_ev_tcp_info(fd, ret, err, &info);
+}
+
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
 #define MAX_PORT 60999
 static int force_bind(int fd, TcpConnection *con, bool IPV6) {
@@ -439,12 +446,7 @@ error_out:
             should_dump_tcp_info(con) && ev_type_cons != TCP_EV_TCP_INFO; \
         if (should_dump_json(con)) tcp_dump_json(con, false);             \
         ra_unlock_elem(fd);                                               \
-        if (dump_tcp_info) {                                              \
-                struct tcp_info _i;                                       \
-                int _r = fill_tcpinfo(fd, &_i);                           \
-                int _e = errno;                                           \
-                tcp_ev_tcp_info(fd, _r, _e, &_i);                         \
-        }
+        if (dump_tcp_info) tcp_dump_tcp_info(fd);
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
@@ -481,6 +483,7 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         push_event(new_con, (TcpEvent *)ev);
         output_event((TcpEvent *)ev);
         if (!ra_put_elem(fd, new_con)) goto error;
+        if (should_dump_tcp_info(new_con)) tcp_dump_tcp_info(fd);
         return;
 error:
         LOG_FUNC_FAIL;
