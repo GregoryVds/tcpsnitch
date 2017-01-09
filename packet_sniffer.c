@@ -48,7 +48,7 @@ error:
 /* This thread captures packets indefinitely until the boolean pointed by
    switch_flag is turned to false. */
 static void *capture_thread(void *params) {
-        LOG(INFO, "Capture thread started.");
+        LOG_FUNC_D;
         CaptureThreadArgs *args = (CaptureThreadArgs *)params;
 
         bool *switch_flag = args->switch_flag;
@@ -72,7 +72,7 @@ static void *capture_thread(void *params) {
  * switch flag to false. We don't want to hang the main thread, we thus do this
  * in another thread to delay the end of the packet capture. */
 static void *delayed_stop_thread(void *params) {
-        LOG(INFO, "Delayed stop thread started.");
+        LOG_FUNC_D;
         DelayStopThreadArgs *args = (DelayStopThreadArgs *)params;
         struct timespec ns = {0, args->delay_ms * 1000000};
         nanosleep(&ns, NULL);
@@ -86,6 +86,7 @@ static void *delayed_stop_thread(void *params) {
 // TODO: Bind to specific IP on host to filter on addr1 host too.
 char *alloc_capture_filter(const struct sockaddr *addr1,
                            const struct sockaddr *addr2) {
+        LOG_FUNC_D;
         static const char *PORT_FILTER = "port %s";
         static const char *SINGLE_FILTER = "host %s and port %s";
         static const char *DOUBLE_FILTER = "port %s and host %s and port %s";
@@ -133,6 +134,7 @@ error_out:
 }
 
 bool *start_capture(const char *filter_str, const char *path) {
+        LOG_FUNC_D;
         // Get handle
         pcap_t *handle = get_capture_handle();
         if (!handle) goto error_out;
@@ -200,6 +202,7 @@ error_out:
 }
 
 int stop_capture(bool *switch_flag, int delay_ms) {
+        LOG_FUNC_D;
         // Prepare args for thread
         DelayStopThreadArgs *args =
             (DelayStopThreadArgs *)my_malloc(sizeof(DelayStopThreadArgs));

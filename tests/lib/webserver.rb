@@ -1,6 +1,5 @@
 class WebServer
   PORT = 8000
-  @@pid
   @@started = false 
 
   def self.start

@@ -308,6 +308,8 @@ error_out:
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
 #define MAX_PORT 60999
 static int force_bind(int fd, TcpConnection *con, bool IPV6) {
+        LOG(INFO, "Forcing bind on connection %d.", con->id);
+        LOG_FUNC_D;
         con->force_bind = true;
 
         for (int port = MIN_PORT; port <= MAX_PORT; port++) {
@@ -372,6 +374,8 @@ void free_connection(TcpConnection *con) {
 }
 
 void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
+        LOG(INFO, "Starting packet capture.");
+        LOG_FUNC_D;
         TcpConnection *con = ra_get_and_lock_elem(fd);
         if (!con) goto error_out;
 
@@ -380,33 +384,34 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         // Before forcing the bind, we unlock the mutex in order to avoid
         // having to use recusive mutexes (since it will trigger a bind()).
         if (!con->bound) {
-                con = NULL;
                 ra_unlock_elem(fd);
                 if (force_bind(fd, con, addr_to->sa_family == AF_INET6))
                         LOG(INFO, "Filter dest IP/PORT only.");
+                // Retrive con again from array & check for error.
+                con = NULL;
                 con = ra_get_and_lock_elem(fd);
                 if (!con) goto error_out;
         }
-
+        
         // Build pcap file path
         char *pcap_file_path = alloc_pcap_path_str(con);
-        if (!pcap_file_path) goto error1;
+        if (!pcap_file_path) goto error_out;
 
         // Build capture filter
         const struct sockaddr *addr_from =
             (con->bound) ? (const struct sockaddr *)&con->bound_addr : NULL;
 
         const char *capture_filter = alloc_capture_filter(addr_from, addr_to);
-        if (!capture_filter) goto error2;
+        if (!capture_filter) goto error1;
         con->capture_switch = start_capture(capture_filter, pcap_file_path);
 
         free(pcap_file_path);
-        return;
-error2:
-        free(pcap_file_path);
-error1:
         ra_unlock_elem(fd);
+        return;
+error1:
+        free(pcap_file_path);
 error_out:
+        ra_unlock_elem(fd);
         LOG_FUNC_FAIL;
         return;
 }
