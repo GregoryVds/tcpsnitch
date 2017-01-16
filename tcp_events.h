@@ -15,6 +15,7 @@ typedef enum TcpEventType {
         TCP_EV_CONNECT,
         TCP_EV_SHUTDOWN,
         TCP_EV_LISTEN,
+        TCP_EV_ACCEPT,
         TCP_EV_SETSOCKOPT,
         TCP_EV_SEND,
         TCP_EV_RECV,
@@ -82,6 +83,11 @@ typedef struct {
         TcpEvent super;
         int backlog;
 } TcpEvListen;
+
+typedef struct {
+        TcpEvent super;
+        TcpAddr addr;
+} TcpEvAccept;
 
 typedef struct {
         TcpEvent super;
@@ -264,6 +270,9 @@ void tcp_ev_connect(int fd, int return_value, int err,
 void tcp_ev_shutdown(int fd, int return_value, int err, int how);
 
 void tcp_ev_listen(int fd, int return_value, int err, int backlog);
+
+void tcp_ev_accept(int fd, int return_value, int err, struct sockaddr *addr,
+                   socklen_t *addr_len);
 
 void tcp_ev_setsockopt(int fd, int return_value, int err, int level,
                        int optname);

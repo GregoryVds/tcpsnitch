@@ -67,7 +67,7 @@ checkdeps:
 
 tcpsnitch: checkdeps $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling 64 bits version..."
-	@$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
+	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
 	@echo "[-] Compiling 32 bits version..."
 	@$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o $(LIB_I386) $(SOURCES) $(DEPS) 
 	@echo "[-] Done!"

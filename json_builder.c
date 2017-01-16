@@ -188,6 +188,14 @@ static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_accept(const TcpEvAccept *ev) {
+        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+
+        add(json_details, "addr", build_addr(&ev->addr));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
 
@@ -386,6 +394,9 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         break;
                 case TCP_EV_LISTEN:
                         r = build_tcp_ev_listen((const TcpEvListen *)ev);
+                        break;
+                case TCP_EV_ACCEPT:
+                        r = build_tcp_ev_accept((const TcpEvAccept *)ev);
                         break;
                 case TCP_EV_SETSOCKOPT:
                         r = build_tcp_ev_setsockopt(

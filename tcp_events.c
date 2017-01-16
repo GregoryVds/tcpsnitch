@@ -74,6 +74,10 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvListen), 1);
                         break;
+                case TCP_EV_ACCEPT:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvAccept), 1);
+                        break;
                 case TCP_EV_SETSOCKOPT:
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvSetsockopt), 1);
@@ -163,6 +167,9 @@ static void free_event(TcpEvent *ev) {
                         break;
                 case TCP_EV_CONNECT:
                         free_addr(&((TcpEvConnect *)ev)->addr);
+                        break;
+                case TCP_EV_ACCEPT:
+                        free_addr(&((TcpEvAccept *)ev)->addr);
                         break;
                 case TCP_EV_SETSOCKOPT:
                         free(((TcpEvSetsockopt *)ev)->optname_str);
@@ -399,7 +406,7 @@ void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
                 con = ra_get_and_lock_elem(fd);
                 if (!con) goto error_out;
         }
-        
+
         // Build pcap file path
         char *pcap_file_path = alloc_pcap_path_str(con);
         if (!pcap_file_path) goto error_out;
@@ -450,10 +457,11 @@ error_out:
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket",     "bind",    "connect",  "shutdown", "listen",
-            "setsockopt", "send",    "recv",     "sendto",   "recvfrom",
-            "sendmsg",    "recvmsg", "sendmmsg", "recvmmsg", "write",
-            "read",       "close",   "writev",   "readv",    "tcp_info"};
+            "socket",   "bind",       "connect", "shutdown", "listen",
+            "accept",   "setsockopt", "send",    "recv",     "sendto",
+            "recvfrom", "sendmsg",    "recvmsg", "sendmmsg", "recvmmsg",
+            "write",    "read",       "close",   "writev",   "readv",
+            "tcp_info"};
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
@@ -534,6 +542,29 @@ void tcp_ev_listen(int fd, int return_value, int err, int backlog) {
         ev->backlog = backlog;
 
         TCP_EV_POSTLUDE(TCP_EV_LISTEN);
+}
+
+void tcp_ev_accept(int fd, int return_value, int err, struct sockaddr *addr,
+                   socklen_t *addr_len) {
+        // Instantiate local vars TcpConnection *con & TcpEvAccept *ev
+        TCP_EV_PRELUDE(TCP_EV_ACCEPT, TcpEvAccept);
+
+        fill_addr(&(ev->addr), addr, *addr_len);
+
+        // Create new connection
+        TcpConnection *new_con = alloc_connection();
+        if (!new_con) goto error;
+        TcpEvAccept *new_ev =
+            (TcpEvAccept *)alloc_event(TCP_EV_ACCEPT, return_value, err, 0);
+        memcpy(&new_ev, &ev, sizeof(TcpEvAccept));
+        push_event(new_con, (TcpEvent *)new_ev);
+        output_event((TcpEvent *)new_ev);
+        if (!ra_put_elem(return_value, new_con)) goto error;
+
+        TCP_EV_POSTLUDE(TCP_EV_ACCEPT);
+error:
+        LOG_FUNC_FAIL;
+        ra_unlock_elem(fd);
 }
 
 void tcp_ev_setsockopt(int fd, int return_value, int err, int level,

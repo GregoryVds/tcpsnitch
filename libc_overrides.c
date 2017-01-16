@@ -63,9 +63,9 @@
 
  sys/socket.h - Internet Protocol family
 
- functions: socket(), bind(), connect(), shutdown(), listen(), setsockopt(),
- send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(), sendmmsg(),
- recvmmsg().
+ functions: socket(), bind(), connect(), shutdown(), listen(), accept(),
+ setsockopt(), send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
+ sendmmsg(), recvmmsg().
 
 */
 
@@ -140,6 +140,23 @@ int listen(int __fd, int __n) {
         int ret = orig_listen(__fd, __n);
         int err = errno;
         if (is_tcp_socket(__fd)) tcp_ev_listen(__fd, ret, err, __n);
+
+        errno = err;
+        return ret;
+}
+
+typedef int (*orig_accept_type)(int __fd, struct sockaddr *__addr,
+                                socklen_t *__addr_len);
+orig_accept_type orig_accept;
+
+int accept(int __fd, struct sockaddr *__addr, socklen_t *__addr_len) {
+        if (!orig_accept)
+                orig_accept = (orig_accept_type)dlsym(RTLD_NEXT, "accept");
+
+        int ret = orig_accept(__fd, __addr, __addr_len);
+        int err = errno;
+        if (is_tcp_socket(__fd))
+                tcp_ev_accept(__fd, ret, err, __addr, __addr_len);
 
         errno = err;
         return ret;
@@ -284,7 +301,7 @@ int sendmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
         int ret = orig_sendmmsg(__fd, __vmessages, __vlen, __flags);
         int err = errno;
-        if (is_tcp_socket(__fd)) 
+        if (is_tcp_socket(__fd))
                 tcp_ev_sendmmsg(__fd, ret, err, __vmessages, __vlen, __flags);
 
         errno = err;
@@ -305,8 +322,9 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
         int ret = orig_recvmmsg(__fd, __vmessages, __vlen, __flags, __tmo);
         int err = errno;
-        if (is_tcp_socket(__fd)) 
-                tcp_ev_recvmmsg(__fd, ret, err, __vmessages, __vlen, __flags, __tmo);
+        if (is_tcp_socket(__fd))
+                tcp_ev_recvmmsg(__fd, ret, err, __vmessages, __vlen, __flags,
+                                __tmo);
 
         errno = err;
         return ret;

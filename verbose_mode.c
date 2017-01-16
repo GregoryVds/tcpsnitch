@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "verbose_mode.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -7,7 +8,6 @@
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
-#include "verbose_mode.h"
 
 #define BUF_SIZE 512
 
@@ -45,6 +45,10 @@ static void output_ev_shutdown(const TcpEvShutdown *ev) {
 
 static void output_ev_listen(const TcpEvListen *ev) {
         OUTPUT_EV("listen()=%d", ev->super.return_value);
+}
+
+static void output_ev_accept(const TcpEvAccept *ev) {
+        OUTPUT_EV("accept()=%d", ev->super.return_value);
 }
 
 static void output_ev_setsockopt(const TcpEvSetsockopt *ev) {
@@ -126,6 +130,9 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_LISTEN:
                         output_ev_listen((const TcpEvListen *)ev);
+                        break;
+                case TCP_EV_ACCEPT:
+                        output_ev_accept((const TcpEvAccept *)ev);
                         break;
                 case TCP_EV_SETSOCKOPT:
                         output_ev_setsockopt((const TcpEvSetsockopt *)ev);
