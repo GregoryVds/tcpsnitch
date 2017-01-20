@@ -10,6 +10,7 @@ UNAME_FILE="uname.txt"
 SYSCTL_FILE="sysctl_net.txt"
 LIB_32="/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.${VERSION}"
 LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
+UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
 
 # Option default values
 OPT_B=4096
@@ -169,6 +170,7 @@ if [[ ! -e "$OS_CONFIG_PATH" ]]; then
        uname -a > "$OS_CONFIG_PATH"
 fi
 
+( \
 TCPSNITCH_OPT_B=$OPT_B \
 TCPSNITCH_OPT_C=$OPT_C \
 TCPSNITCH_OPT_D=$OPT_D \
@@ -179,6 +181,27 @@ TCPSNITCH_OPT_L=$OPT_L \
 TCPSNITCH_OPT_P=$OPT_P \
 TCPSNITCH_OPT_U=$OPT_U \
 TCPSNITCH_OPT_V=$OPT_V \
-LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 3>&1 4>&2 1>/dev/null
+LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 4>&1 2>&1 3>&2 1>/dev/null | \
+grep -E -v "$UNWANTED_ERRORS" \
+) 3>&1 1>&2 2>&3
+
+# WHAT JUST HAPPENED?
+# First, we have to know that tcpsnitch opens 2 streams to file descriptors 3 
+# and 4. These new streams serve as the new stdout/stderr for tcpsnitch. This 
+# allows us to distinguish stdout/stderr from tcpsnitch & the traced process. 
+#
+# Now, we want to perform the following manipulations with these 4 streams:
+#       - Discard stdout of the traced process.
+#       - Merge stderr of tcpsnitch and the traced process.
+#       - Send stdout of tcpsnitch to stdout of traced process.
+#       - Filter stderr to remove some errors that are always thrown.
+#
+# To do this, we start by swapping stderr & stdout:
+#       - 4>&1 2>&1: stderr of process+tcpsnitch go to stdout. They merge.
+#       - 3>&2: stdout of tcpsnitch goes to stderr.
+#       - 1>/devnull: dicard stdout of process.
+#
+# Now, we filter unwanted errors using "grep -v".
+# Finally, we swap back stderr and stdout. Done.
 
 echo "tcpsnitch data saved in $OPT_D"
