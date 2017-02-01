@@ -275,6 +275,7 @@ static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
         return json_ev;
 }
 
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 static json_t *build_tcp_ev_sendmmsg(const TcpEvSendmmsg *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
         return json_ev;
@@ -284,6 +285,7 @@ static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
         return json_ev;
 }
+#endif
 
 static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
         BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
@@ -420,12 +422,14 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_RECVMSG:
                         r = build_tcp_ev_recvmsg((const TcpEvRecvmsg *)ev);
                         break;
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
                 case TCP_EV_SENDMMSG:
                         r = build_tcp_ev_sendmmsg((const TcpEvSendmmsg *)ev);
                         break;
                 case TCP_EV_RECVMMSG:
                         r = build_tcp_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
+#endif
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((const TcpEvWrite *)ev);
                         break;

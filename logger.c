@@ -77,11 +77,11 @@ static void log_to_stream(LogLevel log_lvl, const char *formated_str,
         Timestamp ts;
         fill_timestamp(&ts);
         fprintf(stream,
-                "%s%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d/%ld (%s:%d) "
+                "%s%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d (%s:%d) "
                 "%s%s\n",
                 colors[log_lvl], ts.year, ts.mon, ts.day, ts.hour, ts.min,
                 ts.sec, ts.usec, log_level_str(log_lvl), getpid(),
-                syscall(SYS_gettid), file, line, formated_str,
+                file, line, formated_str,
                 ANSI_COLOR_RESET);
 }
 

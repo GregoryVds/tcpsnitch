@@ -79,6 +79,7 @@ static void output_ev_recvmsg(const TcpEvRecvmsg *ev) {
         OUTPUT_EV("recvmsg()=%d", ev->super.return_value);
 }
 
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 static void output_ev_sendmmsg(const TcpEvSendmmsg *ev) {
         OUTPUT_EV("sendmmsg()=%d", ev->super.return_value);
 }
@@ -86,6 +87,7 @@ static void output_ev_sendmmsg(const TcpEvSendmmsg *ev) {
 static void output_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
         OUTPUT_EV("recvmmsg()=%d", ev->super.return_value);
 }
+#endif
 
 static void output_ev_write(const TcpEvWrite *ev) {
         OUTPUT_EV("write()=%d", ev->super.return_value);
@@ -155,12 +157,14 @@ void output_event(const TcpEvent *ev) {
                 case TCP_EV_RECVMSG:
                         output_ev_recvmsg((const TcpEvRecvmsg *)ev);
                         break;
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
                 case TCP_EV_SENDMMSG:
                         output_ev_sendmmsg((const TcpEvSendmmsg *)ev);
                         break;
                 case TCP_EV_RECVMMSG:
                         output_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
+#endif
                 case TCP_EV_WRITE:
                         output_ev_write((const TcpEvWrite *)ev);
                         break;
