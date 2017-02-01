@@ -238,7 +238,11 @@ static void fill_send_flags(TcpSendFlags *s, int flags) {
 }
 
 static void fill_recv_flags(TcpRecvFlags *s, int flags) {
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         s->msg_cmsg_cloexec = (flags & MSG_CMSG_CLOEXEC);
+#else
+        s->msg_cmsg_cloexec = false; 
+#endif
         s->msg_dontwait = (flags & MSG_DONTWAIT);
         s->msg_errqueue = (flags & MSG_ERRQUEUE);
         s->msg_oob = (flags & MSG_OOB);
