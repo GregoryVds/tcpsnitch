@@ -241,7 +241,7 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         s->msg_cmsg_cloexec = (flags & MSG_CMSG_CLOEXEC);
 #else
-        s->msg_cmsg_cloexec = false; 
+        s->msg_cmsg_cloexec = false;
 #endif
         s->msg_dontwait = (flags & MSG_DONTWAIT);
         s->msg_errqueue = (flags & MSG_ERRQUEUE);
@@ -467,11 +467,30 @@ error_out:
 
 const char *string_from_tcp_event_type(TcpEventType type) {
         static const char *strings[] = {
-            "socket",   "bind",       "connect", "shutdown", "listen",
-            "accept",   "setsockopt", "send",    "recv",     "sendto",
-            "recvfrom", "sendmsg",    "recvmsg", "sendmmsg", "recvmmsg",
-            "write",    "read",       "close",   "writev",   "readv",
-            "tcp_info"};
+                "socket",
+                "bind",
+                "connect",
+                "shutdown",
+                "listen",
+                "accept",
+                "setsockopt",
+                "send",
+                "recv",
+                "sendto",
+                "recvfrom",
+                "sendmsg",
+                "recvmsg",
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+                "sendmmsg",
+                "recvmmsg",
+#endif
+                "write",
+                "read",
+                "close",
+                "writev",
+                "readv",
+                "tcp_info"
+        };
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
         return strings[type];
 }
@@ -495,8 +514,13 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
         ev->protocol = protocol;
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         ev->sock_cloexec = type & SOCK_CLOEXEC;
         ev->sock_nonblock = type & SOCK_NONBLOCK;
+#else
+        ev->sock_cloexec = false;
+        ev->sock_nonblock = false;
+#endif
 
         push_event(new_con, (TcpEvent *)ev);
         output_event((TcpEvent *)ev);

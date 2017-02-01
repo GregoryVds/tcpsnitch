@@ -23,8 +23,10 @@ typedef enum TcpEventType {
         TCP_EV_RECVFROM,
         TCP_EV_SENDMSG,
         TCP_EV_RECVMSG,
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         TCP_EV_SENDMMSG,
         TCP_EV_RECVMMSG,
+#endif
         // unistd.h
         TCP_EV_WRITE,
         TCP_EV_READ,

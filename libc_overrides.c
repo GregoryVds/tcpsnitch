@@ -205,7 +205,7 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
         return ret;
 }
 
-#if defined(__ANDROID__) && ___ANDROID_API__ <= 19
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
 typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
                                   unsigned int __flags);
 #else

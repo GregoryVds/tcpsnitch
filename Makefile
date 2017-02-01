@@ -19,8 +19,9 @@ LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
 LIB_AMD64=$(REAL_NAME)-$(AMD64)
 LIB_I386=$(REAL_NAME)-$(I386)
 
+CC_ANDROID=../android_toolchain/bin/arm-linux-androideabi-gcc-4.9
 CC=gcc
-C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic
+C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
 	-Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return \
 	-Wcast-qual -Wunreachable-code 
@@ -69,9 +70,11 @@ tcpsnitch: checkdeps $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling 64 bits version..."
 	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
 	@echo "[-] Compiling 32 bits version..."
-	@$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o $(LIB_I386) $(SOURCES) $(DEPS) 
+	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o $(LIB_I386) $(SOURCES) $(DEPS) 
 	@echo "[-] Done!"
 
+android:
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
 install:
 	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
 	@test -d $(LIB_AMD64_PATH) || mkdir $(LIB_AMD64_PATH) 
