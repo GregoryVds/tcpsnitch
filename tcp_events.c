@@ -110,6 +110,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmsg), 1);
                         break;
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
                 case TCP_EV_SENDMMSG:
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmmsg), 1);
@@ -118,6 +119,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmmsg), 1);
                         break;
+#endif
                 case TCP_EV_WRITE:
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvWrite), 1);
@@ -659,6 +661,7 @@ void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
         TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
 }
 
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 void tcp_ev_sendmmsg(int fd, int return_value, int err,
                      struct mmsghdr *vmessages, unsigned int vlen, int flags) {
         // Instantiate local vars TcpConnection *con & TcpEvSendmmsg *ev
@@ -680,6 +683,7 @@ void tcp_ev_recvmmsg(int fd, int return_value, int err,
         UNUSED(tmo);
         TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
 }
+#endif
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
