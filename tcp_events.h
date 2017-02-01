@@ -168,6 +168,7 @@ typedef struct {
         TcpMsghdr msghdr;
 } TcpEvRecvmsg;
 
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 typedef struct {
         TcpMsghdr msghdr;
         unsigned int msg_len;
@@ -188,6 +189,7 @@ typedef struct {
         int mmsghdr_count;
         TcpMmsghdr **msghdr;
 } TcpEvRecvmmsg;
+#endif
 
 typedef struct {
         TcpEvent super;
@@ -292,13 +294,14 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
 
 void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
                     int flags);
-
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 void tcp_ev_sendmmsg(int fd, int return_value, int err,
                      struct mmsghdr *vmessages, unsigned int vlen, int flags);
 
 void tcp_ev_recvmmsg(int fd, int return_value, int err,
                      struct mmsghdr *vmessages, unsigned int vlen, int flags,
                      struct timespec *tmo);
+#endif
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
 

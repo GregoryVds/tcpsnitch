@@ -35,7 +35,6 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <netdb.h>
-#include <netinet/tcp.h>
 #include <poll.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -181,11 +180,21 @@ int setsockopt(int __fd, int __level, int __optname, const void *__optval,
         return ret;
 }
 
+#if defined(__ANDROID__)
+typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
+                                  unsigned int __flags);
+#else
 typedef ssize_t (*orig_send_type)(int __fd, const void *__buf, size_t __n,
                                   int __flags);
+#endif
+
 orig_send_type orig_send;
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+ssize_t send(int __fd, const void *__buf, size_t __n, unsigned int __flags) {
+#else
 ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
+#endif
         if (!orig_send) orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
 
         ssize_t ret = orig_send(__fd, __buf, __n, __flags);
@@ -196,11 +205,21 @@ ssize_t send(int __fd, const void *__buf, size_t __n, int __flags) {
         return ret;
 }
 
+#if defined(__ANDROID__) && ___ANDROID_API__ <= 19
+typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
+                                  unsigned int __flags);
+#else
 typedef ssize_t (*orig_recv_type)(int __fd, void *__buf, size_t __n,
                                   int __flags);
+#endif
+
 orig_recv_type orig_recv;
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+ssize_t recv(int __fd, void *__buf, size_t __n, unsigned int __flags) {
+#else
 ssize_t recv(int __fd, void *__buf, size_t __n, int __flags) {
+#endif
         if (!orig_recv) orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
 
         ssize_t ret = orig_recv(__fd, __buf, __n, __flags);
@@ -231,14 +250,28 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
         return ret;
 }
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
+                                      size_t __n, unsigned int __flags,
+                                      const struct sockaddr *__addr,
+                                      socklen_t *__restrict __addr_len);
+#else
 typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
                                       size_t __n, int __flags,
                                       struct sockaddr *__addr,
                                       socklen_t *__restrict __addr_len);
+#endif
+
 orig_recvfrom_type orig_recvfrom;
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n,
+                 unsigned int __flags, const struct sockaddr *__addr,
+                 socklen_t *__addr_len) {
+#else
 ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
                  struct sockaddr *__addr, socklen_t *__addr_len) {
+#endif
         if (!orig_recvfrom)
                 orig_recvfrom =
                     (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
@@ -254,11 +287,22 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
         return ret;
 }
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
+                                     unsigned int __flags);
+#else
 typedef ssize_t (*orig_sendmsg_type)(int __fd, const struct msghdr *__message,
                                      int __flags);
+#endif
+
 orig_sendmsg_type orig_sendmsg;
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+ssize_t sendmsg(int __fd, const struct msghdr *__message,
+                unsigned int __flags) {
+#else
 ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
+#endif
         if (!orig_sendmsg)
                 orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
 
@@ -271,11 +315,21 @@ ssize_t sendmsg(int __fd, const struct msghdr *__message, int __flags) {
         return ret;
 }
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
+                                     unsigned int __flags);
+#else
 typedef ssize_t (*orig_recvmsg_type)(int __fd, struct msghdr *__message,
                                      int __flags);
+#endif
+
 orig_recvmsg_type orig_recvmsg;
 
+#if defined(__ANDROID__) && __ANDROID_API__ <= 19
+ssize_t recvmsg(int __fd, struct msghdr *__message, unsigned int __flags) {
+#else
 ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
+#endif
         if (!orig_recvmsg)
                 orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
 
@@ -288,6 +342,7 @@ ssize_t recvmsg(int __fd, struct msghdr *__message, int __flags) {
         return ret;
 }
 
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 typedef int (*orig_sendmmsg_type)(int __fd, struct mmsghdr *__vmessages,
                                   unsigned int __vlen, int __flags);
 
@@ -329,6 +384,7 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
         errno = err;
         return ret;
 }
+#endif
 
 /*
   _   _ _   _ ___ ____ _____ ____       _    ____ ___
