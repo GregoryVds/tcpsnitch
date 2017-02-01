@@ -28,7 +28,12 @@ FILE *_stdout;
 FILE *_stderr;
 
 static bool initialized = false;
+
+#ifdef __ANDROID__
+static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER;
+#else
 static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#endif
 
 /* Private functions */
 

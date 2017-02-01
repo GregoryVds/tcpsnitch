@@ -23,7 +23,11 @@
 #include "string_builders.h"
 #include "verbose_mode.h"
 
+#ifdef __ANDROID__
+#define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
+#else
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#endif
 
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 static int connections_count = 0;
