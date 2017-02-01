@@ -23,8 +23,8 @@ CC_ANDROID=../android_toolchain/bin/arm-linux-androideabi-gcc-4.9
 CC=gcc
 C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
-	-Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return \
-	-Wcast-qual -Wunreachable-code 
+	-Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual \
+	-Wunreachable-code 
 L_FLAGS=-Wl,-soname,$(SONAME) 
 
 

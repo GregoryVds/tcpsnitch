@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "string_builders.h"
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -10,7 +11,6 @@
 #include "constants.h"
 #include "lib.h"
 #include "logger.h"
-#include "string_builders.h"
 
 char *alloc_ip_str(const struct sockaddr *addr) {
         static const int ADDR_WIDTH = 40;
@@ -285,10 +285,9 @@ static const IntStrPair SOCKET_DOMAINS[] = {
 
 static const IntStrPair SOCKET_TYPES[] = {{SOCK_STREAM, "SOCK_STREAM"},
                                           {SOCK_DGRAM, "SOCK_DGRAM"},
+                                          {SOCK_SEQPACKET, "SOCK_SEQPACKET"},
                                           {SOCK_RAW, "SOCK_RAW"},
                                           {SOCK_RDM, "SOCK_RDM"},
-                                          {SOCK_SEQPACKET, "SOCK_SEQPACKET"},
-                                          {SOCK_DCCP, "SOCK_DCCP"},
                                           {SOCK_PACKET, "SOCK_PACKET"}};
 
 static const IntStrPair SOCKET_OPTIONS[] = {
@@ -325,7 +324,9 @@ static const IntStrPair SOCKET_OPTIONS[] = {
     {IP_IPSEC_POLICY, "IP_IPSEC_POLICY"},
     {IP_XFRM_POLICY, "IP_XFRM_POLICY"},
     {IP_PASSSEC, "IP_PASSSEC"},
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
     {IP_TRANSPARENT, "IP_TRANSPARENT"},
+#endif
     // TCP-level options (netinet/tcp.h)
     {TCP_NODELAY, "TCP_NODELAY"},
     {TCP_MAXSEG, "TCP_MAXSEG"},
@@ -340,6 +341,7 @@ static const IntStrPair SOCKET_OPTIONS[] = {
     {TCP_INFO, "TCP_INFO"},
     {TCP_QUICKACK, "TCP_QUICKACK"},
     {TCP_CONGESTION, "TCP_CONGESTION"},
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
     {TCP_MD5SIG, "TCP_MD5SIG"},
     {TCP_THIN_LINEAR_TIMEOUTS, "TCP_THIN_LINEAR_TIMEOUTS"},
     {TCP_THIN_DUPACK, "TCP_THIN_DUPACK"},
@@ -349,7 +351,9 @@ static const IntStrPair SOCKET_OPTIONS[] = {
     {TCP_QUEUE_SEQ, "TCP_QUEUE_SEQ"},
     {TCP_REPAIR_OPTIONS, "TCP_REPAIR_OPTIONS"},
     {TCP_FASTOPEN, "TCP_FASTOPEN"},
-    {TCP_TIMESTAMP, "TCP_TIMESTAMP"}};
+    {TCP_TIMESTAMP, "TCP_TIMESTAMP"}
+#endif
+};
 
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
