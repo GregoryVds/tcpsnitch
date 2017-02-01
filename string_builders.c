@@ -154,7 +154,9 @@ error:
 char *alloc_base_dirname_str(void) {
         // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
         // Prepare components
-        const char *app_name = get_app_name();
+        char *app_name = alloc_cmdline_str();
+        if (!app_name) goto error;
+
         int app_name_len = strlen(app_name);
         static int timestamp_len = 10;
         int pid = getpid();
@@ -170,6 +172,7 @@ char *alloc_base_dirname_str(void) {
         snprintf(str + strlen(str), timestamp_len + 1, "%lu", get_time_sec());
         strncat(str, "_", 1);
         snprintf(str + strlen(str), pid_len + 1, "%d", pid);
+        free(app_name);
         return str;
 error:
         LOG_FUNC_FAIL;

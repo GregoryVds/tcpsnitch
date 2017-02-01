@@ -14,6 +14,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
+
 bool is_fd(int fd) { return fcntl(fd, F_GETFD) != -1 || errno != EBADF; }
 
 bool is_socket(int fd) {
@@ -143,12 +144,6 @@ long get_long_env_or_defaultval(const char *env_var, long def_val) {
 char *get_str_env(const char *env_var) {
         char *val = getenv(env_var);
         return strlen(val) ? val : NULL;
-}
-
-const char *get_app_name(void) {
-        char *app_name, *last = strrchr(program_invocation_name, '/');
-        app_name = (last == NULL) ? program_invocation_name : last + 1;
-        return app_name;
 }
 
 int get_int_len(int i) {
