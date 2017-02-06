@@ -154,7 +154,7 @@ error:
 char *alloc_base_dirname_str(void) {
         // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
         // Prepare components
-        char *app_name = alloc_cmdline_str();
+        char *app_name = alloc_app_name();
         if (!app_name) goto error;
 
         int app_name_len = strlen(app_name);
@@ -200,29 +200,11 @@ char *alloc_json_path_str(TcpConnection *con) {
         return alloc_concat_path(con->directory, JSON_FILE);
 }
 
-char *alloc_cmdline_path(void) {
-        static int path_length = 30;
-        char *path = (char *)my_malloc(sizeof(char) * path_length);
-        if (!path) goto error;
-        if (snprintf(path, path_length, "/proc/%d/cmdline", getpid()) >=
-            path_length)
-                goto error;
-        return path;
-error:
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-
 char *alloc_cmdline_str(void) {
         static int cmd_line_length = 1024;
 
-        // Open cmdline file
-        char *cmdline_path = alloc_cmdline_path();
-        if (!cmdline_path) goto error_out;
-
-        FILE *fp = fopen(cmdline_path, "r");
+        FILE *fp = fopen("/proc/self/cmdline", "r");
         if (!fp) goto error1;
-        free(cmdline_path);
 
         // Read cmdline file into cmdline array
         char *cmdline = (char *)my_malloc(sizeof(char) * cmd_line_length);
@@ -241,6 +223,26 @@ error2:
         goto error_out;
 error1:
         LOG(ERROR, "fopen() failed. %s.", strerror(errno));
+error_out:
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+char *alloc_app_name(void) {
+        char *cmdline = alloc_cmdline_str();
+        if (!cmdline) goto error_out;
+
+        char *app_name_start = strrchr(cmdline, '/');
+        if (app_name_start)
+                app_name_start += 1;
+        else
+                return cmdline;
+
+        int n = strlen(app_name_start) + 1;
+        char *app_name = (char *)my_malloc(sizeof(char) * n);
+        strncpy(app_name, app_name_start, n);
+        free(cmdline);
+        return app_name;
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
