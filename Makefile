@@ -19,16 +19,16 @@ LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
 LIB_AMD64=$(REAL_NAME)-$(AMD64)
 LIB_I386=$(REAL_NAME)-$(I386)
 
-CC_ANDROID=../android_toolchain/bin/arm-linux-androideabi-gcc-4.9
+CC_ANDROID=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
 CC=gcc
 C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
 	-Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual \
-	-Wunreachable-code 
+	-Wunreachable-code
 L_FLAGS=-Wl,-soname,$(SONAME) 
 
-
 DEPS=-ljansson -ldl -lpthread -lpcap 
+DEPS_ANDROID=-ldl -llog -ljansson -lpcap
 HEADERS=lib.h tcp_events.h string_builders.h json_builder.h packet_sniffer.h \
 	logger.h init.h resizable_array.h verbose_mode.h
 SOURCES=libc_overrides.c lib.c tcp_events.c string_builders.c json_builder.c \
@@ -74,7 +74,7 @@ tcpsnitch: checkdeps $(HEADERS) $(SOURCES)
 	@echo "[-] Done!"
 
 android:
-	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LINKER_NAME) $(SOURCES) $(DEPS_ANDROID)
 install:
 	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
 	@test -d $(LIB_AMD64_PATH) || mkdir $(LIB_AMD64_PATH) 

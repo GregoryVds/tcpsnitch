@@ -253,7 +253,7 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
                                       size_t __n, unsigned int __flags,
-                                      struct sockaddr *__addr,
+                                      const struct sockaddr *__addr,
                                       socklen_t *__restrict __addr_len);
 #elif defined(__ANDROID__)
 typedef ssize_t (*orig_recvfrom_type)(int __fd, void *__restrict __buf,
