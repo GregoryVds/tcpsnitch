@@ -28,7 +28,7 @@ int main(void) {
     return(EXIT_FAILURE);
 
   char *req = "GET / HTTP/1.0\r\n\r\n";
-  send(sock, req, sizeof(char)*strlen(req), 0); 
+  send(sock, req, sizeof(char)*strlen(req), 0);
 
   char iovec_buf0[20];
   char iovec_buf1[30];
@@ -41,7 +41,7 @@ int main(void) {
   iovec[1].iov_len = sizeof(iovec_buf1);
   iovec[2].iov_base = iovec_buf2;
   iovec[2].iov_len = sizeof(iovec_buf2);
- 
+
   if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
     return(EXIT_FAILURE);
           

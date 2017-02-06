@@ -21,7 +21,7 @@ int main(void) {
 
   int data = 42;
   if (send(sock, &data, sizeof(data), -1) != -1)
-    return(EXIT_FAILURE); 
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

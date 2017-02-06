@@ -30,9 +30,9 @@ int main(void) {
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
   socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr, 
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
                &fromlen) != -1) {
-    return(EXIT_FAILURE); 
+    return(EXIT_FAILURE);
   }
           
   return(EXIT_SUCCESS);

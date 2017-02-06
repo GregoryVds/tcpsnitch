@@ -28,7 +28,7 @@ int main(void) {
     return(EXIT_FAILURE);
 
   int data = 42;
-  if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr, 
+  if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
              sizeof(addr)) < 0) {
     return(EXIT_FAILURE);
   }

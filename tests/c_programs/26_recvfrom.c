@@ -28,13 +28,13 @@ int main(void) {
     return(EXIT_FAILURE);
 
   char *req = "GET / HTTP/1.0\r\n\r\n";
-  send(sock, req, sizeof(char)*strlen(req), 0); 
+  send(sock, req, sizeof(char)*strlen(req), 0);
 
   char buf[42];
   socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr, 
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
                &fromlen) < 0) {
-    return(EXIT_FAILURE); 
+    return(EXIT_FAILURE);
   }
           
   return(EXIT_SUCCESS);

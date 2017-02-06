@@ -28,7 +28,7 @@ int main(void) {
     return(EXIT_FAILURE);
 
   char *req = "GET / HTTP/1.0\r\n\r\n";
-  send(sock, req, sizeof(char)*strlen(req), 0); 
+  send(sock, req, sizeof(char)*strlen(req), 0);
 
   char iovec_buf0[20];
   char iovec_buf1[30];

@@ -33,7 +33,7 @@ int main(void) {
 
   fcntl(sock, F_SETFL, O_NONBLOCK);
   if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) != -1)
-    return(EXIT_FAILURE); 
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

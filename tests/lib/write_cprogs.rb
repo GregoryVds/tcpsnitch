@@ -24,7 +24,7 @@ def sockaddr_in(port)
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(#{port});
-  inet_aton('127.0.0.1', &addr.sin_addr);
+  inet_aton("127.0.0.1", &addr.sin_addr);
   EOT
 end
 
@@ -144,7 +144,7 @@ EOT
 
 def send_http_get
   <<-EOT
-  char *req = 'GET / HTTP/1.0\\r\\n\\r\\n';
+  char *req = "GET / HTTP/1.0\\r\\n\\r\\n";
   send(sock, req, sizeof(char)*strlen(req), 0);
   EOT
 end
@@ -236,9 +236,9 @@ EOT
 
 def write_iovec(iovec_name = 'iovec')
   <<-EOT
-  char *#{iovec_name}_buf0 = \'short string\\n\';
-  char *#{iovec_name}_buf1 = \'This is a longer string\\n\';
-  char *#{iovec_name}_buf2 = \'This is the longest string in this example\\n\';
+  char *#{iovec_name}_buf0 = "short string\\n";
+  char *#{iovec_name}_buf1 = "This is a longer string\\n";
+  char *#{iovec_name}_buf2 = "This is the longest string in this example\\n";
 
   struct iovec #{iovec_name}[3];
   #{iovec_name}[0].iov_base = #{iovec_name}_buf0;

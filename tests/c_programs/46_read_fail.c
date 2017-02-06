@@ -30,7 +30,7 @@ int main(void) {
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
   if (read(sock, &buf, -1) != -1)
-    return(EXIT_FAILURE); 
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

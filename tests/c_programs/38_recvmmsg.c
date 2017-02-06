@@ -61,7 +61,7 @@ int main(void) {
   msg2.msg_iov = iovec2;
   msg2.msg_iovlen = sizeof(iovec2)/sizeof(struct iovec);
 
-	struct mmsghdr mmsg[2];
+  struct mmsghdr mmsg[2];
 	memset(mmsg, 0, sizeof(mmsg));
 	mmsg[0].msg_hdr = msg1;
 	mmsg[0].msg_len = 3;
@@ -69,7 +69,7 @@ int main(void) {
 	mmsg[1].msg_len = 3;
 
   char *req = "GET / HTTP/1.0\r\n\r\n";
-  send(sock, req, sizeof(char)*strlen(req), 0); 
+  send(sock, req, sizeof(char)*strlen(req), 0);
 
 	if (recvmmsg(sock, mmsg, 2, 0, NULL) < 0)
 		return(EXIT_FAILURE);

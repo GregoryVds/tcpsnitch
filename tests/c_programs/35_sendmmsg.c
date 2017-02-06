@@ -61,7 +61,7 @@ int main(void) {
   msg2.msg_iov = iovec2;
   msg2.msg_iovlen = sizeof(iovec2)/sizeof(struct iovec);
 
-	struct mmsghdr mmsg[2];
+  struct mmsghdr mmsg[2];
 	memset(mmsg, 0, sizeof(mmsg));
 	mmsg[0].msg_hdr = msg1;
 	mmsg[0].msg_len = 3;
