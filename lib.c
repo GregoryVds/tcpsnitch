@@ -51,7 +51,7 @@ bool is_tcp_socket(int fd) {
 error:
         LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
         LOG_FUNC_FAIL;
-        LOG(ERROR, "Assume INRY socket is not a TCP socket.");
+        LOG(ERROR, "Assume socket is not a TCP socket.");
         return false;
 }
 
@@ -143,6 +143,7 @@ long get_long_env_or_defaultval(const char *env_var, long def_val) {
 
 char *get_str_env(const char *env_var) {
         char *val = getenv(env_var);
+        if (!val) return NULL;
         return strlen(val) ? val : NULL;
 }
 
