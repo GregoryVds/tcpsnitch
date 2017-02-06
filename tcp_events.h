@@ -296,13 +296,22 @@ void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
 
 void tcp_ev_recvmsg(int fd, int return_value, int err, const struct msghdr *msg,
                     int flags);
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+#if !defined(__ANDROID__)
 void tcp_ev_sendmmsg(int fd, int return_value, int err,
                      struct mmsghdr *vmessages, unsigned int vlen, int flags);
+#elif __ANDROID_API__ >= 21
+void tcp_ev_sendmmsg(int fd, int return_value, int err,
+                     const struct mmsghdr *vmessages, unsigned int vlen, int flags);
+#endif
 
+#if !defined(__ANDROID__)
 void tcp_ev_recvmmsg(int fd, int return_value, int err,
                      struct mmsghdr *vmessages, unsigned int vlen, int flags,
                      struct timespec *tmo);
+#elif __ANDROID_API__ >= 21
+void tcp_ev_recvmmsg(int fd, int return_value, int err,
+                     struct mmsghdr *vmessages, unsigned int vlen, int flags,
+                     const struct timespec *tmo);
 #endif
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes);
