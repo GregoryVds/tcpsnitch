@@ -11,6 +11,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
@@ -94,7 +97,7 @@ error:
         return -1;
 }
 
-time_t get_time_sec() {
+time_t get_time_sec(void) {
         struct timeval tv;
         if (fill_timeval(&tv)) goto error;
         return tv.tv_sec;
@@ -103,7 +106,7 @@ error:
         return 0;
 }
 
-unsigned long get_time_micros() {
+unsigned long get_time_micros(void) {
         struct timeval tv;
         if (fill_timeval(&tv)) goto error;
         unsigned long time_micros;
@@ -114,37 +117,60 @@ error:
         return 0;
 }
 
-long get_env_as_long(const char *env_var) {
-        char *var_str_end, *var_str = getenv(env_var);
-        if (var_str == NULL) goto error1;
-        long val = strtol(var_str, &var_str_end, 10);
-        if (*var_str_end != '\0') goto error2;
-        if (val == LONG_MIN || val == LONG_MAX) goto error3;
+long parse_long(const char *str) {
+        char *str_end;
+        long val = strtol(str, &str_end, 10);
+        if (*str_end != '\0') goto error1;
+        if (val == LONG_MIN || val == LONG_MAX) goto error2;
         return val;
 error1:
-        LOG(ERROR, "getenv() failed. Variable %s is not set.", env_var);
-        goto error_out;
-error2:
         LOG(ERROR, "strtol() failed. Incorrect format.");
         goto error_out;
-error3:
+error2:
         LOG(ERROR, "strtol() failed. Overflow.");
 error_out:
         LOG_FUNC_FAIL;
         return -1;
 }
 
-long get_long_env_or_defaultval(const char *env_var, long def_val) {
-        long val = get_env_as_long(env_var);
-        if (val < 0)
-                LOG(WARN, "%s incorrect. Defaults to %lu.", env_var, def_val);
-        return val;
+long get_env_as_long(const char *env_var) {
+        char *var_str = getenv(env_var);
+        if (var_str == NULL) goto error;
+        return parse_long(var_str);
+error:
+        LOG(ERROR, "getenv() failed. Variable %s is not set.", env_var);
+        LOG_FUNC_FAIL;
+        return -1;
 }
 
 char *get_str_env(const char *env_var) {
         char *val = getenv(env_var);
         if (!val) return NULL;
         return strlen(val) ? val : NULL;
+}
+
+#ifdef __ANDROID__
+long get_property_as_long(const char *property) {
+        char val[PROP_VALUE_MAX + 1];
+        int n = __system_property_get(property, val);
+        if (!n) goto error;
+        return parse_long(val); 
+error:
+        LOG(ERROR, "property not defined or empty.");
+        LOG_FUNC_FAIL;
+        return -1;
+}
+#endif
+
+long get_long_opt_or_defaultval(const char *opt, long def_val) {
+#ifdef __ANDROID__
+        long val = get_property_as_long(opt);
+#else
+        long val = get_env_as_long(opt);
+#endif
+        if (val < 0)
+                LOG(WARN, "%s incorrect. Defaults to %lu.", opt, def_val);
+        return val;
 }
 
 int get_int_len(int i) {

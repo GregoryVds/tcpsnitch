@@ -2,14 +2,10 @@
 set -o nounset
 # set -o xtrace
 
-NAME="tcpsnitch"
+NAME="tcpsnitch_android"
 VERSION=1.0
 VERSION_STR="${NAME} version ${VERSION}"
-UNAME_FILE="uname.txt"
-SYSCTL_FILE="sysctl_net.txt"
-LIB_32="/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.${VERSION}"
-LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
-UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
+BASE_PROP="be.ucl.tcpsnitch"
 
 # Option default values
 OPT_B=4096
@@ -23,12 +19,12 @@ OPT_U=0
 OPT_V=0
 
 usage() {
-        echo "Usage: tcpsnitch [-chpv] [ -b <bytes> ] [ -d <dir>]" 
-        echo "                 [ -e <events> ] [ -f <lvl> ] [ -l <lvl> ]"
-        echo "                 [ -u <usec> ] [ --version ] command <args>"
+        echo "Usage: tcpsnitch_android [-chpv] [ -b <bytes> ] [ -d <dir>]" 
+        echo "                 [ -e <events> ] [ -f <lvl> ] [ -i <iface> ]" 
+        echo "                 [ -l <lvl> ] [ -u <usec> ] [ --version ] "
+        echo "                 package"
         echo ""
-        echo "command     command to spy on."
-        echo "<args>      args to command."
+        echo "package     name of package to spy on."
         echo "-b <bytes>  dump tcp_info max once every <bytes> (def. 4096)."
         echo "-c          activate capture of pcap traces."
         echo "-d <dir>    dir to save traces (defaults to random dir in /tmp)."
@@ -128,75 +124,33 @@ done
 # Consume option args
 shift $((OPTIND - 1))
 
+# Check that adb sees exactly 1 device
+if [ $(adb devices | wc -l) -ne 3 ]; then
+        error "adb must see exactly 1 device"
+fi
+
 # Verify number of arguments
-if [[ $# -lt 1 ]]; then
-        error "too few arguments"
+if [[ $# -ne 1 ]]; then
+        error "missing package argument"
         exit 1
 fi
 
-# Test command is executable/in path
-command=$1
-if [ ${command:0:2} = "./" -o ${command:0:1} = "/" ]; then # $command is a path
-        if ! [[ -x $command ]]; then
-                error "invalid command: '$command' is not executable" 
-                exit 1
-        fi
-else
-        if ! which $command > /dev/null; then
-                error "invalid argument: '$command' is not in \$PATH"
-                exit 1
-        fi
+package=$1
+
+# Check that package exists
+if ! adb shell pm list packages | grep -wq "package:$package"; then
+        error "invalid argument: package '$package' not found"
+        exit 1
 fi
 
-# Create temp dir if option -d not used
-if [[ -z "$OPT_D" ]]; then
-        OPT_D=$(mktemp -d)
-        chmod 777 "$OPT_D"
-fi
+# Set system properties
+adb shell setprop wrap.$package LD_PRELOAD=/data/libtcpsnitch.so
+adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
+adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"
+adb shell setprop "$BASE_PROP.opt_e" "$OPT_E"
+adb shell setprop "$BASE_PROP.opt_f" "$OPT_F"
+adb shell setprop "$BASE_PROP.opt_l" "$OPT_L"
+adb shell setprop "$BASE_PROP.opt_p" "$OPT_P"
+adb shell setprop "$BASE_PROP.opt_u" "$OPT_U"
+adb shell setprop "$BASE_PROP.opt_v" "$OPT_V"
 
-# Save network config
-NET_CONFIG_PATH="${OPT_D}/${SYSCTL_FILE}"
-if [[ ! -e "$NET_CONFIG_PATH" ]]; then
-        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
-fi
-
-# Save os config
-OS_CONFIG_PATH="${OPT_D}/${UNAME_FILE}"
-if [[ ! -e "$OS_CONFIG_PATH" ]]; then
-       uname -a > "$OS_CONFIG_PATH"
-fi
-
-( \
-TCPSNITCH_OPT_B=$OPT_B \
-TCPSNITCH_OPT_C=$OPT_C \
-TCPSNITCH_OPT_D=$OPT_D \
-TCPSNITCH_OPT_E=$OPT_E \
-TCPSNITCH_OPT_F=$OPT_F \
-TCPSNITCH_OPT_L=$OPT_L \
-TCPSNITCH_OPT_P=$OPT_P \
-TCPSNITCH_OPT_U=$OPT_U \
-TCPSNITCH_OPT_V=$OPT_V \
-LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 4>&1 2>&1 3>&2 1>/dev/null | \
-grep -E -v "$UNWANTED_ERRORS" \
-) 3>&1 1>&2 2>&3
-
-# WHAT JUST HAPPENED?
-# First, we have to know that tcpsnitch opens 2 streams to file descriptors 3 
-# and 4. These new streams serve as the new stdout/stderr for tcpsnitch. This 
-# allows us to distinguish stdout/stderr from tcpsnitch & the traced process. 
-#
-# Now, we want to perform the following manipulations with these 4 streams:
-#       - Discard stdout of the traced process.
-#       - Merge stderr of tcpsnitch and the traced process.
-#       - Send stdout of tcpsnitch to stdout of traced process.
-#       - Filter stderr to remove some errors that are always thrown.
-#
-# To do this, we start by swapping stderr & stdout:
-#       - 4>&1 2>&1: stderr of process+tcpsnitch go to stdout. They merge.
-#       - 3>&2: stdout of tcpsnitch goes to stderr.
-#       - 1>/devnull: dicard stdout of process.
-#
-# Now, we filter unwanted errors using "grep -v".
-# Finally, we swap back stderr and stdout. Done.
-
-echo "tcpsnitch data saved in $OPT_D"

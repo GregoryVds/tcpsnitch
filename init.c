@@ -1,4 +1,4 @@
-#define _GNU_SOURCE  // For program_invocation_name
+#define _GNU_SOURCE
 
 #include <dirent.h>
 #include <errno.h>
@@ -7,6 +7,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
 #include "constants.h"
 #include "lib.h"
 #include "logger.h"
@@ -37,9 +40,10 @@ static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 /* Private functions */
 
+#ifndef __ANDROID__
 static char *get_conf_opt_d(void) {
         DIR *dir;
-        char *val = get_str_env(ENV_OPT_D);
+        char *val = get_str_env(OPT_D);
         if (val) {
                 if ((dir = opendir(val)))
                         closedir(dir);
@@ -52,11 +56,12 @@ error1:
         LOG(ERROR, "opendir() failed on %s. %s.", val, strerror(errno));
         goto error_out;
 error2:
-        LOG(ERROR, "%s not set.", ENV_OPT_D);
+        LOG(ERROR, "%s not set.", OPT_D);
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
+#endif
 
 static char *create_logs_dir(void) {
         char *base_path, *path;
@@ -111,7 +116,8 @@ static void cleanup(void) {
 
 /*  This function is used to reset the library after a fork() call. If a fork()
  *  is not followed by exec(), the global variables are not reinitialized.
- *  This means that 2 processes with differents PID would use the same conf_opt_d,
+ *  This means that 2 processes with differents PID would use the same
+ * conf_opt_d,
  *  but more importantly, the child would inherit all the states from the
  *  fd_con_map of its parents. This leads to many issues:
  *     - The 2 processes will mix their logs in the same file.
@@ -148,7 +154,8 @@ void init_tcpsnitch(void) {
         mutex_lock(&init_mutex);
         if (initialized) goto exit;
 
-        /* We need a way to unweave the main process and tcpsnitch standard 
+#ifndef __ANDROID__
+        /* We need a way to unweave the main process and tcpsnitch standard
          * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
          * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
          * tcpsnitch stderr/stdout do not have the regular 1 & 2 fd, but are
@@ -157,25 +164,39 @@ void init_tcpsnitch(void) {
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
         if (!(_stderr = fdopen(STDERR_FD, "w")))
                 LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
- 
-	logger_init(NULL, WARN, WARN);
-       
+#endif
+
+        logger_init(NULL, WARN, WARN);
         atexit(cleanup);
 
-        conf_opt_b = get_long_env_or_defaultval(ENV_OPT_B, 4096);
-        conf_opt_c = get_long_env_or_defaultval(ENV_OPT_C, 0);
-        conf_opt_e = get_long_env_or_defaultval(ENV_OPT_E, 1000);
-        conf_opt_f = get_long_env_or_defaultval(ENV_OPT_F, WARN);
-        conf_opt_i = get_str_env(ENV_OPT_I);
-        conf_opt_l = get_long_env_or_defaultval(ENV_OPT_L, WARN);
-        conf_opt_p = get_long_env_or_defaultval(ENV_OPT_P, 0); 
-        conf_opt_u = get_long_env_or_defaultval(ENV_OPT_U, 0);
-        conf_opt_v = get_long_env_or_defaultval(ENV_OPT_V, 0); 
+        conf_opt_b = get_long_opt_or_defaultval(OPT_B, 4096);
+        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
+        conf_opt_e = get_long_opt_or_defaultval(OPT_E, 1000);
+        conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
+#ifdef __ANDROID__
+        conf_opt_i = NULL;
+#else
+        conf_opt_i = get_str_env(OPT_I);
+#endif
+        conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
+        conf_opt_p = get_long_opt_or_defaultval(OPT_P, 0);
+        conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
+        conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
+
+#ifdef __ANDROID__
+        // On Android, we don't chose the logs directory.
+        // We always write under: /data/data/[app_name], which the internal
+        // storage of the app.
+        char *app_name = alloc_app_name();
+        int n = 11 + strlen(app_name) + 1;  // "/data/data/" + APP_NAME + '\0'
+        conf_opt_d = (char *)my_malloc(sizeof(char) * n);
+        sprintf(conf_opt_d, "/data/data/%s", app_name);
+        D("android path: %s", conf_opt_d);
+#else
         if (!(conf_opt_d = get_conf_opt_d())) goto exit1;
+#endif
 
-        /* Create dir containing log, pcap and json files for this process */
         if (!(conf_opt_d = create_logs_dir())) goto exit1;
-
         const char *log_file_path;
         if (!(log_file_path = alloc_concat_path(conf_opt_d, MAIN_LOG_FILE)))
                 goto exit2;

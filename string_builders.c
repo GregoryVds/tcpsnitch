@@ -179,10 +179,10 @@ error:
         return NULL;
 }
 
-char *alloc_base_dir_path(const char *netspy_path) {
+char *alloc_base_dir_path(const char *dir_path) {
         char *name, *path;
         if (!(name = alloc_base_dirname_str())) goto error_out;
-        if (!(path = alloc_concat_path(netspy_path, name))) goto error1;
+        if (!(path = alloc_concat_path(dir_path, name))) goto error1;
         free(name);
         return path;
 error1:

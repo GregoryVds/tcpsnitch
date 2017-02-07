@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "logger.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -10,10 +11,13 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+
 #include "constants.h"
 #include "init.h"
 #include "lib.h"
-#include "logger.h"
 #include "tcp_events.h"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
@@ -80,9 +84,8 @@ static void log_to_stream(LogLevel log_lvl, const char *formated_str,
                 "%s%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d (%s:%d) "
                 "%s%s\n",
                 colors[log_lvl], ts.year, ts.mon, ts.day, ts.hour, ts.min,
-                ts.sec, ts.usec, log_level_str(log_lvl), getpid(),
-                file, line, formated_str,
-                ANSI_COLOR_RESET);
+                ts.sec, ts.usec, log_level_str(log_lvl), getpid(), file, line,
+                formated_str, ANSI_COLOR_RESET);
 }
 
 static void unbuffered_stderr(const char *str) {
@@ -130,7 +133,14 @@ void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
 }
 
 void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
+#ifdef __ANDROID__
+        //        if (log_lvl <= stderr_lvl)
+        UNUSED(log_lvl);
+        __android_log_print(ANDROID_LOG_DEBUG, "tcpsnitch", "(%s:%d) %s", file,
+                            line, str);
+#else
         if (log_file && log_lvl <= file_lvl)
                 log_to_stream(log_lvl, str, file, line, log_file);
         if (log_lvl <= stderr_lvl) log_to_stderr(log_lvl, str, file, line);
+#endif
 }

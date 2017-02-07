@@ -24,9 +24,13 @@ int fill_timeval(struct timeval *timeval);
 time_t get_time_sec(void);
 unsigned long get_time_micros(void);
 
+long parse_long(const char *str);
 long get_env_as_long(const char *env_var);
 char *get_str_env(const char *env_var);
-long get_long_env_or_defaultval(const char *env_var, long def_val);
+#ifdef __ANDROID__
+long get_property_as_long(const char *property);
+#endif
+long get_long_opt_or_defaultval(const char *opt, long def_val);
 int get_int_len(int i);
 
 bool mutex_lock(pthread_mutex_t *mutex);
