@@ -1,6 +1,9 @@
 #define _GNU_SOURCE
 
 #include "verbose_mode.h"
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -9,6 +12,11 @@
 #include "lib.h"
 #include "logger.h"
 
+#ifdef __ANDROID__
+#define OUTPUT_EV(format, args...) \
+        __android_log_print(ANDROID_LOG_VERBOSE, "tcpsnitch", format, ##args);
+
+#else  // Not Android
 #define BUF_SIZE 512
 
 #define MKSTR(var, format, args...)                                 \
@@ -26,6 +34,7 @@
 #define OUTPUT_EV(format, args...)  \
         MKSTR(_ev, format, ##args); \
         STDOUT("[pid %d] %s\n", getpid(), _ev);
+#endif  // #ifdef __ANDROID__
 
 static void output_ev_socket(const TcpEvSocket *ev) {
         OUTPUT_EV("socket()=%d", ev->super.return_value);
@@ -114,7 +123,9 @@ static void output_ev_tcpinfo(const TcpEvTcpInfo *ev) {
 }
 
 void output_event(const TcpEvent *ev) {
+#ifndef __ANDROID__
         if (!_stdout) return;  // We don't bother handling a fdopen() fail.
+#endif
         if (!conf_opt_v) return;
 
         switch (ev->type) {

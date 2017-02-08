@@ -1,5 +1,6 @@
 #define _GNU_SOURCE  // For program_invocation_name
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -262,7 +263,7 @@ error:
         return ret;
 }
 
-char *create_numbered_dir_in_path(char *path, int dir_number) {
+char *create_numbered_dir_in_path(const char *path, int dir_number) {
         char *dirname, *dir_path;
         int n;
         if (!path) goto error1;
@@ -286,3 +287,14 @@ error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
+
+bool is_dir_writable(const char *path) {
+        if (!path) return false;
+        DIR *dir;
+        if ((dir = opendir(path)))
+                closedir(dir);
+        else
+                return false;
+        return true;
+}
+

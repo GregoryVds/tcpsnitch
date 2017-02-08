@@ -27,8 +27,12 @@ long conf_opt_p;
 long conf_opt_u;
 long conf_opt_v;
 
+char *logs_dir_path;
+
+#ifndef __ANDROID__
 FILE *_stdout;
 FILE *_stderr;
+#endif
 
 static bool initialized = false;
 
@@ -40,68 +44,55 @@ static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
 /* Private functions */
 
-#ifndef __ANDROID__
-static char *get_conf_opt_d(void) {
-        DIR *dir;
-        char *val = get_str_env(OPT_D);
-        if (val) {
-                if ((dir = opendir(val)))
-                        closedir(dir);
-                else
-                        goto error1;
-        } else
-                goto error2;
-        return val;
-error1:
-        LOG(ERROR, "opendir() failed on %s. %s.", val, strerror(errno));
-        goto error_out;
-error2:
-        LOG(ERROR, "%s not set.", OPT_D);
-error_out:
-        LOG_FUNC_FAIL;
-        return NULL;
-}
-#endif
-
-static char *create_logs_dir(void) {
-        char *base_path, *path;
-        DIR *dir;
-        if (!(base_path = alloc_base_dir_path(conf_opt_d))) goto error_out;
-
-        // Find first directory available starting from base_path and by
-        // concatenating increasing integers.
+// Find first directory available starting from [base_path] by concatenating
+// increasing integers.
+static char *create_logs_dir_at_path(const char *path) {
+        char *dirname, *base_path, *full_path;
         int i = 0;
-        if (!(path = alloc_append_int_to_path(base_path, i))) goto error1;
+        DIR *dir;
+
+        if (!(dirname = alloc_dirname_str())) goto error_out;
+        if (!(base_path = alloc_concat_path(path, dirname))) goto error1;
+        if (!(full_path = alloc_append_int_to_path(base_path, i))) goto error2;
+
         while (true) {
-                if ((dir = opendir(path))) {  // Already exists.
+                if ((dir = opendir(full_path))) {  // Already exists.
+                        free(full_path);
                         i++;
-                        path = alloc_append_int_to_path(base_path, i);
+                        full_path = alloc_append_int_to_path(base_path, i);
                 } else if (!dir && errno == ENOENT)
                         break;  // Free.
                 else if (!dir)
-                        goto error2;  // Failure for some other reason.
+                        goto error3;  // Failure for some other reason.
         }
-        free(base_path);
 
-        // Finally, create dir at path.
-        if (mkdir(path, 0777)) goto error3;
-        return path;
-error3:
-        LOG(ERROR, "mkdir() failed for %s. %s.", path, strerror(errno));
-        free(path);
-        goto error_out;
-error2:
-        LOG(ERROR, "opendir() failed. %s.", strerror(errno));
-        free(path);
-error1:
+        // Finally, create dir at full_path.
+        if (mkdir(full_path, 0777)) goto error4;
+
+        free(dirname);
         free(base_path);
+        return full_path;
+error4:
+        LOG(ERROR, "mkdir() failed for %s. %s.", path, strerror(errno));
+        free(full_path);
+        goto error_out;
+error3:
+        LOG(ERROR, "opendir() failed. %s.", strerror(errno));
+        free(full_path);
+error2:
+        free(base_path);
+error1:
+        free(dirname);
 error_out:
         LOG_FUNC_FAIL;
         return NULL;
 }
 
 static void tcp_snitch_free(void) {
+#ifdef __ANDROID__
         free(conf_opt_d);
+#endif
+        free(logs_dir_path);
         mutex_destroy(&init_mutex);
 }
 
@@ -110,6 +101,59 @@ static void cleanup(void) {
         tcp_close_unclosed_connections();
         // tcp_free();
         // tcp_snitch_free();
+}
+
+#ifndef __ANDROID__
+static void open_std_streams(void) {
+        /* We need a way to unweave the main process and tcpsnitch standard
+         * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
+         * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
+         * tcpsnitch stderr/stdout do not have the regular 1 & 2 fd, but are
+         * 3 and 4 instead. */
+        if (!(_stdout = fdopen(STDOUT_FD, "w"))) goto error1;
+        if (!(_stderr = fdopen(STDERR_FD, "w"))) goto error2;
+        return;
+error2:
+        LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
+        goto error_out;
+error1:
+        LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
+error_out:
+        LOG_FUNC_FAIL;
+}
+#endif
+
+static void get_options(void) {
+        conf_opt_b = get_long_opt_or_defaultval(OPT_B, 4096);
+        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
+#ifdef __ANDROID__
+        conf_opt_d = alloc_android_opt_d();
+#else
+        conf_opt_d = get_str_env(OPT_D);
+#endif
+        conf_opt_e = get_long_opt_or_defaultval(OPT_E, 1000);
+        conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
+#ifdef __ANDROID__
+        conf_opt_i = NULL;
+#else
+        conf_opt_i = get_str_env(OPT_I);
+#endif
+        conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
+        conf_opt_p = get_long_opt_or_defaultval(OPT_P, 0);
+        conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
+        conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
+}
+
+static void init_logs(void) {
+        char *log_file_path;
+        if (!(log_file_path = alloc_concat_path(logs_dir_path, MAIN_LOG_FILE)))
+                goto error;
+        logger_init(log_file_path, conf_opt_l, conf_opt_f);
+        free(log_file_path);
+        return;
+error:
+        LOG_FUNC_FAIL;
+        LOG(ERROR, "No logs to file.");
 }
 
 /* Public functions */
@@ -142,7 +186,7 @@ void reset_tcpsnitch(void) {
         if (!initialized) return;  // Nothing to do.
 
         tcp_snitch_free();
-        logger_init(NULL, 0, 0);
+        logger_init(NULL, WARN, WARN);
         initialized = false;
         mutex_init(&init_mutex);
 
@@ -155,60 +199,15 @@ void init_tcpsnitch(void) {
         if (initialized) goto exit;
 
 #ifndef __ANDROID__
-        /* We need a way to unweave the main process and tcpsnitch standard
-         * streams. To this purpose, we create 2 additionnal fd (3 & 4) with
-         * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
-         * tcpsnitch stderr/stdout do not have the regular 1 & 2 fd, but are
-         * 3 and 4 instead. */
-        if (!(_stdout = fdopen(STDOUT_FD, "w")))
-                LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
-        if (!(_stderr = fdopen(STDERR_FD, "w")))
-                LOG(ERROR, "fdopen() failed. No buffered I/O for stderr.");
+        open_std_streams();
 #endif
-
-        logger_init(NULL, WARN, WARN);
         atexit(cleanup);
-
-        conf_opt_b = get_long_opt_or_defaultval(OPT_B, 4096);
-        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
-        conf_opt_e = get_long_opt_or_defaultval(OPT_E, 1000);
-        conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
-#ifdef __ANDROID__
-        conf_opt_i = NULL;
-#else
-        conf_opt_i = get_str_env(OPT_I);
-#endif
-        conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
-        conf_opt_p = get_long_opt_or_defaultval(OPT_P, 0);
-        conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
-        conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
-
-#ifdef __ANDROID__
-        // On Android, we don't chose the logs directory.
-        // We always write under: /data/data/[app_name], which the internal
-        // storage of the app.
-        char *app_name = alloc_app_name();
-        int n = 11 + strlen(app_name) + 1;  // "/data/data/" + APP_NAME + '\0'
-        conf_opt_d = (char *)my_malloc(sizeof(char) * n);
-        sprintf(conf_opt_d, "/data/data/%s", app_name);
-        D("android path: %s", conf_opt_d);
-#else
-        if (!(conf_opt_d = get_conf_opt_d())) goto exit1;
-#endif
-
-        if (!(conf_opt_d = create_logs_dir())) goto exit1;
-        const char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(conf_opt_d, MAIN_LOG_FILE)))
-                goto exit2;
-        else
-                logger_init(log_file_path, conf_opt_l, conf_opt_f);
-
+        get_options();
+        if (!(logs_dir_path = create_logs_dir_at_path(conf_opt_d))) goto exit1;
+        init_logs();
         goto exit;
 exit1:
         LOG(ERROR, "Nothing will be written to file (log, pcap, json).");
-        goto exit;
-exit2:
-        LOG(ERROR, "No logs to file.");
 exit:
         initialized = true;
         mutex_unlock(&init_mutex);

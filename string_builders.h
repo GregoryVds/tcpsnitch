@@ -15,9 +15,8 @@ bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
 char *alloc_concat_path(const char *path1, const char *path2);
 char *alloc_append_int_to_path(const char *path1, int i);
 
-char *alloc_base_dirname_str(void);
-char *alloc_base_dir_path(const char *netspy_path);
-
+char *alloc_dirname_str(void);
+char *alloc_android_opt_d(void);
 char *alloc_pcap_path_str(TcpConnection *con);
 char *alloc_json_path_str(TcpConnection *con);
 

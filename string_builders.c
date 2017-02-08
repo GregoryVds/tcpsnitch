@@ -151,7 +151,7 @@ error:
         return NULL;
 }
 
-char *alloc_base_dirname_str(void) {
+char *alloc_dirname_str(void) {
         // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
         // Prepare components
         char *app_name = alloc_app_name();
@@ -179,15 +179,17 @@ error:
         return NULL;
 }
 
-char *alloc_base_dir_path(const char *dir_path) {
-        char *name, *path;
-        if (!(name = alloc_base_dirname_str())) goto error_out;
-        if (!(path = alloc_concat_path(dir_path, name))) goto error1;
-        free(name);
-        return path;
-error1:
-        free(name);
-error_out:
+// On Android, we don't chose the logs directory. We always write under: 
+// /data/data/[app_name], which the internal storage of the app.
+char *alloc_android_opt_d(void) {
+        char *app_name = alloc_app_name();
+        int n = 11 + strlen(app_name) + 1;  // "/data/data/" + APP_NAME + '\0'
+        char *opt_d = (char *)my_malloc(sizeof(char) * n);
+        if (!opt_d) goto error;
+        sprintf(opt_d, "/data/data/%s", app_name);
+        free(app_name);
+        return opt_d;
+error:
         LOG_FUNC_FAIL;
         return NULL;
 }

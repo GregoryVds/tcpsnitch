@@ -15,8 +15,12 @@ extern long conf_opt_p;
 extern long conf_opt_u;
 extern long conf_opt_v;
 
+extern char *logs_dir_path;
+
+#ifndef __ANDROID__
 extern FILE *_stdout;
 extern FILE *_stderr;
+#endif
 
 void reset_tcpsnitch(void);
 void init_tcpsnitch(void);

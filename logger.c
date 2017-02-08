@@ -40,13 +40,19 @@ static const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_RED,
                                ANSI_COLOR_YELLOW, ANSI_COLOR_WHITE,
                                ANSI_COLOR_GREEN};
 
+#ifdef __ANDROID__
+static const int android_log_priorities_map[] = {
+    ANDROID_LOG_FATAL, ANDROID_LOG_ERROR, ANDROID_LOG_WARN, ANDROID_LOG_INFO,
+    ANDROID_LOG_DEFAULT};
+#endif
+
 /* We do not want to open/close a new stream each time we log a single line to
    file. Closing the stream would always trigger a write to kernel space.
    Instead we open it once, and let the system automatically close the stream
    when the process ends. Not sure this is the best solution? */
 static FILE *log_file = NULL;
-static LogLevel stderr_lvl = 0;
-static LogLevel file_lvl = 0;
+static LogLevel stderr_lvl = WARN;
+static LogLevel file_lvl = WARN;
 
 /* Private functions */
 
@@ -88,6 +94,13 @@ static void log_to_stream(LogLevel log_lvl, const char *formated_str,
                 formated_str, ANSI_COLOR_RESET);
 }
 
+#ifdef __ANDROID__
+static void log_to_logcat(LogLevel log_lvl, const char *str, const char *file,
+                          int line) {
+        __android_log_print(android_log_priorities_map[log_lvl], "tcpsnitch",
+                            "(%s:%d) %s", file, line, str);
+}
+#else
 static void unbuffered_stderr(const char *str) {
         char *msg = malloc(sizeof(char) * (strlen(str) + 2));
         if (msg) {
@@ -106,6 +119,7 @@ static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
         else
                 unbuffered_stderr(str);
 }
+#endif
 
 static void set_log_path(const char *path) {
         if (log_file != NULL) fclose(log_file);
@@ -120,7 +134,12 @@ static void set_log_path(const char *path) {
                 char str[1024];
                 snprintf(str, sizeof(str), "fopen() failed on %s. %s.", path,
                          strerror(errno));
+#ifdef __ANDROID__
+                log_to_logcat(ERROR, str, __FILE__, __LINE__);
+#else
                 log_to_stderr(ERROR, str, __FILE__, __LINE__);
+#endif
+
         }
 }
 
@@ -133,14 +152,12 @@ void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
 }
 
 void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
+        if (log_lvl <= stderr_lvl)
 #ifdef __ANDROID__
-        //        if (log_lvl <= stderr_lvl)
-        UNUSED(log_lvl);
-        __android_log_print(ANDROID_LOG_DEBUG, "tcpsnitch", "(%s:%d) %s", file,
-                            line, str);
+                log_to_logcat(log_lvl, str, file, line);
 #else
+                log_to_stderr(log_lvl, str, file, line);
+#endif
         if (log_file && log_lvl <= file_lvl)
                 log_to_stream(log_lvl, str, file, line, log_file);
-        if (log_lvl <= stderr_lvl) log_to_stderr(log_lvl, str, file, line);
-#endif
 }
