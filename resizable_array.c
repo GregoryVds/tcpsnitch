@@ -14,7 +14,12 @@ typedef struct {
         pthread_mutex_t mutex;
 } ElemWrapper;
 
+#ifdef __ANDROID__
+static pthread_mutex_t rwlock = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER;
+#else
 static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+#endif
+
 static ElemWrapper **array = NULL;
 static int size = 0;
 
@@ -59,8 +64,32 @@ static bool is_index_in_bounds(int index) { return index < size; }
 
 /* Public functions */
 
-bool ra_put_elem(int index, ELEM_TYPE elem) {
+void rwlock_rdlock(void) {
+#ifdef __ANDROID__
+        mutex_lock(&rwlock);
+#else
+        pthread_rwlock_rdlock(&rwlock);
+#endif
+}
+
+void rwlock_wrlock(void) {
+#ifdef __ANDROID__
+        mutex_lock(&rwlock);
+#else
         pthread_rwlock_wrlock(&rwlock);
+#endif
+}
+
+void rwlock_unlock(void) {
+#ifdef __ANDROID__
+        mutex_unlock(&rwlock);
+#else
+        pthread_rwlock_unlock(&rwlock);
+#endif
+}
+
+bool ra_put_elem(int index, ELEM_TYPE elem) {
+        rwlock_wrlock();
         if (!array && !init(index + 1)) goto error;
         if (index > size - 1 && !double_size(index))
                 goto error;
@@ -71,19 +100,19 @@ bool ra_put_elem(int index, ELEM_TYPE elem) {
         ew->elem = elem;
 
         array[index] = ew;
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return true;
 error:
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         LOG_FUNC_FAIL;
         return false;
 }
 
 ELEM_TYPE ra_get_and_lock_elem(int index) {
-        pthread_rwlock_rdlock(&rwlock);
+        rwlock_rdlock();
         if (!is_index_in_bounds(index)) goto error;
         if (!array[index]) {
-                pthread_rwlock_unlock(&rwlock);
+                rwlock_unlock();
                 return NULL;
         }
         ElemWrapper *ew = array[index];
@@ -91,7 +120,7 @@ ELEM_TYPE ra_get_and_lock_elem(int index) {
         return ew->elem;
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         LOG_FUNC_FAIL;
         return NULL;
 }
@@ -100,7 +129,7 @@ void ra_unlock_elem(int index) {
         if (!is_index_in_bounds(index)) goto error1;
         if (!array[index]) goto error2;
         mutex_unlock(&(array[index]->mutex));
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return;
 error1:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
@@ -108,15 +137,15 @@ error1:
 error2:
         LOG(ERROR, "No item at index %d.", index);
 error_out:
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         LOG_FUNC_FAIL;
 }
 
 ELEM_TYPE ra_remove_elem(int index) {
-        pthread_rwlock_wrlock(&rwlock);
+        rwlock_wrlock();
         if (!is_index_in_bounds(index)) goto error;
         if (!array[index]) {
-                pthread_rwlock_unlock(&rwlock);
+                rwlock_unlock();
                 return NULL;
         }
         ElemWrapper *ew = array[index];
@@ -126,35 +155,35 @@ ELEM_TYPE ra_remove_elem(int index) {
         ELEM_TYPE el = ew->elem;
         array[index] = NULL;
         free(ew);
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return el;
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         LOG_FUNC_FAIL;
         return NULL;
 }
 
 bool ra_is_present(int index) {
-        pthread_rwlock_rdlock(&rwlock);
+        rwlock_rdlock();
         if (!is_index_in_bounds(index)) goto out_false;
         bool ret = (array[index] != NULL);
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return ret;
 out_false:
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return false;
 }
 
 int ra_get_size(void) {
-        pthread_rwlock_rdlock(&rwlock);
+        rwlock_rdlock();
         int ret = size;
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
         return ret;
 }
 
 void ra_free() {
-        pthread_rwlock_rdlock(&rwlock);
+        rwlock_rdlock();
         for (int i = 0; i < size; i++) {
                 if (array[i]) {
                         mutex_destroy(&array[i]->mutex);
@@ -163,15 +192,23 @@ void ra_free() {
                 }
         }
         free(array);
-        pthread_rwlock_unlock(&rwlock);
+        rwlock_unlock();
+#ifdef __ANDROID__
+        mutex_destroy(&rwlock);
+#else
         pthread_rwlock_destroy(&rwlock);
+#endif
 }
 
 void ra_reset(void) {
+#ifdef __ANDROID__
+        mutex_init(&rwlock);
+#else
         if (pthread_rwlock_init(&rwlock, NULL)) {
                 LOG(ERROR, "pthread_rwlock_init() failed. %s.",
                     strerror(errno));
         }
+#endif
         array = NULL;
         size = 0;
 }

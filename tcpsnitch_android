@@ -144,6 +144,9 @@ if ! adb shell pm list packages | grep -wq "package:$package"; then
 fi
 
 # Set system properties
+adb shell su -c rm /data/libtcpsnitch.so
+adb push libtcpsnitch.so /data
+
 adb shell setprop wrap.$package LD_PRELOAD=/data/libtcpsnitch.so
 adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
 adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"

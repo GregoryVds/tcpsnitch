@@ -9,11 +9,11 @@ void logger_init(const char *path, LogLevel stdout_lvl, LogLevel file_lvl);
 
 void logger(LogLevel lvl, const char *str, const char *file, int line);
 
-#define LOG(lvl, format, args...)                           \
-        {                                                   \
-                char _buf[1024];                             \
+#define LOG(lvl, format, args...)                             \
+        {                                                     \
+                char _buf[1024];                              \
                 snprintf(_buf, sizeof(_buf), format, ##args); \
-                logger(lvl, _buf, __FILE__, __LINE__);       \
+                logger(lvl, _buf, __FILE__, __LINE__);        \
         }
 
 #define LOG_FUNC_FAIL LOG(ERROR, "%s failed.", __func__)
