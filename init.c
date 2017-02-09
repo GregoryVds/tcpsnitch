@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
+#include <android/log.h>
 #endif
 #include "constants.h"
 #include "lib.h"
@@ -88,19 +89,12 @@ error_out:
         return NULL;
 }
 
-static void tcp_snitch_free(void) {
+static void tcpsnitch_free(void) {
 #ifdef __ANDROID__
         free(conf_opt_d);
 #endif
         free(logs_dir_path);
         mutex_destroy(&init_mutex);
-}
-
-static void cleanup(void) {
-        LOG(INFO, "Performing library cleanup before end of process.");
-        tcp_close_unclosed_connections();
-        // tcp_free();
-        // tcp_snitch_free();
 }
 
 #ifndef __ANDROID__
@@ -185,7 +179,7 @@ error:
 void reset_tcpsnitch(void) {
         if (!initialized) return;  // Nothing to do.
 
-        tcp_snitch_free();
+        tcpsnitch_free();
         logger_init(NULL, WARN, WARN);
         initialized = false;
         mutex_init(&init_mutex);
@@ -201,7 +195,6 @@ void init_tcpsnitch(void) {
 #ifndef __ANDROID__
         open_std_streams();
 #endif
-        atexit(cleanup);
         get_options();
         if (!(logs_dir_path = create_logs_dir_at_path(conf_opt_d))) goto exit1;
         init_logs();
@@ -213,3 +206,11 @@ exit:
         mutex_unlock(&init_mutex);
         return;
 }
+
+__attribute__((destructor)) static void cleanup(void) {
+        LOG(INFO, "Performing library cleanup before end of process.");
+        tcp_close_unclosed_connections();
+        // tcp_free();
+        // tcpsnitch_free();
+}
+

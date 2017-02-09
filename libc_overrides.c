@@ -77,7 +77,6 @@ int socket(int __domain, int __type, int __protocol) {
 
         int fd = orig_socket(__domain, __type, __protocol);
         if (is_tcp_socket(fd)) tcp_ev_socket(fd, __domain, __type, __protocol);
-
         return fd;
 }
 
@@ -426,7 +425,7 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
  unistd.h - standard symbolic constants and types
 
- functions: write(), read(), close(), fork(), syscall().
+ functions: write(), read(), close(), fork().
 
 */
 
@@ -489,6 +488,42 @@ pid_t fork(void) {
         errno = err;
         return ret;
 }
+
+typedef int (*orig_dup_type)(int __fd); 
+orig_dup_type orig_dup;
+
+int dup (int __fd) {
+        if (!orig_dup) orig_dup = (orig_dup_type)dlsym(RTLD_NEXT, "dup");
+        int ret = orig_dup(__fd);
+        if (is_tcp_socket(__fd))
+                LOG(INFO, "dup() called on %d, ret %d.", __fd, ret);
+        return ret;
+}
+
+typedef int (*orig_dup2_type)(int __fd, int __fd2);
+orig_dup2_type orig_dup2;
+
+int dup2 (int __fd, int __fd2) {
+        if (!orig_dup2) orig_dup2 = (orig_dup2_type)dlsym(RTLD_NEXT, "dup2");
+        int ret = orig_dup2(__fd, __fd2);
+        if (is_tcp_socket(__fd))
+                LOG(INFO, "dup2() called on %d-%d, ret %d.", __fd, __fd2, ret);
+        return ret;
+}
+
+
+#ifdef __USE_GNU
+typedef int (*orig_dup3_type)(int __fd, int __fd2, int __flags);
+orig_dup3_type orig_dup3;
+
+int dup3 (int __fd, int __fd2, int __flags) {
+        if (!orig_dup3) orig_dup3 = (orig_dup3_type)dlsym(RTLD_NEXT, "dup3");
+        int ret = orig_dup3(__fd, __fd2, __flags);
+        if (is_tcp_socket(__fd))
+                LOG(INFO, "dup3() called on %d-%d, ret %d.", __fd, __fd2, ret);
+        return ret;
+}
+#endif
 
 /*
   _   _ ___ ___       _    ____ ___
