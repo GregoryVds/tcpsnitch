@@ -289,7 +289,7 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
                    const struct sockaddr *addr, socklen_t len);
 
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
-                     const struct sockaddr *addr, socklen_t len);
+                     const struct sockaddr *addr, socklen_t *len);
 
 void tcp_ev_sendmsg(int fd, int return_value, int err, const struct msghdr *msg,
                     int flags);

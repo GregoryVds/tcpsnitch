@@ -241,6 +241,7 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 
         ssize_t ret =
             orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
+
         int err = errno;
         if (is_tcp_socket(__fd))
                 tcp_ev_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
@@ -285,10 +286,11 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 
         ssize_t ret =
             orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
+
         int err = errno;
         if (is_tcp_socket(__fd))
                 tcp_ev_recvfrom(__fd, ret, err, __n, __flags, __addr,
-                                *__addr_len);
+                                __addr_len);
 
         errno = err;
         return ret;

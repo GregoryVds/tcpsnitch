@@ -43,7 +43,7 @@ static const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_RED,
 #ifdef __ANDROID__
 static const int android_log_priorities_map[] = {
     ANDROID_LOG_FATAL, ANDROID_LOG_ERROR, ANDROID_LOG_WARN, ANDROID_LOG_INFO,
-    ANDROID_LOG_DEFAULT};
+    ANDROID_LOG_DEBUG};
 #endif
 
 /* We do not want to open/close a new stream each time we log a single line to

@@ -653,14 +653,14 @@ void tcp_ev_sendto(int fd, int return_value, int err, size_t bytes, int flags,
 }
 
 void tcp_ev_recvfrom(int fd, int return_value, int err, size_t bytes, int flags,
-                     const struct sockaddr *addr, socklen_t len) {
+                     const struct sockaddr *addr, socklen_t *len) {
         // Instantiate local vars TcpConnection *con & TcpEvRecvfrom *ev
         TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
 
         ev->bytes = bytes;
         con->bytes_received += bytes;
         fill_recv_flags(&(ev->flags), flags);
-        memcpy(&(ev->addr), addr, len);
+        if (len) memcpy(&(ev->addr), addr, *len);
 
         TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
 }
@@ -725,7 +725,7 @@ void tcp_ev_recvmmsg(int fd, int return_value, int err,
         TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
 }
 
-#endif // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+#endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
 void tcp_ev_write(int fd, int return_value, int err, size_t bytes) {
         // Instantiate local vars TcpConnection *con & TcpEvWrite *ev
