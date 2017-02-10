@@ -88,9 +88,9 @@ error:
         return -1;
 }
 
-int fill_tcpinfo(int fd, struct tcp_info *info) {
+int fill_tcp_info(int fd, struct tcp_info *info) {
         socklen_t n = sizeof(struct tcp_info);
-        if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)&info, &n)) goto error;
+        if (getsockopt(fd, SOL_TCP, TCP_INFO, (void *)info, &n)) goto error;
         return 0;
 error:
         LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));

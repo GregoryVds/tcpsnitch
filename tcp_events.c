@@ -323,10 +323,11 @@ error_out:
 }
 
 static void tcp_dump_tcp_info(int fd) {
-        struct tcp_info info;
-        int ret = fill_tcpinfo(fd, &info);
+        struct tcp_info *info =
+            (struct tcp_info *)malloc(sizeof(struct tcp_info));
+        int ret = fill_tcp_info(fd, info);
         int err = errno;
-        tcp_ev_tcp_info(fd, ret, err, &info);
+        tcp_ev_tcp_info(fd, ret, err, info);
 }
 
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
@@ -799,10 +800,11 @@ void tcp_ev_tcp_info(int fd, int return_value, int err, struct tcp_info *info) {
         TCP_EV_PRELUDE(TCP_EV_TCP_INFO, TcpEvTcpInfo);
         LOG_FUNC_D;
 
-        memcpy(&(ev->info), &info, sizeof(struct tcp_info));
+        memcpy(&(ev->info), info, sizeof(struct tcp_info));
         con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
         con->last_info_dump_micros = get_time_micros();
         con->rtt = info->tcpi_rtt;
+        free(info);
 
         TCP_EV_POSTLUDE(TCP_EV_TCP_INFO);
 }

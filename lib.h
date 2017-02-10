@@ -18,7 +18,7 @@ bool is_tcp_socket(int fd);
 
 int append_string_to_file(const char *str, const char *path);
 
-int fill_tcpinfo(int fd, struct tcp_info *info);
+int fill_tcp_info(int fd, struct tcp_info *info);
 int fill_timeval(struct timeval *timeval);
 
 time_t get_time_sec(void);
