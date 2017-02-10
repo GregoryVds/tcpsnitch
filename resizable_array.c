@@ -83,6 +83,7 @@ ELEM_TYPE ra_get_and_lock_elem(int index) {
         pthread_rwlock_rdlock(&rwlock);
         if (!is_index_in_bounds(index)) goto error;
         if (!array[index]) {
+                LOG(WARN, "Null in array at index %d.", index);
                 pthread_rwlock_unlock(&rwlock);
                 return NULL;
         }

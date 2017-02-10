@@ -442,13 +442,32 @@ error_out:
 }
 
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                 \
-        TcpConnection *con = ra_get_and_lock_elem(fd);                        \
+        init_tcpsnitch();                                                     \
+        TcpConnection *con = NULL;                                            \
+        if (ev_type_cons != TCP_EV_SOCKET && ev_type_cons != TCP_EV_ACCEPT)   \
+                con = ra_get_and_lock_elem(fd);                               \
         if (!con) {                                                           \
-                LOG_FUNC_FAIL;                                                \
-                return;                                                       \
+                if (ev_type_cons != TCP_EV_SOCKET &&                          \
+                    ev_type_cons != TCP_EV_ACCEPT) {                          \
+                        LOG(WARN,                                             \
+                            "Opening of TCP connection on fd %d was not "     \
+                            "detected.",                                      \
+                            fd);                                              \
+                }                                                             \
+                con = alloc_connection();                                     \
+                if (!con || !ra_put_elem(fd, con)) {                          \
+                        LOG_FUNC_FAIL;                                        \
+                        return;                                               \
+                }                                                             \
+                con = NULL;                                                   \
+                con = ra_get_and_lock_elem(fd);                               \
+                if (!con) {                                                   \
+                        LOG_FUNC_FAIL;                                        \
+                        return;                                               \
+                }                                                             \
         }                                                                     \
         const char *ev_name = string_from_tcp_event_type(ev_type_cons);       \
-        LOG(INFO, "%s on connection %d.", ev_name, con->id);                  \
+        LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);      \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, return_value, err, \
                                              con->events_count);              \
         if (!ev) {                                                            \
@@ -498,19 +517,13 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 
 #define SOCK_TYPE_MASK 0b1111
 void tcp_ev_socket(int fd, int domain, int type, int protocol) {
-        init_tcpsnitch();
-        LOG(INFO, "tcp_ev_socket() with fd %d.", fd);
-
         /* Check if connection already exits and was not properly closed. */
         if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
+        int err = 0;
+        int return_value = fd;
 
-        /* Create new connection */
-        TcpConnection *new_con = alloc_connection();
-        if (!new_con) goto error;
-
-        /* Create new event */
-        TcpEvSocket *ev = (TcpEvSocket *)alloc_event(TCP_EV_SOCKET, fd, 0, 0);
-        if (!ev) goto error;
+        // Instantiate local vars TcpConnection *con & TcpEvSocket *ev
+        TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
 
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
@@ -523,15 +536,7 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->sock_nonblock = false;
 #endif
 
-        push_event(new_con, (TcpEvent *)ev);
-        output_event((TcpEvent *)ev);
-        if (should_dump_json(new_con)) tcp_dump_json(new_con, false);
-        if (!ra_put_elem(fd, new_con)) goto error;
-        if (should_dump_tcp_info(new_con)) tcp_dump_tcp_info(fd);
-        return;
-error:
-        LOG_FUNC_FAIL;
-        return;
+        TCP_EV_POSTLUDE(TCP_EV_SOCKET);
 }
 
 void tcp_ev_bind(int fd, int return_value, int err, const struct sockaddr *addr,
