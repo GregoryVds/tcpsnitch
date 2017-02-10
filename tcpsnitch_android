@@ -16,13 +16,14 @@ OPT_F=2
 OPT_L=0
 OPT_P=0
 OPT_U=0
+OPT_T=1000
 OPT_V=0
 
 usage() {
         echo "Usage: tcpsnitch_android [-chpv] [ -b <bytes> ] [ -d <dir>]" 
         echo "                 [ -e <events> ] [ -f <lvl> ] [ -i <iface> ]" 
-        echo "                 [ -l <lvl> ] [ -u <usec> ] [ --version ] "
-        echo "                 package"
+        echo "                 [ -l <lvl> ] [ -t <msec> ] [ -u <usec> ]"
+        echo "                 [ --version ] package"
         echo ""
         echo "package     name of package to spy on."
         echo "-b <bytes>  dump tcp_info max once every <bytes> (def. 4096)."
@@ -33,6 +34,7 @@ usage() {
         echo "-h          show this help text."
         echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 0)."  
         echo "-p          activate pretty print of JSON traces."
+        echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
         echo "-u <usec>   dump tcp_info max once every <usec> (def. 0)."
         echo "-v          activate verbose output."  
         echo "--version   print tcpsnitch version." 
@@ -57,7 +59,7 @@ error() {
 }
 
 # Parse options
-while getopts ":chpvb:d:e:f:i:l:u:-:" opt; do
+while getopts ":chpvb:d:e:f:i:l:u:t:-:" opt; do
         case $opt in
                 -) # Trick to parse long options with getopts.
                         case "$OPTARG" in
@@ -111,6 +113,10 @@ while getopts ":chpvb:d:e:f:i:l:u:-:" opt; do
                         assert_int "$OPTARG" "invalid -u argument: '$OPTARG'" 
                         OPT_U=$OPTARG
                         ;;
+                t)
+                        assert_int "$OPTARG" "invalid -t argument: '$OPTARG'"
+                        OPT_T=$OPTARG
+                        ;;
                 v)
                         OPT_V=$((OPT_V+1))
                         ;;
@@ -154,6 +160,7 @@ adb shell setprop "$BASE_PROP.opt_e" "$OPT_E"
 adb shell setprop "$BASE_PROP.opt_f" "$OPT_F"
 adb shell setprop "$BASE_PROP.opt_l" "$OPT_L"
 adb shell setprop "$BASE_PROP.opt_p" "$OPT_P"
+adb shell setprop "$BASE_PROP.opt_t" "$OPT_T"
 adb shell setprop "$BASE_PROP.opt_u" "$OPT_U"
 adb shell setprop "$BASE_PROP.opt_v" "$OPT_V"
 

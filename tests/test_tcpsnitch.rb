@@ -25,7 +25,7 @@ describe "tcpsnitch" do
     end
   end
   
-  ["-b", "-e", "-f", "-l", "-u"].each do |opt|
+  ["-b", "-e", "-f", "-l", "-t", "-u"].each do |opt|
     describe "when #{opt} is set" do
       it "should report 'invalid #{opt} argument'" do
         assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
@@ -124,17 +124,15 @@ describe "tcpsnitch" do
     end
 
     it "should pretty print the JSON with -p" do
-      skip
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR} -p", cmd)
-      assert system("test $(wc -l < #{json_file_str}) -gt 0") 
+      assert system("test $(wc -l < #{json_file_str}) -gt 2") 
     end
 
     it "should not pretty print the JSON without -p" do
-      skip
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert system("test $(wc -l < #{json_file_str}) -eq 0") 
+      assert system("test $(wc -l < #{json_file_str}) -eq 2") 
     end
   end
 

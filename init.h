@@ -13,6 +13,7 @@ extern char *conf_opt_i;
 extern long conf_opt_l;
 extern long conf_opt_p;
 extern long conf_opt_u;
+extern long conf_opt_t;
 extern long conf_opt_v;
 
 extern char *logs_dir_path;
