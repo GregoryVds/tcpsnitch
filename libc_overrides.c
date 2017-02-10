@@ -241,7 +241,6 @@ ssize_t sendto(int __fd, const void *__buf, size_t __n, int __flags,
 
         ssize_t ret =
             orig_sendto(__fd, __buf, __n, __flags, __addr, __addr_len);
-
         int err = errno;
         if (is_tcp_socket(__fd))
                 tcp_ev_sendto(__fd, ret, err, __n, __flags, __addr, __addr_len);
@@ -286,7 +285,6 @@ ssize_t recvfrom(int __fd, void *__restrict __buf, size_t __n, int __flags,
 
         ssize_t ret =
             orig_recvfrom(__fd, __buf, __n, __flags, __addr, __addr_len);
-
         int err = errno;
         if (is_tcp_socket(__fd))
                 tcp_ev_recvfrom(__fd, ret, err, __n, __flags, __addr,
@@ -416,7 +414,7 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
         return ret;
 }
 
-#endif // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+#endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
 /*
   _   _ _   _ ___ ____ _____ ____       _    ____ ___
@@ -491,38 +489,37 @@ pid_t fork(void) {
         return ret;
 }
 
-typedef int (*orig_dup_type)(int __fd); 
+typedef int (*orig_dup_type)(int __fd);
 orig_dup_type orig_dup;
 
-int dup (int __fd) {
+int dup(int __fd) {
         if (!orig_dup) orig_dup = (orig_dup_type)dlsym(RTLD_NEXT, "dup");
         int ret = orig_dup(__fd);
         if (is_tcp_socket(__fd))
-                LOG(INFO, "dup() called on %d, ret %d.", __fd, ret);
+                LOG(ERROR, "dup() called on socket %d, ret %d.", __fd, ret);
         return ret;
 }
 
 typedef int (*orig_dup2_type)(int __fd, int __fd2);
 orig_dup2_type orig_dup2;
 
-int dup2 (int __fd, int __fd2) {
+int dup2(int __fd, int __fd2) {
         if (!orig_dup2) orig_dup2 = (orig_dup2_type)dlsym(RTLD_NEXT, "dup2");
         int ret = orig_dup2(__fd, __fd2);
         if (is_tcp_socket(__fd))
-                LOG(INFO, "dup2() called on %d-%d, ret %d.", __fd, __fd2, ret);
+                LOG(ERROR, "dup2() called on %d-%d, ret %d.", __fd, __fd2, ret);
         return ret;
 }
-
 
 #ifdef __USE_GNU
 typedef int (*orig_dup3_type)(int __fd, int __fd2, int __flags);
 orig_dup3_type orig_dup3;
 
-int dup3 (int __fd, int __fd2, int __flags) {
+int dup3(int __fd, int __fd2, int __flags) {
         if (!orig_dup3) orig_dup3 = (orig_dup3_type)dlsym(RTLD_NEXT, "dup3");
         int ret = orig_dup3(__fd, __fd2, __flags);
         if (is_tcp_socket(__fd))
-                LOG(INFO, "dup3() called on %d-%d, ret %d.", __fd, __fd2, ret);
+                LOG(ERROR, "dup3() called on %d-%d, ret %d.", __fd, __fd2, ret);
         return ret;
 }
 #endif
