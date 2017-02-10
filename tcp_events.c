@@ -276,7 +276,7 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
-static void tcp_dump_json(TcpConnection *con, bool final) {
+static void tcp_dump_json(TcpConnection *con) {
         if (con->directory == NULL) goto error1;
         LOG_FUNC_D;
 
@@ -292,12 +292,8 @@ static void tcp_dump_json(TcpConnection *con, bool final) {
                 TcpEvent *ev = cur->data;
                 if (!(json_str = alloc_tcp_ev_json(ev))) goto error_out;
 
-                if (ev->id == 0) my_fputs("[\n", fp);
                 my_fputs(json_str, fp);
-                if (final && ev->id + 1 == con->events_count)
-                        my_fputs("\n", fp);
-                else
-                        my_fputs(",\n", fp);
+                my_fputs("\n", fp);
 
                 free(json_str);
                 free_event(cur->data);
@@ -309,7 +305,6 @@ static void tcp_dump_json(TcpConnection *con, bool final) {
         con->tail = NULL;
         con->last_json_dump_evcount = con->events_count;
 
-        if (final) my_fputs("]", fp);
         if (fclose(fp) == EOF) goto error2;
         return;
 error2:
@@ -481,7 +476,7 @@ error_out:
         output_event((TcpEvent *)ev);                                     \
         bool dump_tcp_info =                                              \
             should_dump_tcp_info(con) && ev_type_cons != TCP_EV_TCP_INFO; \
-        if (should_dump_json(con)) tcp_dump_json(con, false);             \
+        if (should_dump_json(con)) tcp_dump_json(con);                    \
         ra_unlock_elem(fd);                                               \
         if (dump_tcp_info) tcp_dump_tcp_info(fd);
 
@@ -768,7 +763,7 @@ void tcp_ev_close(int fd, int return_value, int err, bool detected) {
 
         push_event(con, (TcpEvent *)ev);
         output_event((TcpEvent *)ev);
-        tcp_dump_json(con, true);
+        tcp_dump_json(con);
 
         free_connection(con);
         return;
