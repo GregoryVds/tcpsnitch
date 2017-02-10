@@ -25,8 +25,8 @@ describe 'tcp_spy' do
         { type: TCP_EV_SOCKET }.ignore_extra_keys!,
         { type: TCP_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json(0))
-      assert_json_match(pattern1, read_json(1))
+      assert_json_match(pattern0, read_json_as_array(0))
+      assert_json_match(pattern1, read_json_as_array(1))
     end
 
     it 'should properly handle 2 concurrent connections' do
@@ -39,8 +39,8 @@ describe 'tcp_spy' do
         { type: TCP_EV_SOCKET }.ignore_extra_keys!,
         { type: TCP_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json(0))
-      assert_json_match(pattern1, read_json(1))
+      assert_json_match(pattern0, read_json_as_array(0))
+      assert_json_match(pattern1, read_json_as_array(1))
     end
   end
 
@@ -59,7 +59,7 @@ describe 'tcp_spy' do
           type: String
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -78,7 +78,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -99,7 +99,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -119,7 +119,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -135,7 +135,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -150,7 +150,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -168,7 +168,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -192,7 +192,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -216,7 +216,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -240,7 +240,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -264,7 +264,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -295,7 +295,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -326,7 +326,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -341,7 +341,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -356,7 +356,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -371,7 +371,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -390,7 +390,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -409,7 +409,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 
@@ -455,7 +455,7 @@ describe 'tcp_spy' do
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern, read_json)
+      assert_json_match(pattern, read_json_as_array)
     end
   end
 end

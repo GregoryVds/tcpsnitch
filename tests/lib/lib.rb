@@ -67,8 +67,17 @@ def pcap_file_str(con_id=0)
   con_dir_str(con_id)+PCAP_FILE
 end
 
-def read_json(con_id=0)
+def read_json_trace(con_id=0)
   File.read(json_file_str(con_id))
+end
+
+def wrap_as_array(json_trace)
+  json_trace.split("\n").join(',').insert(0,"[").insert(-1,"]")
+end
+
+# This builds a valid JSON array from the JSON object in the file
+def read_json_as_array(con_id=0)
+  wrap_as_array(read_json_trace(con_id))
 end
 
 ##################

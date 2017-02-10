@@ -11,7 +11,7 @@ def no_error_log(log_file=log_file_str)
   !errors_in_log?(log_file)
 end
 
-def assert_event_present(type, success=true, json=read_json)
+def assert_event_present(type, success=true, json=read_json_as_array)
   pattern =  [
     {
       type: type,
@@ -107,10 +107,10 @@ describe "libc overrides" do
 
     it "socket() should be in JSON for both processes" do 
       run_c_program(prog)
-      dir0 = process_dirs[0]
-      dir1 = process_dirs[1]
-      assert_event_present("socket", true, File.read(dir0+"/0/"+JSON_FILE))
-      assert_event_present("socket", true, File.read(dir1+"/0/"+JSON_FILE))
+      trace1 = File.read(process_dirs[0]+"/0/"+JSON_FILE)
+      trace2 = File.read(process_dirs[1]+"/0/"+JSON_FILE)
+      assert_event_present("socket", true, wrap_as_array(trace1))
+      assert_event_present("socket", true, wrap_as_array(trace2))
     end
   end
 end
