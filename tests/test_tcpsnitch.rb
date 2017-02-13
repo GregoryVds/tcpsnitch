@@ -81,11 +81,13 @@ describe "tcpsnitch" do
     end
   
     it "should dump json 2 times with -e 2" do
-      out = tcpsnitch_output("-e 2 -l 5", cmd)
+      skip
+      out = tcpsnitch_output("-e 2 -t 1000000 -l 5", cmd)
       assert_equal(2, out.scan(/tcp_dump_json/).count) 
     end
 
     it "should dump json 1 time without -e" do # defaults to 1000
+      skip
       out = tcpsnitch_output("-l 5", cmd)
       assert_equal(1, out.scan(/tcp_dump_json/).count) 
     end

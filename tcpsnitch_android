@@ -13,7 +13,7 @@ OPT_C=0
 OPT_D=""
 OPT_E=1024
 OPT_F=2
-OPT_L=0
+OPT_L=2
 OPT_P=0
 OPT_U=0
 OPT_T=1000
@@ -32,7 +32,7 @@ usage() {
         echo "-e <events> dump to JSON file every <events> (def. 1024)."
         echo "-f <lvl>    verbosity of logs to file (0 to 5, defaults to 2)."
         echo "-h          show this help text."
-        echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 0)."  
+        echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 2)."  
         echo "-p          activate pretty print of JSON traces."
         echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
         echo "-u <usec>   dump tcp_info every <usec> (0 means NO dump, def 0)."

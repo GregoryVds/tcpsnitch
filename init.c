@@ -141,17 +141,17 @@ static void get_options(void) {
 }
 
 static void log_options(void) {
-        LOG(WARN, "Option b: %lu.", conf_opt_b);
-        LOG(WARN, "Option c: %lu.", conf_opt_c);
-        LOG(WARN, "Option d: %s", conf_opt_d);
-        LOG(WARN, "Option e: %lu.", conf_opt_e);
-        LOG(WARN, "Option f: %lu.", conf_opt_f);
-        LOG(WARN, "Option i: %s.", conf_opt_i);
-        LOG(WARN, "Option l: %lu.", conf_opt_l);
-        LOG(WARN, "Option p: %lu.", conf_opt_p);
-        LOG(WARN, "Option u: %lu.", conf_opt_u);
-        LOG(WARN, "Option t: %lu.", conf_opt_t);
-        LOG(WARN, "Option v: %lu.", conf_opt_v);
+        LOG(INFO, "Option b: %lu.", conf_opt_b);
+        LOG(INFO, "Option c: %lu.", conf_opt_c);
+        LOG(INFO, "Option d: %s", conf_opt_d);
+        LOG(INFO, "Option e: %lu.", conf_opt_e);
+        LOG(INFO, "Option f: %lu.", conf_opt_f);
+        LOG(INFO, "Option i: %s.", conf_opt_i);
+        LOG(INFO, "Option l: %lu.", conf_opt_l);
+        LOG(INFO, "Option p: %lu.", conf_opt_p);
+        LOG(INFO, "Option u: %lu.", conf_opt_u);
+        LOG(INFO, "Option t: %lu.", conf_opt_t);
+        LOG(INFO, "Option v: %lu.", conf_opt_v);
 }
 
 static void init_logs(void) {

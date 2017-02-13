@@ -415,7 +415,7 @@ describe 'tcp_spy' do
 
   describe "a #{TCP_EV_TCP_INFO} event" do
     it "#{TCP_EV_TCP_INFO} should have the correct JSON fields" do
-      tcpsnitch("-u 0 -b 0 -d #{TEST_DIR}", './c_programs/*socket.out')
+      tcpsnitch("-u 1 -d #{TEST_DIR}", './c_programs/*socket.out')
       pattern = [
         {
           type: TCP_EV_TCP_INFO,
