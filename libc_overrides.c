@@ -4,30 +4,6 @@
  * Date: October, 2016
  */
 
-/*
- * This file contains all (and the only) symbols that should be exposed by
- * the NETSPY library. Those symbols are most of the networking related
- * functions from the C standard librairies.
- *
- * NETSPY works by intercepting all calls to theses functions and by performing
- * custom processing before and/or after calling the real implementation. This
- * will prove valuable when trying the model the network behaviour of
- * applications.
- *
- * On Linux, NETSPY works using LD_PRELOAD. This environnement variable tells
- * the linker to automatically link librairies in LD_PRELOAD BEFORE any other
- * dynamic librairy. When multiple librairies which define the same symbol are
- * linked, the first one to be linked gets the precedence. This way, we can
- * effectively override any function from the C standard library. We then use
- * the dynamic linking library <dlfcn.h> to get a reference to the original
- * implementation and call it.
- *
- * NETPSY has currently only been tested on Linux with the glibc implementation
- * of the C standard librairies. We mainly override Posix functions, but also
- * some Linux specific functions such sendfile().
- *
- */
-
 #define _GNU_SOURCE
 
 #include "lib.h"
@@ -425,7 +401,7 @@ int recvmmsg(int __fd, struct mmsghdr *__vmessages, unsigned int __vlen,
 
  unistd.h - standard symbolic constants and types
 
- functions: write(), read(), close(), fork().
+ functions: write(), read(), close(), fork(), dup(), dup2(), dup3()
 
 */
 
@@ -568,6 +544,40 @@ ssize_t readv(int __fd, const struct iovec *__iovec, int __count) {
 
         errno = err;
         return ret;
+}
+
+/*
+  ___ ___   ____ _____ _     
+ |_ _/ _ \ / ___|_   _| |    
+  | | | | | |     | | | |    
+  | | |_| | |___  | | | |___ 
+ |___\___/ \____| |_| |_____|
+                             
+  sys/ioctl.h - control device
+
+  functions: ioctl()
+*/
+
+typedef int (*orig_ioctl_type)(int __fd, unsigned long int __request, ...);
+
+orig_ioctl_type orig_ioctl;
+
+int ioctl(int __fd, unsigned long int __request, ...) {
+	va_list argp;
+	va_start(argp, __request);
+	void *value = va_arg(argp, void *);
+	va_end(argp);
+
+	if (!orig_ioctl)
+		orig_ioctl = (orig_ioctl_type)dlsym(RTLD_NEXT, "ioctl");
+
+	int ret = orig_ioctl(__fd, __request, value);
+	int err = errno;
+	if (is_tcp_socket(__fd))
+                LOG(ERROR, "ioctl() on socket %d.", __fd);
+
+	errno = err;
+	return ret;
 }
 
 /*
