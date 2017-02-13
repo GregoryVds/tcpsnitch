@@ -17,6 +17,7 @@
 #define OPT_F "be.ucl.tcpsnitch.opt_f"
 #define OPT_L "be.ucl.tcpsnitch.opt_l"
 #define OPT_P "be.ucl.tcpsnitch.opt_p"
+#define OPT_T "be.ucl.tcpsnitch.opt_t"
 #define OPT_U "be.ucl.tcpsnitch.opt_u"
 #define OPT_V "be.ucl.tcpsnitch.opt_v"
 #else
@@ -28,6 +29,7 @@
 #define OPT_I "TCPSNITCH_OPT_I"
 #define OPT_L "TCPSNITCH_OPT_L"
 #define OPT_P "TCPSNITCH_OPT_P"
+#define OPT_T "TCPSNITCH_OPT_T"
 #define OPT_U "TCPSNITCH_OPT_U"
 #define OPT_V "TCPSNITCH_OPT_V"
 #endif

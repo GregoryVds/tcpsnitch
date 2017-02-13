@@ -304,6 +304,7 @@ static void tcp_dump_json(TcpConnection *con) {
         con->head = NULL;
         con->tail = NULL;
         con->last_json_dump_evcount = con->events_count;
+        con->last_json_dump_micros = get_time_micros();
 
         if (fclose(fp) == EOF) goto error2;
         return;
@@ -362,26 +363,26 @@ error_out:
 }
 
 static bool should_dump_tcp_info(const TcpConnection *con) {
-        /* Check if time lower bound is set, otherwise assume no lower bound */
         if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
-                if (time_elasped < conf_opt_u) return false;
+                if (time_elasped > conf_opt_u) return true;
         }
 
-        /* Check if bytes lower bound set, otherwise assume no lower bound */
         if (conf_opt_b > 0) {
                 long cur_bytes = con->bytes_sent + con->bytes_received;
                 long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
-                if (bytes_elapsed < conf_opt_b) return false;
+                if (bytes_elapsed > conf_opt_b) return true;
         }
 
-        /* If we reach this point, no lower bound prevents from dumping */
-        return true;
+        return false;
 }
 
 static bool should_dump_json(const TcpConnection *con) {
-        return con->events_count - con->last_json_dump_evcount >= conf_opt_e;
+        long cur_time = get_time_micros();
+        long time_elasped = cur_time - con->last_json_dump_micros;
+        return (time_elasped > conf_opt_t * 1000 ||
+                con->events_count - con->last_json_dump_evcount >= conf_opt_e);
 }
 
 /* Public functions */
