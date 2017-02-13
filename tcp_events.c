@@ -29,6 +29,11 @@
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 #endif
 
+typedef struct {
+        bool *switch_flag;
+        int con_fd;
+} JSONDumperThreadArgs;
+
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 static int connections_count = 0;
 
@@ -276,10 +281,45 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
+#define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
+#define MAX_PORT 60999
+static int force_bind(int fd, TcpConnection *con, bool IPV6) {
+        LOG(INFO, "Forcing bind on connection %d.", con->id);
+        LOG_FUNC_D;
+        con->force_bind = true;
+
+        for (int port = MIN_PORT; port <= MAX_PORT; port++) {
+                int rc;
+                if (IPV6) {
+                        struct sockaddr_in6 a;
+                        a.sin6_family = AF_INET6;
+                        a.sin6_port = htons(port);  // Any port
+                        a.sin6_addr = in6addr_any;
+                        rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
+                } else {
+                        struct sockaddr_in a;
+                        a.sin_family = AF_INET;
+                        a.sin_port = htons(port);
+                        a.sin_addr.s_addr = INADDR_ANY;
+                        rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
+                }
+                if (rc == 0) return 0;                 // Sucessfull bind. Stop.
+                if (errno != EADDRINUSE) goto error1;  // Unexpected error.
+                // Expected error EADDRINUSE. Try next port.
+        }
+        // Could not bind if we reach this point.
+        goto error_out;
+error1:
+        LOG(ERROR, "bind() failed. %s.", strerror(errno));
+        goto error_out;
+error_out:
+        LOG_FUNC_FAIL;
+        return -1;
+}
+
 static void tcp_dump_json(TcpConnection *con) {
         if (con->directory == NULL) goto error1;
         LOG_FUNC_D;
-
         char *json_str, *json_file_str;
 
         if (!(json_file_str = alloc_json_path_str(con))) goto error_out;
@@ -318,48 +358,42 @@ error_out:
         return;
 }
 
+static void *json_dumper_thread(void *params) {
+        LOG_FUNC_D;
+        JSONDumperThreadArgs *args = (JSONDumperThreadArgs *)params;
+
+        struct timespec time;
+        time.tv_sec = conf_opt_t / 1000;
+        time.tv_nsec = (conf_opt_t % 1000) * 1000 * 1000;  // opt_t is in ms
+
+        while (*args->switch_flag) {
+                nanosleep(&time, NULL);
+                TcpConnection *con = ra_get_and_lock_elem(args->con_fd);
+                if (!con) goto out;
+                tcp_dump_json(con);
+                ra_unlock_elem(args->con_fd);
+        }
+        goto out;
+out:
+        LOG(WARN, "json_dumper_thread for fd %d terminated.", args->con_fd);
+        free(args->switch_flag);
+        free(args);
+        return NULL;
+}
+
+static bool should_dump_json(const TcpConnection *con) {
+        long cur_time = get_time_micros();
+        long time_elasped = cur_time - con->last_json_dump_micros;
+        return (time_elasped > conf_opt_t * 1000 ||
+                con->events_count - con->last_json_dump_evcount >= conf_opt_e);
+}
+
 static void tcp_dump_tcp_info(int fd) {
         struct tcp_info *info =
             (struct tcp_info *)malloc(sizeof(struct tcp_info));
         int ret = fill_tcp_info(fd, info);
         int err = errno;
         tcp_ev_tcp_info(fd, ret, err, info);
-}
-
-#define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
-#define MAX_PORT 60999
-static int force_bind(int fd, TcpConnection *con, bool IPV6) {
-        LOG(INFO, "Forcing bind on connection %d.", con->id);
-        LOG_FUNC_D;
-        con->force_bind = true;
-
-        for (int port = MIN_PORT; port <= MAX_PORT; port++) {
-                int rc;
-                if (IPV6) {
-                        struct sockaddr_in6 a;
-                        a.sin6_family = AF_INET6;
-                        a.sin6_port = htons(port);  // Any port
-                        a.sin6_addr = in6addr_any;
-                        rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
-                } else {
-                        struct sockaddr_in a;
-                        a.sin_family = AF_INET;
-                        a.sin_port = htons(port);
-                        a.sin_addr.s_addr = INADDR_ANY;
-                        rc = bind(fd, (struct sockaddr *)&a, sizeof(a));
-                }
-                if (rc == 0) return 0;                 // Sucessfull bind. Stop.
-                if (errno != EADDRINUSE) goto error1;  // Unexpected error.
-                // Expected error EADDRINUSE. Try next port.
-        }
-        // Could not bind if we reach this point.
-        goto error_out;
-error1:
-        LOG(ERROR, "bind() failed. %s.", strerror(errno));
-        goto error_out;
-error_out:
-        LOG_FUNC_FAIL;
-        return -1;
 }
 
 static bool should_dump_tcp_info(const TcpConnection *con) {
@@ -376,13 +410,6 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
         }
 
         return false;
-}
-
-static bool should_dump_json(const TcpConnection *con) {
-        long cur_time = get_time_micros();
-        long time_elasped = cur_time - con->last_json_dump_micros;
-        return (time_elasped > conf_opt_t * 1000 ||
-                con->events_count - con->last_json_dump_evcount >= conf_opt_e);
 }
 
 /* Public functions */
@@ -437,6 +464,32 @@ error_out:
         return;
 }
 
+void start_json_dumper_thread(TcpConnection *con, int fd) {
+        bool *json_dump_switch = (bool *)my_malloc(sizeof(bool));
+        if (!json_dump_switch) goto error_out;
+        *json_dump_switch = true;
+
+        JSONDumperThreadArgs *args =
+            (JSONDumperThreadArgs *)my_malloc(sizeof(JSONDumperThreadArgs));
+        if (!args) goto error1;
+
+        args->con_fd = fd;
+        args->switch_flag = json_dump_switch;
+        con->json_dump_switch = json_dump_switch;
+
+        pthread_t thread;
+        int rc = pthread_create(&thread, NULL, json_dumper_thread, args);
+        if (rc) goto error2;
+        return;
+error2:
+        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
+        free(args);
+error1:
+        free(json_dump_switch);
+error_out:
+        LOG_FUNC_FAIL;
+}
+
 #define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                 \
         init_tcpsnitch();                                                     \
         TcpConnection *con = NULL;                                            \
@@ -461,6 +514,7 @@ error_out:
                         LOG_FUNC_FAIL;                                        \
                         return;                                               \
                 }                                                             \
+                if (conf_opt_t) start_json_dumper_thread(con, fd);            \
         }                                                                     \
         const char *ev_name = string_from_tcp_event_type(ev_type_cons);       \
         LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);      \
@@ -590,13 +644,17 @@ void tcp_ev_accept(int fd, int return_value, int err, struct sockaddr *addr,
         // Create new connection
         TcpConnection *new_con = alloc_connection();
         if (!new_con) goto error;
+        if (!ra_put_elem(return_value, new_con)) goto error;
+        new_con = NULL;
+
+        new_con = ra_get_and_lock_elem(fd);
+        if (conf_opt_t) start_json_dumper_thread(new_con, fd);
         TcpEvAccept *new_ev =
             (TcpEvAccept *)alloc_event(TCP_EV_ACCEPT, return_value, err, 0);
         memcpy(&new_ev, &ev, sizeof(TcpEvAccept));
         push_event(new_con, (TcpEvent *)new_ev);
         output_event((TcpEvent *)new_ev);
         if (!ra_put_elem(return_value, new_con)) goto error;
-
         TCP_EV_POSTLUDE(TCP_EV_ACCEPT);
 error:
         LOG_FUNC_FAIL;

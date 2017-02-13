@@ -136,8 +136,22 @@ static void get_options(void) {
         conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
         conf_opt_p = get_long_opt_or_defaultval(OPT_P, 0);
         conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
-        conf_opt_u = get_long_opt_or_defaultval(OPT_T, 1000);
+        conf_opt_t = get_long_opt_or_defaultval(OPT_T, 1000);
         conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
+}
+
+static void log_options(void) {
+        LOG(WARN, "Option b: %lu.", conf_opt_b);
+        LOG(WARN, "Option c: %lu.", conf_opt_c);
+        LOG(WARN, "Option d: %s", conf_opt_d);
+        LOG(WARN, "Option e: %lu.", conf_opt_e);
+        LOG(WARN, "Option f: %lu.", conf_opt_f);
+        LOG(WARN, "Option i: %s.", conf_opt_i);
+        LOG(WARN, "Option l: %lu.", conf_opt_l);
+        LOG(WARN, "Option p: %lu.", conf_opt_p);
+        LOG(WARN, "Option u: %lu.", conf_opt_u);
+        LOG(WARN, "Option t: %lu.", conf_opt_t);
+        LOG(WARN, "Option v: %lu.", conf_opt_v);
 }
 
 static void init_logs(void) {
@@ -200,6 +214,7 @@ void init_tcpsnitch(void) {
         get_options();
         if (!(logs_dir_path = create_logs_dir_at_path(conf_opt_d))) goto exit1;
         init_logs();
+        log_options();
         goto exit;
 exit1:
         LOG(ERROR, "Nothing will be written to file (log, pcap, json).");

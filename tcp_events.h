@@ -238,6 +238,7 @@ typedef struct {
         TcpEventNode *tail;  // Tail for list of events.
         // Others
         int id;
+        int fd;
         long events_count;
         unsigned long bytes_sent;      // Total bytes sent.
         unsigned long bytes_received;  // Total bytes received.
@@ -250,6 +251,7 @@ typedef struct {
         struct sockaddr_storage bound_addr;
         int rtt;
         bool *capture_switch;
+        bool *json_dump_switch;
 } TcpConnection;
 
 const char *string_from_tcp_event_type(TcpEventType type);
