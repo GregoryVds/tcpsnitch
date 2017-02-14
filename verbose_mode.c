@@ -102,6 +102,10 @@ static void output_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
 }
 #endif
 
+static void output_ev_getsockname(const TcpEvGetsockname *ev) {
+        OUTPUT_EV("getsockname()=%d", ev->super.return_value);
+}
+
 static void output_ev_write(const TcpEvWrite *ev) {
         OUTPUT_EV("write()=%d", ev->super.return_value);
 }
@@ -136,6 +140,26 @@ static void output_ev_readv(const TcpEvReadv *ev) {
 
 static void output_ev_ioctl(const TcpEvIoctl *ev) {
         OUTPUT_EV("iotctl()=%d", ev->super.return_value);
+}
+
+static void output_ev_sendfile(const TcpEvSendfile *ev) {
+        OUTPUT_EV("sendfile()=%d", ev->super.return_value);
+}
+
+static void output_ev_poll(const TcpEvPoll *ev) {
+        OUTPUT_EV("poll()=%d", ev->super.return_value);
+}
+
+static void output_ev_ppoll(const TcpEvPpoll *ev) {
+        OUTPUT_EV("ppoll()=%d", ev->super.return_value);
+}
+
+static void output_ev_select(const TcpEvSelect *ev) {
+        OUTPUT_EV("select()=%d", ev->super.return_value);
+}
+
+static void output_ev_pselect(const TcpEvPselect *ev) {
+        OUTPUT_EV("pselect()=%d", ev->super.return_value);
 }
 
 static void output_ev_tcpinfo(const TcpEvTcpInfo *ev) {
@@ -199,6 +223,9 @@ void output_event(const TcpEvent *ev) {
                         output_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
 #endif
+		case TCP_EV_GETSOCKNAME:
+			output_ev_getsockname((const TcpEvGetsockname *)ev);
+			break;
                 case TCP_EV_DUP:
                         output_ev_dup((const TcpEvDup *)ev);
                         break;
@@ -225,6 +252,21 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_IOCTL:
                         output_ev_ioctl((const TcpEvIoctl *)ev);
+                        break;
+	        case TCP_EV_SENDFILE:
+                        output_ev_sendfile((const TcpEvSendfile *)ev);
+                        break;
+                case TCP_EV_POLL:
+                        output_ev_poll((const TcpEvPoll *)ev);
+                        break;
+                case TCP_EV_PPOLL:
+                        output_ev_ppoll((const TcpEvPpoll *)ev);
+                        break;
+                case TCP_EV_SELECT:
+                        output_ev_select((const TcpEvSelect *)ev);
+                        break;
+                case TCP_EV_PSELECT:
+                        output_ev_pselect((const TcpEvPselect *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         output_ev_tcpinfo((const TcpEvTcpInfo *)ev);

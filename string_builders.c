@@ -15,7 +15,7 @@
 char *alloc_ip_str(const struct sockaddr *addr) {
         static const int ADDR_WIDTH = 40;
 
-        char *addr_str = (char *)my_calloc(sizeof(char), ADDR_WIDTH);
+        char *addr_str = (char *)my_calloc(sizeof(char) * ADDR_WIDTH);
         if (!addr_str) goto error_out;
 
         // Convert host from network to printable
@@ -47,7 +47,7 @@ error_out:
 char *alloc_port_str(const struct sockaddr *addr) {
         static const int PORT_WIDTH = 6;
 
-        char *port_str = (char *)my_calloc(sizeof(char), PORT_WIDTH);
+        char *port_str = (char *)my_calloc(sizeof(char) * PORT_WIDTH);
         if (!port_str) goto error_out;
 
         // Convert port to string
@@ -84,7 +84,7 @@ char *alloc_addr_str(const struct sockaddr *addr) {
         static const int n = 46;  // ADDR:PORT\0
 
         char *addr_str, *host_str, *port_str;
-        if (!(addr_str = (char *)my_calloc(sizeof(char), n))) goto error_out;
+        if (!(addr_str = (char *)my_calloc(sizeof(char) * n))) goto error_out;
         if (!(host_str = alloc_ip_str(addr))) goto error1;
         if (!(port_str = alloc_port_str(addr))) goto error2;
 
@@ -163,7 +163,7 @@ char *alloc_dirname_str(void) {
         int pid_len = get_int_len(pid);
         int n = app_name_len + timestamp_len + pid_len + 3;  // 3 '_','_','\0'
 
-        char *str = (char *)my_calloc(sizeof(char), n);
+        char *str = (char *)my_calloc(sizeof(char) * n);
         if (!str) goto error;
 
         // Build string
@@ -258,7 +258,7 @@ char *alloc_kernel_str(void) {
         if (!fp) goto error1;
 
         // Read output into kernel_str
-        char *kernel_str = (char *)my_calloc(sizeof(char), kernel_width);
+        char *kernel_str = (char *)my_calloc(sizeof(char) * kernel_width);
         if (!kernel_str) goto error2;
         if (!fgets(kernel_str, kernel_width, fp)) goto error3;
 

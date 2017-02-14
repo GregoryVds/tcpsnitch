@@ -43,7 +43,7 @@ static int connections_count = 0;
 
 static TcpConnection *alloc_connection(void) {
 	TcpConnection *con;
-	if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection), 1)))
+	if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection))))
 		goto error;
 
 	// Get & increment connections_count
@@ -66,110 +66,134 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
 	TcpEvent *ev;
 	switch (type) {
 		case TCP_EV_SOCKET:
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSocket), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSocket));
 			success = (return_value != 0);
 			break;
 		case TCP_EV_BIND:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvBind), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvBind));
 			break;
 		case TCP_EV_CONNECT:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvConnect), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvConnect));
 			break;
 		case TCP_EV_SHUTDOWN:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvShutdown), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvShutdown));
 			break;
 		case TCP_EV_LISTEN:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvListen), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvListen));
 			break;
 		case TCP_EV_ACCEPT:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvAccept), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvAccept));
 			break;
 		case TCP_EV_GETSOCKOPT:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvGetsockopt), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvGetsockopt));
 			break;
 		case TCP_EV_SETSOCKOPT:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSetsockopt), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSetsockopt));
 			break;
 		case TCP_EV_SEND:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSend), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSend));
 			break;
 		case TCP_EV_RECV:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecv), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecv));
 			break;
 		case TCP_EV_SENDTO:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendto), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendto));
 			break;
 		case TCP_EV_RECVFROM:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvfrom), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvfrom));
 			break;
 		case TCP_EV_SENDMSG:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmsg), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmsg));
 			break;
 		case TCP_EV_RECVMSG:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmsg), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmsg));
 			break;
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 		case TCP_EV_SENDMMSG:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmmsg), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendmmsg));
 			break;
 		case TCP_EV_RECVMMSG:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmmsg), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRecvmmsg));
 			break;
 #endif
+                case TCP_EV_GETSOCKNAME:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvGetsockname));
+			break;
 		case TCP_EV_WRITE:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvWrite), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvWrite));
 			break;
 		case TCP_EV_READ:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRead), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvRead));
 			break;
 		case TCP_EV_CLOSE:
 			success = (return_value == 0);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvClose), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvClose));
 			break;
 		case TCP_EV_DUP:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup));
 			break;
 		case TCP_EV_DUP2:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup2), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup2));
 			break;
 		case TCP_EV_DUP3:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup3), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvDup3));
 			break;
 		case TCP_EV_WRITEV:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvWritev), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvWritev));
 			break;
 		case TCP_EV_READV:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvReadv), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvReadv));
 			break;
 		case TCP_EV_IOCTL:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvIoctl), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvIoctl));
+			break;
+                case TCP_EV_SENDFILE:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSendfile));
+			break;
+                case TCP_EV_POLL:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvPoll));
+			break;
+                case TCP_EV_PPOLL:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvPpoll));
+			break;
+                case TCP_EV_SELECT:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvSelect));
+			break;
+                case TCP_EV_PSELECT:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvPselect));
 			break;
 		case TCP_EV_TCP_INFO:
 			success = (return_value != -1);
-			ev = (TcpEvent *)my_calloc(sizeof(TcpEvTcpInfo), 1);
+			ev = (TcpEvent *)my_calloc(sizeof(TcpEvTcpInfo));
 			break;
 	}
 	if (!ev) goto error;

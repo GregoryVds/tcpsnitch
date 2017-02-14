@@ -21,7 +21,7 @@ static int size = 0;
 // Private functions
 
 ElemWrapper **allocate_array(int _size) {
-        return (ElemWrapper **)my_calloc(1, sizeof(ElemWrapper *) * _size);
+        return (ElemWrapper **)my_calloc(sizeof(ElemWrapper *) * _size);
 }
 
 static bool init(int init_size) {

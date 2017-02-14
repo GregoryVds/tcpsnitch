@@ -298,6 +298,11 @@ static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
 }
 #endif
 
+static json_t *build_tcp_ev_getsockname(const TcpEvGetsockname *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
@@ -367,6 +372,31 @@ static json_t *build_tcp_ev_ioctl(const TcpEvIoctl *ev) {
 
         add(json_details, "request", json_integer(ev->request));
 
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_sendfile(const TcpEvSendfile *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_poll(const TcpEvPoll *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_ppoll(const TcpEvPpoll *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_select(const TcpEvSelect *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_pselect(const TcpEvPselect *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         return json_ev;
 }
 
@@ -475,6 +505,9 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         r = build_tcp_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
 #endif
+                case TCP_EV_GETSOCKNAME:
+                        r = build_tcp_ev_getsockname((const TcpEvGetsockname *)ev);
+                        break;
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((const TcpEvWrite *)ev);
                         break;
@@ -501,6 +534,21 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         break;
                 case TCP_EV_IOCTL:
                         r = build_tcp_ev_ioctl((const TcpEvIoctl *)ev);
+                        break;
+                case TCP_EV_SENDFILE:
+                        r = build_tcp_ev_sendfile((const TcpEvSendfile *)ev);
+                        break;
+                case TCP_EV_POLL:
+                        r = build_tcp_ev_poll((const TcpEvPoll *)ev);
+                        break;
+                case TCP_EV_PPOLL:
+                        r = build_tcp_ev_ppoll((const TcpEvPpoll *)ev);
+                        break;
+                case TCP_EV_SELECT:
+                        r = build_tcp_ev_select((const TcpEvSelect *)ev);
+                        break;
+                case TCP_EV_PSELECT:
+                        r = build_tcp_ev_pselect((const TcpEvPselect *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         r = build_tcp_ev_tcp_info((const TcpEvTcpInfo *)ev);

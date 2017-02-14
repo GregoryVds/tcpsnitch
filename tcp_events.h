@@ -28,6 +28,7 @@ typedef enum TcpEventType {
 	TCP_EV_SENDMMSG,
 	TCP_EV_RECVMMSG,
 #endif
+	TCP_EV_GETSOCKNAME,
 	// unistd.h
 	TCP_EV_WRITE,
 	TCP_EV_READ,
@@ -40,6 +41,14 @@ typedef enum TcpEventType {
 	TCP_EV_READV,
 	// sys/ioctl.h
 	TCP_EV_IOCTL,
+	// sendfile.h
+	TCP_EV_SENDFILE,
+	// poll.h
+	TCP_EV_POLL,
+	TCP_EV_PPOLL,
+	// sys/select.h
+	TCP_EV_SELECT,
+	TCP_EV_PSELECT,
 	// others
 	TCP_EV_TCP_INFO
 } TcpEventType;
@@ -210,6 +219,11 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
+	TcpAddr addr;
+} TcpEvGetsockname;
+
+typedef struct {
+	TcpEvent super;
 	size_t bytes;
 } TcpEvWrite;
 
@@ -256,6 +270,57 @@ typedef struct {
 	unsigned long int request;
 #endif
 } TcpEvIoctl;
+
+typedef struct {
+	TcpEvent super;
+	size_t bytes;
+} TcpEvSendfile;
+
+typedef struct {
+	bool pollin;
+	bool pollpri;
+	bool pollout;
+	bool pollrdhup;
+	bool pollerr;
+	bool pollhup;
+	bool pollinval;
+} TcpPollEvents;
+
+typedef struct {
+	TcpEvent super;
+	int timeout;
+	TcpPollEvents requested_events;
+	TcpPollEvents returned_events;
+} TcpEvPoll;
+
+typedef struct {
+	TcpEvent super;
+	struct timespec timeout;
+	TcpPollEvents requested_events;
+	TcpPollEvents returned_events;
+} TcpEvPpoll;
+
+typedef struct {
+	TcpEvent super;
+	struct timeval timeout;
+	bool requested_read;
+	bool requested_write;
+	bool requested_except;
+	bool returned_read;
+	bool returned_write;
+	bool returned_except;
+} TcpEvSelect;
+
+typedef struct {
+	TcpEvent super;
+	struct timespec timeout;
+	bool requested_read;
+	bool requested_write;
+	bool requested_except;
+	bool returned_read;
+	bool returned_write;
+	bool returned_except;
+} TcpEvPselect;
 
 typedef struct {
 	TcpEvent super;
@@ -353,6 +418,9 @@ void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 		     unsigned int vlen, int flags, const struct timespec *tmo);
 #endif
 
+void tcp_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
+			socklen_t *addrlen);
+
 void tcp_ev_write(int fd, int ret, int err, size_t bytes);
 
 void tcp_ev_read(int fd, int ret, int err, size_t bytes);
@@ -376,6 +444,22 @@ void tcp_ev_ioctl(int fd, int ret, int err, int request);
 #else
 void tcp_ev_ioctl(int fd, int ret, int err, unsigned long int request);
 #endif
+
+void tcp_ev_sendfile(int fd, int ret, int err, size_t bytes);
+
+void tcp_ev_poll(int fd, int ret, int err, short requested_events,
+		 short returned_event, int timeout);
+
+void tcp_ev_ppoll(int fd, int ret, int err, short requested_events,
+		  short returned_event, const struct timespec *timeout);
+
+void tcp_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
+		   bool req_except, bool ret_read, bool ret_write,
+		   bool ret_except, struct timeval *timeout);
+
+void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
+		    bool req_except, bool ret_read, bool ret_write,
+		    bool ret_except, const struct timespec *timeout);
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 

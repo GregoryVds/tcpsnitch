@@ -259,8 +259,8 @@ error:
 	return NULL;
 }
 
-void *my_calloc(size_t nmemb, size_t size) {
-	void *ret = calloc(nmemb, size);
+void *my_calloc(size_t size) {
+	void *ret = calloc(size, 1);
 	if (!ret) goto error;
 	return ret;
 error:

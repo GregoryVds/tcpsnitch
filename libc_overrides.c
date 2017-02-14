@@ -410,8 +410,7 @@ int getsockname(int fd, struct sockaddr *addr, socklen_t *len) {
 
 	int ret = orig_getsockname(fd, addr, len);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		LOG(ERROR, "getsockname() on %d not implemented.", fd);
+	if (is_tcp_socket(fd)) tcp_ev_getsockname(fd, ret, err, addr, len);
 
 	errno = err;
 	return ret;
@@ -639,10 +638,12 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count) {
 		orig_sendfile =
 		    (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
-	if (is_tcp_socket(out_fd))
-		LOG(WARN, "NOT IMPLEMENTED: sendfile() on socket %d", out_fd);
+	int ret = orig_sendfile(out_fd, in_fd, offset, count);
+	int err = errno;
+	if (is_tcp_socket(out_fd)) tcp_ev_sendfile(out_fd, ret, err, count);
 
-	return orig_sendfile(out_fd, in_fd, offset, count);
+	errno = err;
+	return ret;
 }
 
 /*
@@ -664,13 +665,18 @@ orig_poll_type orig_poll;
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 	if (!orig_poll) orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
 
+	int ret = orig_poll(fds, nfds, timeout);
+	int err = errno;
 	unsigned long i;
 	for (i = 0; i < nfds; i++) {
 		struct pollfd pollfd = fds[i];
 		if (is_tcp_socket(pollfd.fd))
-			LOG(INFO, "poll() on socket %d", pollfd.fd);
+			tcp_ev_poll(pollfd.fd, ret, err, pollfd.events,
+				    pollfd.revents, timeout);
 	}
-	return orig_poll(fds, nfds, timeout);
+
+	errno = err;
+	return ret;
 }
 
 typedef int (*orig_ppoll_type)(struct pollfd *fds, nfds_t nfds,
@@ -684,13 +690,18 @@ int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
 	if (!orig_ppoll)
 		orig_ppoll = (orig_ppoll_type)dlsym(RTLD_NEXT, "ppoll");
 
+	int ret = orig_ppoll(fds, nfds, tmo_p, sigmask);
+	int err = errno;
 	unsigned long i;
 	for (i = 0; i < nfds; i++) {
 		struct pollfd pollfd = fds[i];
 		if (is_tcp_socket(pollfd.fd))
-			LOG(INFO, "ppoll() on socket %d", pollfd.fd);
+			tcp_ev_ppoll(pollfd.fd, ret, err, pollfd.events,
+				     pollfd.revents, tmo_p);
 	}
-	return orig_ppoll(fds, nfds, tmo_p, sigmask);
+
+	errno = err;
+	return ret;
 }
 
 /*
@@ -710,26 +721,51 @@ typedef int (*orig_select_type)(int nfds, fd_set *readfds, fd_set *writefds,
 
 orig_select_type orig_select;
 
+#define READ_FLAG 0b1
+#define WRITE_FLAG 0b10
+#define EXCEPT_FLAG 0b100
+
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	   struct timeval *timeout) {
 	if (!orig_select)
 		orig_select = (orig_select_type)dlsym(RTLD_NEXT, "select");
 
+	short req_ev[nfds - 1];
+	memset(req_ev, 0, sizeof(req_ev));
+
 	int fd;
 	for (fd = 0; fd < nfds; fd++) {
 		if (is_tcp_socket(fd)) {
-			bool read = FD_ISSET(fd, readfds);
-			bool write = FD_ISSET(fd, writefds);
-			bool except = FD_ISSET(fd, exceptfds);
-			LOG(ERROR, "select() on %d (%d,%d,%d)", fd, read, write,
-			    except);
+			if (FD_ISSET(fd, readfds))
+				(req_ev[fd] = req_ev[fd] | READ_FLAG);
+			if (FD_ISSET(fd, writefds))
+				(req_ev[fd] = req_ev[fd] | WRITE_FLAG);
+			if (FD_ISSET(fd, exceptfds))
+				(req_ev[fd] = req_ev[fd] | EXCEPT_FLAG);
 		}
 	}
-	return orig_select(nfds, readfds, writefds, exceptfds, timeout);
+
+	int ret = orig_select(nfds, readfds, writefds, exceptfds, timeout);
+	int err = errno;
+
+	for (fd = 0; fd < nfds; fd++) {
+		if (is_tcp_socket(fd) &&
+		    req_ev[fd]) {  // Socket was in initial call
+			tcp_ev_select(fd, ret, err, (req_ev[fd] | READ_FLAG),
+				      (req_ev[fd] | WRITE_FLAG),
+				      (req_ev[fd] | EXCEPT_FLAG),
+				      FD_ISSET(fd, readfds),
+				      FD_ISSET(fd, writefds),
+				      FD_ISSET(fd, exceptfds), timeout);
+		}
+	}
+
+	return ret;
 }
 
 typedef int (*orig_pselect_type)(int nfds, fd_set *readfds, fd_set *writefds,
-				 fd_set *exceptfds, const struct timespec *timeout,
+				 fd_set *exceptfds,
+				 const struct timespec *timeout,
 				 const sigset_t *sigmask);
 
 orig_pselect_type orig_pselect;
@@ -739,15 +775,36 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	if (!orig_pselect)
 		orig_pselect = (orig_pselect_type)dlsym(RTLD_NEXT, "pselect");
 
+	short req_ev[nfds - 1];
+	memset(req_ev, 0, sizeof(req_ev));
+
 	int fd;
 	for (fd = 0; fd < nfds; fd++) {
 		if (is_tcp_socket(fd)) {
-			bool read = FD_ISSET(fd, readfds);
-			bool write = FD_ISSET(fd, writefds);
-			bool except = FD_ISSET(fd, exceptfds);
-			LOG(ERROR, "select() on %d (%d,%d,%d)", fd, read, write,
-			    except);
+			if (FD_ISSET(fd, readfds))
+				(req_ev[fd] = req_ev[fd] | READ_FLAG);
+			if (FD_ISSET(fd, writefds))
+				(req_ev[fd] = req_ev[fd] | WRITE_FLAG);
+			if (FD_ISSET(fd, exceptfds))
+				(req_ev[fd] = req_ev[fd] | EXCEPT_FLAG);
 		}
 	}
-	return orig_pselect(nfds, readfds, writefds, exceptfds, timeout, sigmask);
+
+	int ret =
+	    orig_pselect(nfds, readfds, writefds, exceptfds, timeout, sigmask);
+	int err = errno;
+
+	for (fd = 0; fd < nfds; fd++) {
+		if (is_tcp_socket(fd) && req_ev[fd]) {
+			tcp_ev_pselect(fd, ret, err, (req_ev[fd] | READ_FLAG),
+				       (req_ev[fd] | WRITE_FLAG),
+				       (req_ev[fd] | EXCEPT_FLAG),
+				       FD_ISSET(fd, readfds),
+				       FD_ISSET(fd, writefds),
+				       FD_ISSET(fd, exceptfds), timeout);
+		}
+	}
+
+	errno = err;
+	return ret;
 }
