@@ -60,6 +60,10 @@ static void output_ev_accept(const TcpEvAccept *ev) {
         OUTPUT_EV("accept()=%d", ev->super.return_value);
 }
 
+static void output_ev_getsockopt(const TcpEvGetsockopt *ev) {
+        OUTPUT_EV("getsockopt()=%d", ev->super.return_value);
+}
+
 static void output_ev_setsockopt(const TcpEvSetsockopt *ev) {
         OUTPUT_EV("setsockopt()=%d", ev->super.return_value);
 }
@@ -110,12 +114,28 @@ static void output_ev_close(const TcpEvClose *ev) {
         OUTPUT_EV("close()=%d", ev->super.return_value);
 }
 
+static void output_ev_dup(const TcpEvDup *ev) {
+        OUTPUT_EV("dup()=%d", ev->super.return_value);
+}
+
+static void output_ev_dup2(const TcpEvDup2 *ev) {
+        OUTPUT_EV("dup2()=%d", ev->super.return_value);
+}
+
+static void output_ev_dup3(const TcpEvDup3 *ev) {
+        OUTPUT_EV("dup3()=%d", ev->super.return_value);
+}
+
 static void output_ev_writev(const TcpEvWritev *ev) {
         OUTPUT_EV("writev()=%d", ev->super.return_value);
 }
 
 static void output_ev_readv(const TcpEvReadv *ev) {
         OUTPUT_EV("readv()=%d", ev->super.return_value);
+}
+
+static void output_ev_ioctl(const TcpEvIoctl *ev) {
+        OUTPUT_EV("iotctl()=%d", ev->super.return_value);
 }
 
 static void output_ev_tcpinfo(const TcpEvTcpInfo *ev) {
@@ -147,6 +167,9 @@ void output_event(const TcpEvent *ev) {
                 case TCP_EV_ACCEPT:
                         output_ev_accept((const TcpEvAccept *)ev);
                         break;
+                case TCP_EV_GETSOCKOPT:
+                        output_ev_getsockopt((const TcpEvGetsockopt *)ev);
+                        break;
                 case TCP_EV_SETSOCKOPT:
                         output_ev_setsockopt((const TcpEvSetsockopt *)ev);
                         break;
@@ -176,6 +199,15 @@ void output_event(const TcpEvent *ev) {
                         output_ev_recvmmsg((const TcpEvRecvmmsg *)ev);
                         break;
 #endif
+                case TCP_EV_DUP:
+                        output_ev_dup((const TcpEvDup *)ev);
+                        break;
+                case TCP_EV_DUP2:
+                        output_ev_dup2((const TcpEvDup2 *)ev);
+                        break;
+                case TCP_EV_DUP3:
+                        output_ev_dup3((const TcpEvDup3 *)ev);
+                        break;
                 case TCP_EV_WRITE:
                         output_ev_write((const TcpEvWrite *)ev);
                         break;
@@ -190,6 +222,9 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_READV:
                         output_ev_readv((const TcpEvReadv *)ev);
+                        break;
+                case TCP_EV_IOCTL:
+                        output_ev_ioctl((const TcpEvIoctl *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         output_ev_tcpinfo((const TcpEvTcpInfo *)ev);

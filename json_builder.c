@@ -139,7 +139,7 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         add(json_ev, "details", json_details);
 
 static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         char *dom_str = alloc_sock_domain_str(ev->domain);
         char *type_str = alloc_sock_type_str(ev->type);
 
@@ -155,7 +155,7 @@ static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
 }
 
 static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "addr", build_addr(&ev->addr));
         add(json_details, "force_bind", json_boolean(ev->force_bind));
@@ -164,7 +164,7 @@ static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
 }
 
 static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "addr", build_addr(&ev->addr));
 
@@ -172,7 +172,7 @@ static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
 }
 
 static json_t *build_tcp_ev_shutdown(const TcpEvShutdown *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "shut_rd", json_boolean(ev->shut_rd));
         add(json_details, "shut_wr", json_boolean(ev->shut_wr));
@@ -181,7 +181,7 @@ static json_t *build_tcp_ev_shutdown(const TcpEvShutdown *ev) {
 }
 
 static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "backlog", json_integer(ev->backlog));
 
@@ -189,26 +189,37 @@ static json_t *build_tcp_ev_listen(const TcpEvListen *ev) {
 }
 
 static json_t *build_tcp_ev_accept(const TcpEvAccept *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "addr", build_addr(&ev->addr));
 
         return json_ev;
 }
 
-static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+static json_t *build_tcp_ev_getsockopt(const TcpEvGetsockopt *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-        add(json_details, "level", json_integer(ev->level));
-        add(json_details, "level_str", json_string(ev->level_str));
-        add(json_details, "optname", json_integer(ev->optname));
-        add(json_details, "optname_str", json_string(ev->optname_str));
+        add(json_details, "level", json_integer(ev->sockopt.level));
+        add(json_details, "level_str", json_string(ev->sockopt.level_str));
+        add(json_details, "optname", json_integer(ev->sockopt.optname));
+        add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "level", json_integer(ev->sockopt.level));
+        add(json_details, "level_str", json_string(ev->sockopt.level_str));
+        add(json_details, "optname", json_integer(ev->sockopt.optname));
+        add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
 
         return json_ev;
 }
 
 static json_t *build_tcp_ev_send(const TcpEvSend *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(&(ev->flags)));
@@ -217,7 +228,7 @@ static json_t *build_tcp_ev_send(const TcpEvSend *ev) {
 }
 
 static json_t *build_tcp_ev_recv(const TcpEvRecv *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(&(ev->flags)));
@@ -226,7 +237,7 @@ static json_t *build_tcp_ev_recv(const TcpEvRecv *ev) {
 }
 
 static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         // char *addr_str = alloc_host_str(&(ev->addr));
         // char *port_str = alloc_port_str(&(ev->addr));
 
@@ -241,7 +252,7 @@ static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
 }
 
 static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         // char *addr_str = alloc_host_str(&(ev->addr));
         // char *port_str = alloc_port_str(&(ev->addr));
 
@@ -256,7 +267,7 @@ static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
 }
 
 static json_t *build_tcp_ev_sendmsg(const TcpEvSendmsg *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(&(ev->flags)));
@@ -266,7 +277,7 @@ static json_t *build_tcp_ev_sendmsg(const TcpEvSendmsg *ev) {
 }
 
 static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(&(ev->flags)));
@@ -277,18 +288,18 @@ static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 static json_t *build_tcp_ev_sendmmsg(const TcpEvSendmmsg *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         return json_ev;
 }
 
 static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         return json_ev;
 }
 #endif
 
 static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
 
@@ -296,7 +307,7 @@ static json_t *build_tcp_ev_write(const TcpEvWrite *ev) {
 }
 
 static json_t *build_tcp_ev_read(const TcpEvRead *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
 
@@ -304,15 +315,37 @@ static json_t *build_tcp_ev_read(const TcpEvRead *ev) {
 }
 
 static json_t *build_tcp_ev_close(const TcpEvClose *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "detected", json_boolean(ev->detected));
 
         return json_ev;
 }
 
+static json_t *build_tcp_ev_dup(const TcpEvDup *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_dup2(const TcpEvDup2 *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "newfd", json_integer(ev->newfd));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_dup3(const TcpEvDup3 *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "newfd", json_integer(ev->newfd));
+        add(json_details, "o_cloexec", json_boolean(ev->o_cloexec));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_writev(const TcpEvWritev *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "iovec", build_iovec(&ev->iovec));
@@ -321,7 +354,7 @@ static json_t *build_tcp_ev_writev(const TcpEvWritev *ev) {
 }
 
 static json_t *build_tcp_ev_readv(const TcpEvReadv *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "iovec", build_iovec(&ev->iovec));
@@ -329,8 +362,16 @@ static json_t *build_tcp_ev_readv(const TcpEvReadv *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_ioctl(const TcpEvIoctl *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "request", json_integer(ev->request));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
-        BUILD_EV_PRELUDE()  // Instant json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         struct tcp_info i = ev->info;
 
         add(json_details, "state", json_integer(i.tcpi_state));
@@ -400,6 +441,10 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_ACCEPT:
                         r = build_tcp_ev_accept((const TcpEvAccept *)ev);
                         break;
+                case TCP_EV_GETSOCKOPT:
+                        r = build_tcp_ev_getsockopt(
+                            (const TcpEvGetsockopt *)ev);
+                        break;
                 case TCP_EV_SETSOCKOPT:
                         r = build_tcp_ev_setsockopt(
                             (const TcpEvSetsockopt *)ev);
@@ -439,11 +484,23 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_CLOSE:
                         r = build_tcp_ev_close((const TcpEvClose *)ev);
                         break;
+                case TCP_EV_DUP:
+                        r = build_tcp_ev_dup((const TcpEvDup *)ev);
+                        break;
+                case TCP_EV_DUP2:
+                        r = build_tcp_ev_dup2((const TcpEvDup2 *)ev);
+                        break;
+                case TCP_EV_DUP3:
+                        r = build_tcp_ev_dup3((const TcpEvDup3 *)ev);
+                        break;
                 case TCP_EV_WRITEV:
                         r = build_tcp_ev_writev((const TcpEvWritev *)ev);
                         break;
                 case TCP_EV_READV:
                         r = build_tcp_ev_readv((const TcpEvReadv *)ev);
+                        break;
+                case TCP_EV_IOCTL:
+                        r = build_tcp_ev_ioctl((const TcpEvIoctl *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         r = build_tcp_ev_tcp_info((const TcpEvTcpInfo *)ev);

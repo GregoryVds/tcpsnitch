@@ -1,11 +1,5 @@
 *.so*
-*.swo
-*.swp
-*.swn
+*.sw*
 *.pyc
 *.py
 tags
-*.swm
-*.swl
-*.swk
-*.swj

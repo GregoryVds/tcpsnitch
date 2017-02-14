@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
 #include <stdarg.h>
@@ -149,7 +150,7 @@ int getsockopt(int fd, int level, int optname, void *optval,
 	int ret = orig_getsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
 	if (is_tcp_socket(fd))
-		LOG(ERROR, "NOT IMPLEMENTED: getsockopt() on socket %d", fd);
+		tcp_ev_getsockopt(fd, ret, err, level, optname);
 
 	errno = err;
 	return ret;
@@ -474,35 +475,42 @@ orig_dup_type orig_dup;
 
 int dup(int fd) {
 	if (!orig_dup) orig_dup = (orig_dup_type)dlsym(RTLD_NEXT, "dup");
+
 	int ret = orig_dup(fd);
-	if (is_tcp_socket(fd))
-		LOG(ERROR, "dup() called on socket %d, ret %d.", fd, ret);
+	int err = errno;
+	if (is_tcp_socket(fd)) tcp_ev_dup(fd, ret, err);
+
+	errno = err;
 	return ret;
 }
 
-typedef int (*orig_dup2_type)(int fd, int fd2);
+typedef int (*orig_dup2_type)(int fd, int newfd);
 orig_dup2_type orig_dup2;
 
-int dup2(int fd, int fd2) {
+int dup2(int fd, int newfd) {
 	if (!orig_dup2) orig_dup2 = (orig_dup2_type)dlsym(RTLD_NEXT, "dup2");
-	int ret = orig_dup2(fd, fd2);
-	if (is_tcp_socket(fd))
-		LOG(ERROR, "dup2() called on %d-%d, ret %d.", fd, fd2, ret);
+
+	int ret = orig_dup2(fd, newfd);
+	int err = errno;
+	if (is_tcp_socket(fd)) tcp_ev_dup2(fd, ret, err, newfd);
+
+	errno = err;
 	return ret;
 }
 
-#ifdef __USE_GNU
-typedef int (*orig_dup3_type)(int fd, int fd2, int flags);
+typedef int (*orig_dup3_type)(int fd, int newfd, int flags);
 orig_dup3_type orig_dup3;
 
-int dup3(int fd, int fd2, int flags) {
+int dup3(int fd, int newfd, int flags) {
 	if (!orig_dup3) orig_dup3 = (orig_dup3_type)dlsym(RTLD_NEXT, "dup3");
-	int ret = orig_dup3(fd, fd2, flags);
-	if (is_tcp_socket(fd))
-		LOG(ERROR, "dup3() called on %d-%d, ret %d.", fd, fd2, ret);
+
+	int ret = orig_dup3(fd, newfd, flags);
+	int err = errno;
+	if (is_tcp_socket(fd)) tcp_ev_dup3(fd, ret, err, newfd, flags);
+
+	errno = err;
 	return ret;
 }
-#endif
 
 /*
   _   _ _ _____       _    ____ ___
@@ -584,7 +592,7 @@ int ioctl(int fd, unsigned long int request, ...) {
 
 	int ret = orig_ioctl(fd, request, value);
 	int err = errno;
-	if (is_tcp_socket(fd)) LOG(ERROR, "ioctl() on socket %d.", fd);
+	if (is_tcp_socket(fd)) tcp_ev_ioctl(fd, ret, err, request);
 
 	errno = err;
 	return ret;
