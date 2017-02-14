@@ -141,15 +141,21 @@ if [[ $# -ne 1 ]]; then
         exit 1
 fi
 
-package=$1
+prefix="package:"
+match=$(adb shell pm list packages | grep -s "$1") 
+echo $match
 
 # Check that package exists
-if ! adb shell pm list packages | grep -wq "package:$package"; then
+if [ -z "$match" ]; then
         error "invalid argument: package '$package' not found"
         exit 1
 fi
 
+package=${match#$prefix}
+echo "Setting up tcpsnitch for: $package"
+
 # Set system properties
+adb shell su -c setenforce 0
 adb shell su -c chmod 777 /data
 adb shell su -c rm -f /data/libtcpsnitch.so
 adb push libtcpsnitch.so /data

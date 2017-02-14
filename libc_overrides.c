@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -27,7 +28,8 @@
 #include "tcp_events.h"
 
 /*
- Use "standard" font of http://patorjk.com/software/taag to generate ASCII arts
+ Use "standard" font here to generate ASCII arts:
+ http://patorjk.com/software/taag/#p=display&f=Standard
 */
 
 /*
@@ -41,7 +43,7 @@
 
  functions: socket(), bind(), connect(), shutdown(), listen(), accept(),
  setsockopt(), send(), recv(), sendto(), recvfrom(), sendmsg(),  recvmsg(),
- sendmmsg(), recvmmsg().
+ sendmmsg(), recvmmsg(), getsockname().
 
 */
 
@@ -149,8 +151,7 @@ int getsockopt(int fd, int level, int optname, void *optval,
 
 	int ret = orig_getsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_getsockopt(fd, ret, err, level, optname);
+	if (is_tcp_socket(fd)) tcp_ev_getsockopt(fd, ret, err, level, optname);
 
 	errno = err;
 	return ret;
@@ -397,6 +398,25 @@ int recvmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
 
 #endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
+typedef int (*orig_getsockname_type)(int fd, struct sockaddr *addr,
+				     socklen_t *len);
+
+orig_getsockname_type orig_getsockname;
+
+int getsockname(int fd, struct sockaddr *addr, socklen_t *len) {
+	if (!orig_getsockname)
+		orig_getsockname =
+		    (orig_getsockname_type)dlsym(RTLD_NEXT, "getsockname");
+
+	int ret = orig_getsockname(fd, addr, len);
+	int err = errno;
+	if (is_tcp_socket(fd))
+		LOG(ERROR, "getsockname() on %d not implemented.", fd);
+
+	errno = err;
+	return ret;
+}
+
 /*
   _   _ _   _ ___ ____ _____ ____       _    ____ ___
  | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
@@ -558,11 +578,11 @@ ssize_t readv(int fd, const struct iovec *iovec, int count) {
 }
 
 /*
-  ___ ___   ____ _____ _
- |_ _/ _ \ / ___|_   _| |
-  | | | | | |     | | | |
-  | | |_| | |___  | | | |___
- |___\___/ \____| |_| |_____|
+  ___ ___   ____ _____ _          _    ____ ___
+ |_ _/ _ \ / ___|_   _| |        / \  |  _ \_ _|
+  | | | | | |     | | | |       / _ \ | |_) | |
+  | | |_| | |___  | | | |___   / ___ \|  __/| |
+ |___\___/ \____| |_| |_____| /_/   \_\_|  |___|
 
   sys/ioctl.h - control device
 
@@ -634,32 +654,100 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count) {
 
  poll.h - definitions for the poll() function
 
- functions: poll()
+ functions: poll(), ppoll()
 */
 
 typedef int (*orig_poll_type)(struct pollfd *fds, nfds_t nfds, int timeout);
+
 orig_poll_type orig_poll;
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 	if (!orig_poll) orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
 
-	unsigned long ndfs = nfds;
-	int i;
-	for (i = 0; (unsigned long)i < ndfs; i++) {
-		struct pollfd *pollfd = fds + i;
-		if (is_tcp_socket(pollfd->fd)) {
-			short events = pollfd->events;
-			char flags[100] = "events:";
-			if (events & POLLIN) strcat(flags, " POLLIN");
-			if (events & POLLPRI) strcat(flags, " POLLPRI");
-			if (events & POLLOUT) strcat(flags, " POLLOUT");
-			if (events & POLLRDHUP) strcat(flags, " POLLRDHUP");
-			if (events & POLLERR) strcat(flags, " POLLERR");
-			if (events & POLLHUP) strcat(flags, " POLLHUP");
-			if (events & POLLNVAL) strcat(flags, " POLLNVAL");
-			LOG(INFO, "poll() on socket %d (%s)", pollfd->fd,
-			    flags);
-		}
+	unsigned long i;
+	for (i = 0; i < nfds; i++) {
+		struct pollfd pollfd = fds[i];
+		if (is_tcp_socket(pollfd.fd))
+			LOG(INFO, "poll() on socket %d", pollfd.fd);
 	}
 	return orig_poll(fds, nfds, timeout);
+}
+
+typedef int (*orig_ppoll_type)(struct pollfd *fds, nfds_t nfds,
+			       const struct timespec *tmo_p,
+			       const sigset_t *sigmask);
+
+orig_ppoll_type orig_ppoll;
+
+int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
+	  const sigset_t *sigmask) {
+	if (!orig_ppoll)
+		orig_ppoll = (orig_ppoll_type)dlsym(RTLD_NEXT, "ppoll");
+
+	unsigned long i;
+	for (i = 0; i < nfds; i++) {
+		struct pollfd pollfd = fds[i];
+		if (is_tcp_socket(pollfd.fd))
+			LOG(INFO, "ppoll() on socket %d", pollfd.fd);
+	}
+	return orig_ppoll(fds, nfds, tmo_p, sigmask);
+}
+
+/*
+  ____  _____ _     _____ ____ _____      _    ____ ___
+ / ___|| ____| |   | ____/ ___|_   _|    / \  |  _ \_ _|
+ \___ \|  _| | |   |  _|| |     | |     / _ \ | |_) | |
+  ___) | |___| |___| |__| |___  | |    / ___ \|  __/| |
+ |____/|_____|_____|_____\____| |_|   /_/   \_\_|  |___|
+
+ sys/select.h
+
+ functions: select(), pselect().
+*/
+
+typedef int (*orig_select_type)(int nfds, fd_set *readfds, fd_set *writefds,
+				fd_set *exceptfds, struct timeval *timeout);
+
+orig_select_type orig_select;
+
+int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+	   struct timeval *timeout) {
+	if (!orig_select)
+		orig_select = (orig_select_type)dlsym(RTLD_NEXT, "select");
+
+	int fd;
+	for (fd = 0; fd < nfds; fd++) {
+		if (is_tcp_socket(fd)) {
+			bool read = FD_ISSET(fd, readfds);
+			bool write = FD_ISSET(fd, writefds);
+			bool except = FD_ISSET(fd, exceptfds);
+			LOG(ERROR, "select() on %d (%d,%d,%d)", fd, read, write,
+			    except);
+		}
+	}
+	return orig_select(nfds, readfds, writefds, exceptfds, timeout);
+}
+
+typedef int (*orig_pselect_type)(int nfds, fd_set *readfds, fd_set *writefds,
+				 fd_set *exceptfds, const struct timespec *timeout,
+				 const sigset_t *sigmask);
+
+orig_pselect_type orig_pselect;
+
+int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+	    const struct timespec *timeout, const sigset_t *sigmask) {
+	if (!orig_pselect)
+		orig_pselect = (orig_pselect_type)dlsym(RTLD_NEXT, "pselect");
+
+	int fd;
+	for (fd = 0; fd < nfds; fd++) {
+		if (is_tcp_socket(fd)) {
+			bool read = FD_ISSET(fd, readfds);
+			bool write = FD_ISSET(fd, writefds);
+			bool except = FD_ISSET(fd, exceptfds);
+			LOG(ERROR, "select() on %d (%d,%d,%d)", fd, read, write,
+			    except);
+		}
+	}
+	return orig_pselect(nfds, readfds, writefds, exceptfds, timeout, sigmask);
 }
