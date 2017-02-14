@@ -154,6 +154,24 @@ describe 'tcp_spy' do
     end
   end
 
+  describe "a #{TCP_EV_GETSOCKOPT} event" do
+    it "#{TCP_EV_GETSOCKOPT} should have the correct JSON fields" do
+      run_c_program(TCP_EV_GETSOCKOPT)
+      pattern = [
+        {
+          type: TCP_EV_GETSOCKOPT,
+          details: {
+            level: Integer,
+            level_str: String,
+            optname: Integer,
+            optname_str: String
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
   describe "a #{TCP_EV_SETSOCKOPT} event" do
     it "#{TCP_EV_SETSOCKOPT} should have the correct JSON fields" do
       run_c_program(TCP_EV_SETSOCKOPT)

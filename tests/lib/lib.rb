@@ -107,7 +107,7 @@ end
 
 def run_c_program(name, opts='')
   reset_dir(TEST_DIR) 
-  tcpsnitch("-d #{TEST_DIR} #{opts}", "./c_programs/*#{name}.out")
+  tcpsnitch("-d #{TEST_DIR} #{opts}", "./c_programs/#{name}.out")
 end
 
 def run_curl

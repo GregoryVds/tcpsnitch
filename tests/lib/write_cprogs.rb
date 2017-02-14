@@ -100,6 +100,30 @@ LISTEN_FAIL = CProg.new(<<-EOT, 'listen_fail')
     return(EXIT_FAILURE);
 EOT
 
+GETSOCKOPT = CProg.new(<<-EOT, 'getsockopt')
+#{SOCKET}
+  int optval;
+  socklen_t optlen = sizeof(optval);
+  if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+GETSOCKOPT_DGRAM = CProg.new(<<-EOT, 'getsockopt_dgram')
+#{SOCKET_DGRAM}
+  int optval;
+  socklen_t optlen = sizeof(optval);
+  if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+GETSOCKOPT_FAIL = CProg.new(<<-EOT, 'getsockopt_fail')
+#{SOCKET}
+  int optval;
+  socklen_t optlen = sizeof(optval);
+  if (getsockopt(sock, -42, SO_REUSEADDR, &optval, &optlen) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 SETSOCKOPT = CProg.new(<<-EOT, 'setsockopt')
 #{SOCKET}
   int optval = 1;

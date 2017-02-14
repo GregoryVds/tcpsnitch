@@ -10,7 +10,7 @@ describe "tcpsnitch" do
 	before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
 	
-  let(:cmd) { "./c_programs/00_socket.out" } 
+  let(:cmd) { "./c_programs/socket.out" } 
 
   describe "when no option is set" do
     it "should not crash" do
@@ -73,7 +73,7 @@ describe "tcpsnitch" do
   end
 
   describe "option -e" do
-    cmd = "./c_programs/09_shutdown.out" # script has 4 syscalls (force_bind)
+    cmd = "./c_programs/shutdown.out" # script has 4 syscalls (force_bind)
     
     it "should dump json 4 times with -e 1" do
       out = tcpsnitch_output("-e 1 -l 5", cmd)

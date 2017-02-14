@@ -703,7 +703,7 @@ error:
 
 void tcp_ev_getsockopt(int fd, int ret, int err, int level, int optname) {
 	// Inst. local vars TcpConnection *con & TcpEvGetsockopt *ev
-	TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
+	TCP_EV_PRELUDE(TCP_EV_GETSOCKOPT, TcpEvGetsockopt);
 
 	fill_sockopt(&ev->sockopt, level, optname);
 

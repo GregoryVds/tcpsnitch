@@ -34,12 +34,8 @@ int main(void) {
 EOT
   end
 
-  def numbered_name
-    format('%02d', @@count) + '_' + @name
-  end
-  
   def path
-    @@programs_path + numbered_name + ".c"
+    @@programs_path + @name + ".c"
   end
 
   def write_to_file
