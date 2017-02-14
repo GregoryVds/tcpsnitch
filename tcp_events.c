@@ -598,7 +598,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 		"dup3",
 		"writev",
 		"readv",
-		"iotctl",
+		"ioctl",
 		"tcp_info"
 	};
 	assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);

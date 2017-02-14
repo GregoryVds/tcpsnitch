@@ -483,6 +483,60 @@ CLOSE_FAIL = CProg.new(<<-EOT, 'close_fail')
     return(EXIT_FAILURE);
 EOT
 
+DUP = CProg.new(<<-EOT, 'dup')
+#{SOCKET}
+  if (dup(sock) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP_DGRAM = CProg.new(<<-EOT, 'dup_dgram')
+#{SOCKET_DGRAM}
+  if (dup(sock) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP_FAIL = CProg.new(<<-EOT, 'dup_fail')
+#{SOCKET}
+  if (dup(42) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+DUP2 = CProg.new(<<-EOT, 'dup2')
+#{SOCKET}
+  if (dup2(sock, 42) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP2_DGRAM = CProg.new(<<-EOT, 'dup2_dgram')
+#{SOCKET_DGRAM}
+  if (dup2(sock, 42) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP2_FAIL = CProg.new(<<-EOT, 'dup2_fail')
+#{SOCKET}
+  if (dup2(sock, 9999999) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+DUP3 = CProg.new(<<-EOT, 'dup3')
+#{SOCKET}
+  if (dup3(sock, 42, O_CLOEXEC) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP3_DGRAM = CProg.new(<<-EOT, 'dup3_dgram')
+#{SOCKET_DGRAM}
+  if (dup3(sock, 42, O_CLOEXEC) < 0)
+    return(EXIT_FAILURE);
+EOT
+
+DUP3_FAIL = CProg.new(<<-EOT, 'dup3_fail')
+#{SOCKET}
+  if (dup3(sock, 999999, O_CLOEXEC) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 FORK = CProg.new(<<-EOT, 'fork')
 #{SOCKET}
   pid_t pid;
@@ -539,6 +593,28 @@ READV_FAIL = CProg.new(<<-EOT, 'readv_fail')
 #{read_iovec}
   if (readv(sock, iovec, -1) != -1)
     return(EXIT_FAILURE);
+EOT
+
+IOCTL = CProg.new(<<-EOT, 'ioctl')
+#{CONNECT}
+#{send_http_get}
+int bytes;
+if (ioctl(sock, FIONREAD, &bytes) == -1)
+  return(EXIT_FAILURE);
+EOT
+
+IOCTL_DGRAM = CProg.new(<<-EOT, 'ioctl_dgram')
+#{SOCKET_DGRAM}
+int bytes;
+if (ioctl(sock, FIONREAD, &bytes) == -1)
+  return(EXIT_FAILURE);
+EOT
+
+IOCTL_FAIL = CProg.new(<<-EOT, 'ioctl_fail')
+#{SOCKET}
+int bytes;
+if (ioctl(sock, 42, &bytes) != -1)
+  return(EXIT_FAILURE);
 EOT
 
 CONSECUTIVE_CONNECTIONS = CProg.new(<<-EOT, 'consecutive_connections')

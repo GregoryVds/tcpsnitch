@@ -68,7 +68,8 @@ describe "libc overrides" do
       # SOCKET: No JSON if no TCP connection.
       # LISTEN: How to fail listen() on valid TCP socket? 
       # CLOSE: How to fail close() on valid TCP socket?
-      unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE].include?(syscall)
+      unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE, 
+              TCP_EV_DUP].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
           assert_event_present(syscall, false)

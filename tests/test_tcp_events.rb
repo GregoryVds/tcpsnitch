@@ -393,6 +393,47 @@ describe 'tcp_spy' do
     end
   end
 
+  describe "a #{TCP_EV_DUP} event" do
+    it "#{TCP_EV_DUP} should have the correct JSON fields" do
+      run_c_program(TCP_EV_DUP)
+      pattern = [
+        {type: TCP_EV_DUP}.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_DUP2} event" do
+    it "#{TCP_EV_DUP2} should have the correct JSON fields" do
+      run_c_program(TCP_EV_DUP2)
+      pattern = [
+        {
+          type: TCP_EV_DUP2,
+          details: {
+            newfd: Integer
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_DUP3} event" do
+    it "#{TCP_EV_DUP3} should have the correct JSON fields" do
+      run_c_program(TCP_EV_DUP3)
+      pattern = [
+        {
+          type: TCP_EV_DUP3,
+          details: {
+            newfd: Integer,
+            o_cloexec: Boolean
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
   describe "a #{TCP_EV_WRITEV} event" do
     it "#{TCP_EV_WRITEV} should have the correct JSON fields" do
       run_c_program(TCP_EV_WRITEV)

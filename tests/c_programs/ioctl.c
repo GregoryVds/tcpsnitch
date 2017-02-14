@@ -17,7 +17,7 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
 
   struct sockaddr_in addr;
@@ -25,11 +25,15 @@ int main(void) {
   addr.sin_port = htons(8000);
   inet_aton("127.0.0.1", &addr.sin_addr);
 
-  int data = 42;
-  if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
-             sizeof(addr)) < 0) {
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     return(EXIT_FAILURE);
-  }
+
+  char *req = "GET / HTTP/1.0\r\n\r\n";
+  send(sock, req, sizeof(char)*strlen(req), 0);
+
+int bytes;
+if (ioctl(sock, FIONREAD, &bytes) == -1)
+  return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

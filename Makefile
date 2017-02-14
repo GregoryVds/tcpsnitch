@@ -97,7 +97,7 @@ uninstall:
 clean:
 	rm -f *.o .*.s* *.so* tests/.*.s*
 
-tests: tcpsnitch
+tests: tcpsnitch install
 	cd tests && rake
 
 index: 
