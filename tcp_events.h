@@ -283,43 +283,46 @@ typedef struct {
 	bool pollrdhup;
 	bool pollerr;
 	bool pollhup;
-	bool pollinval;
+	bool pollnval;
 } TcpPollEvents;
 
 typedef struct {
+        time_t seconds;
+        long nanoseconds;
+} TcpTimeout;
+
+typedef struct {
 	TcpEvent super;
-	int timeout;
+        TcpTimeout timeout;
 	TcpPollEvents requested_events;
 	TcpPollEvents returned_events;
 } TcpEvPoll;
 
 typedef struct {
 	TcpEvent super;
-	struct timespec timeout;
+        TcpTimeout timeout;
 	TcpPollEvents requested_events;
 	TcpPollEvents returned_events;
 } TcpEvPpoll;
 
 typedef struct {
+	bool read;
+	bool write;
+	bool except;
+} TcpSelectEvents;
+
+typedef struct {
 	TcpEvent super;
-	struct timeval timeout;
-	bool requested_read;
-	bool requested_write;
-	bool requested_except;
-	bool returned_read;
-	bool returned_write;
-	bool returned_except;
+        TcpTimeout timeout;
+        TcpSelectEvents requested_events;
+        TcpSelectEvents returned_events;
 } TcpEvSelect;
 
 typedef struct {
 	TcpEvent super;
-	struct timespec timeout;
-	bool requested_read;
-	bool requested_write;
-	bool requested_except;
-	bool returned_read;
-	bool returned_write;
-	bool returned_except;
+        TcpTimeout timeout;
+        TcpSelectEvents requested_events;
+        TcpSelectEvents returned_events;
 } TcpEvPselect;
 
 typedef struct {

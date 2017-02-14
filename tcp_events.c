@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pcap/pcap.h>
+#include <poll.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -305,6 +306,16 @@ static void fill_recv_flags(TcpRecvFlags *s, int flags) {
 	s->msg_peek = (flags & MSG_PEEK);
 	s->msg_trunc = (flags & MSG_TRUNC);
 	s->msg_waitall = (flags & MSG_WAITALL);
+}
+
+static void fill_poll_events(TcpPollEvents *pe, int events) {
+        pe->pollin = (events & POLLIN); 
+        pe->pollpri = (events & POLLPRI);
+        pe->pollout = (events & POLLOUT);
+        pe->pollrdhup = (events & POLLRDHUP);
+        pe->pollerr = (events & POLLERR);
+        pe->pollhup = (events & POLLHUP);
+        pe->pollnval = (events & POLLNVAL);
 }
 
 static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
@@ -614,6 +625,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 		"sendmmsg",
 		"recvmmsg",
 #endif
+                "getsockname",
 		"write",
 		"read",
 		"close",
@@ -623,6 +635,11 @@ const char *string_from_tcp_event_type(TcpEventType type) {
 		"writev",
 		"readv",
 		"ioctl",
+                "sendfile",
+                "poll",
+                "ppoll",
+                "select",
+                "pselect",
 		"tcp_info"
 	};
 	assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
@@ -850,6 +867,16 @@ void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 
 #endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
+void tcp_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
+			socklen_t *addrlen) {
+	// Inst. local vars TcpConnection *con & TcpEvGetsockname *ev
+	TCP_EV_PRELUDE(TCP_EV_GETSOCKNAME, TcpEvGetsockname);
+
+        fill_addr(&(ev->addr), addr, *addrlen);
+
+	TCP_EV_POSTLUDE(TCP_EV_GETSOCKNAME);
+}
+
 void tcp_ev_write(int fd, int ret, int err, size_t bytes) {
 	// Inst. local vars TcpConnection *con & TcpEvWrite *ev
 	TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
@@ -952,6 +979,78 @@ void tcp_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
 	ev->request = request;	
 
 	TCP_EV_POSTLUDE(TCP_EV_IOCTL);
+}
+
+void tcp_ev_sendfile(int fd, int ret, int err, size_t bytes) {
+	// Inst. local vars TcpConnection *con & TcpEvSendfile *ev
+	TCP_EV_PRELUDE(TCP_EV_SENDFILE, TcpEvSendfile);
+
+        ev->bytes = bytes;
+
+	TCP_EV_POSTLUDE(TCP_EV_SENDFILE);
+}
+
+void tcp_ev_poll(int fd, int ret, int err, short requested_events,
+		 short returned_events, int timeout) {
+        // Inst. local vars TcpConnection *con & TcpEvPoll *ev
+	TCP_EV_PRELUDE(TCP_EV_POLL, TcpEvPoll);
+        
+        ev->timeout.seconds = (timeout / 1000);
+        ev->timeout.nanoseconds = (timeout % 1000) * 1000;
+        fill_poll_events(&ev->requested_events, requested_events);
+        fill_poll_events(&ev->returned_events, returned_events);
+        
+	TCP_EV_POSTLUDE(TCP_EV_POLL);
+
+}
+
+void tcp_ev_ppoll(int fd, int ret, int err, short requested_events,
+		  short returned_events, const struct timespec *timeout) {
+        // Inst. local vars TcpConnection *con & TcpEvPpoll *ev
+	TCP_EV_PRELUDE(TCP_EV_PPOLL, TcpEvPpoll);
+
+        ev->timeout.seconds = timeout->tv_sec;
+        ev->timeout.nanoseconds = timeout->tv_nsec;
+        fill_poll_events(&ev->requested_events, requested_events);
+        fill_poll_events(&ev->returned_events, returned_events);
+        
+	TCP_EV_POSTLUDE(TCP_EV_PPOLL);
+}
+
+void tcp_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
+		   bool req_except, bool ret_read, bool ret_write,
+		   bool ret_except, struct timeval *timeout) {
+	// Inst. local vars TcpConnection *con & TcpEvSelect *ev
+	TCP_EV_PRELUDE(TCP_EV_SELECT, TcpEvSelect);
+
+        ev->timeout.seconds = timeout->tv_sec;
+        ev->timeout.nanoseconds = timeout->tv_usec * 1000;
+        ev->requested_events.read = req_read;  
+        ev->requested_events.write = req_write;  
+        ev->requested_events.except = req_except;  
+        ev->returned_events.read = ret_read;  
+        ev->returned_events.write = ret_write;  
+        ev->returned_events.except = ret_except;  
+
+	TCP_EV_POSTLUDE(TCP_EV_SELECT);
+}
+
+void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
+		    bool req_except, bool ret_read, bool ret_write,
+		    bool ret_except, const struct timespec *timeout) {
+	// Inst. local vars TcpConnection *con & TcpEvPselect *ev
+	TCP_EV_PRELUDE(TCP_EV_PSELECT, TcpEvPselect);
+
+        ev->timeout.seconds = timeout->tv_sec;
+        ev->timeout.nanoseconds = timeout->tv_nsec;
+        ev->requested_events.read = req_read;  
+        ev->requested_events.write = req_write;  
+        ev->requested_events.except = req_except;  
+        ev->returned_events.read = ret_read;  
+        ev->returned_events.write = ret_write;  
+        ev->returned_events.except = ret_except;  
+
+	TCP_EV_POSTLUDE(TCP_EV_PSELECT);
 }
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
