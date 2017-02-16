@@ -1,12 +1,12 @@
 #define _GNU_SOURCE
 
+#include "json_builder.h"
 #include <jansson.h>
 #include <netdb.h>
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
-#include "json_builder.h"
 
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
@@ -61,6 +61,53 @@ static json_t *build_recv_flags(const TcpRecvFlags *flags) {
         add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
 
         return json_flags;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+static json_t *build_timeout(const TcpTimeout *timeout) {
+        json_t *json_timeout = json_object();
+        if (!json_timeout) goto error;
+
+        add(json_timeout, "seconds", json_integer(timeout->seconds));
+        add(json_timeout, "nanoseconds", json_integer(timeout->nanoseconds));
+
+        return json_timeout;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+static json_t *build_poll_events(const TcpPollEvents *events) {
+        json_t *json_events = json_object();
+        if (!json_events) goto error;
+
+        add(json_events, "pollin", json_boolean(events->pollin));
+        add(json_events, "pollpri", json_boolean(events->pollpri));
+        add(json_events, "pollout", json_boolean(events->pollout));
+        add(json_events, "pollrdhup", json_boolean(events->pollrdhup));
+        add(json_events, "pollerr", json_boolean(events->pollerr));
+        add(json_events, "pollnval", json_boolean(events->pollnval));
+
+        return json_events;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+static json_t *build_select_events(const TcpSelectEvents *events) {
+        json_t *json_events = json_object();
+        if (!json_events) goto error;
+
+        add(json_events, "read", json_boolean(events->read));
+        add(json_events, "write", json_boolean(events->write));
+        add(json_events, "except", json_boolean(events->except));
+
+        return json_events;
 error:
         LOG(ERROR, "json_object() failed.");
         LOG_FUNC_FAIL;
@@ -300,6 +347,9 @@ static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
 
 static json_t *build_tcp_ev_getsockname(const TcpEvGetsockname *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "addr", build_addr(&ev->addr));
+
         return json_ev;
 }
 
@@ -377,26 +427,57 @@ static json_t *build_tcp_ev_ioctl(const TcpEvIoctl *ev) {
 
 static json_t *build_tcp_ev_sendfile(const TcpEvSendfile *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "bytes", json_integer(ev->bytes));
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_poll(const TcpEvPoll *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "timeout", build_timeout(&ev->timeout));
+        add(json_details, "requested_events",
+            build_poll_events(&ev->requested_events));
+        add(json_details, "returned_events",
+            build_poll_events(&ev->returned_events));
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_ppoll(const TcpEvPpoll *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "timeout", build_timeout(&ev->timeout));
+        add(json_details, "requested_events",
+            build_poll_events(&ev->requested_events));
+        add(json_details, "returned_events",
+            build_poll_events(&ev->returned_events));
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_select(const TcpEvSelect *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "timeout", build_timeout(&ev->timeout));
+        add(json_details, "requested_events",
+            build_select_events(&ev->requested_events));
+        add(json_details, "returned_events",
+            build_select_events(&ev->returned_events));
+
         return json_ev;
 }
 
 static json_t *build_tcp_ev_pselect(const TcpEvPselect *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "timeout", build_timeout(&ev->timeout));
+        add(json_details, "requested_events",
+            build_select_events(&ev->requested_events));
+        add(json_details, "returned_events",
+            build_select_events(&ev->returned_events));
+
         return json_ev;
 }
 
@@ -506,7 +587,8 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         break;
 #endif
                 case TCP_EV_GETSOCKNAME:
-                        r = build_tcp_ev_getsockname((const TcpEvGetsockname *)ev);
+                        r = build_tcp_ev_getsockname(
+                            (const TcpEvGetsockname *)ev);
                         break;
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((const TcpEvWrite *)ev);
@@ -562,7 +644,7 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
 char *alloc_tcp_ev_json(const TcpEvent *ev) {
         json_t *json_ev = build_tcp_ev(ev);
         if (!json_ev) goto error;
-        size_t flags = conf_opt_p ? JSON_INDENT(2) : 0; 
+        size_t flags = conf_opt_p ? JSON_INDENT(2) : 0;
         char *json_string = json_dumps(json_ev, flags);
         json_decref(json_ev);
         return json_string;
@@ -570,4 +652,3 @@ error:
         LOG_FUNC_FAIL;
         return NULL;
 }
-
