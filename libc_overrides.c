@@ -736,9 +736,12 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
         int fd;
         for (fd = 0; fd < nfds; fd++) {
                 if (is_tcp_socket(fd)) {
-                        req_ev[fd] = FD_ISSET(fd, readfds) * READ_FLAG |
-                                     FD_ISSET(fd, writefds) * WRITE_FLAG |
-                                     FD_ISSET(fd, exceptfds) * EXCEPT_FLAG;
+                        if (readfds && FD_ISSET(fd, readfds))
+                                (req_ev[fd] = req_ev[fd] | READ_FLAG);
+                        if (writefds && FD_ISSET(fd, writefds))
+                                (req_ev[fd] = req_ev[fd] | WRITE_FLAG);
+                        if (exceptfds && FD_ISSET(fd, exceptfds))
+                                (req_ev[fd] = req_ev[fd] | EXCEPT_FLAG);
                 }
         }
 
@@ -751,9 +754,10 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
                         tcp_ev_select(fd, ret, err, (req_ev[fd] & READ_FLAG),
                                       (req_ev[fd] & WRITE_FLAG),
                                       (req_ev[fd] & EXCEPT_FLAG),
-                                      FD_ISSET(fd, readfds),
-                                      FD_ISSET(fd, writefds),
-                                      FD_ISSET(fd, exceptfds), timeout);
+                                      readfds && FD_ISSET(fd, readfds),
+                                      writefds && FD_ISSET(fd, writefds),
+                                      exceptfds && FD_ISSET(fd, exceptfds),
+                                      timeout);
                 }
         }
 
@@ -778,9 +782,12 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
         int fd;
         for (fd = 0; fd < nfds; fd++) {
                 if (is_tcp_socket(fd)) {
-                        req_ev[fd] = FD_ISSET(fd, readfds) * READ_FLAG |
-                                     FD_ISSET(fd, writefds) * WRITE_FLAG |
-                                     FD_ISSET(fd, exceptfds) * EXCEPT_FLAG;
+                        if (readfds && FD_ISSET(fd, readfds))
+                                (req_ev[fd] = req_ev[fd] | READ_FLAG);
+                        if (writefds && FD_ISSET(fd, writefds))
+                                (req_ev[fd] = req_ev[fd] | WRITE_FLAG);
+                        if (exceptfds && FD_ISSET(fd, exceptfds))
+                                (req_ev[fd] = req_ev[fd] | EXCEPT_FLAG);
                 }
         }
 
@@ -791,11 +798,12 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
         for (fd = 0; fd < nfds; fd++) {
                 if (is_tcp_socket(fd) && req_ev[fd]) {
                         tcp_ev_pselect(fd, ret, err, (req_ev[fd] & READ_FLAG),
-                                       (req_ev[fd] & WRITE_FLAG),
-                                       (req_ev[fd] & EXCEPT_FLAG),
-                                       FD_ISSET(fd, readfds),
-                                       FD_ISSET(fd, writefds),
-                                       FD_ISSET(fd, exceptfds), timeout);
+                                      (req_ev[fd] & WRITE_FLAG),
+                                      (req_ev[fd] & EXCEPT_FLAG),
+                                      readfds && FD_ISSET(fd, readfds),
+                                      writefds && FD_ISSET(fd, writefds),
+                                      exceptfds && FD_ISSET(fd, exceptfds),
+                                      timeout);
                 }
         }
 

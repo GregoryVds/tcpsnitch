@@ -90,6 +90,7 @@ static json_t *build_poll_events(const TcpPollEvents *events) {
         add(json_events, "pollout", json_boolean(events->pollout));
         add(json_events, "pollrdhup", json_boolean(events->pollrdhup));
         add(json_events, "pollerr", json_boolean(events->pollerr));
+        add(json_events, "pollhup", json_boolean(events->pollhup));
         add(json_events, "pollnval", json_boolean(events->pollnval));
 
         return json_events;

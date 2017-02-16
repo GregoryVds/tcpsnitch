@@ -11,7 +11,7 @@ def no_error_log(log_file=log_file_str)
   !errors_in_log?(log_file)
 end
 
-def assert_event_present(type, success=true, json=read_json_as_array)
+def assert_event_present(type, success=true,json= read_json_as_array)
   pattern =  [
     {
       type: type,
@@ -52,13 +52,16 @@ describe "libc overrides" do
         end
       end
 
-      it "#{failing} should not crash" do
-        assert run_c_program(failing)
+      unless [TCP_EV_POLL, TCP_EV_PPOLL].include?(syscall) 
+        it "#{failing} should not crash" do
+          assert run_c_program(failing)
+        end
       end
 
       # SOCKET: No log file if no TCP connection.
       # CLOSE: No log file if no TCP connection. How to fail close() with con?
-      unless [TCP_EV_SOCKET, TCP_EV_CLOSE].include?(syscall)
+      unless [TCP_EV_SOCKET, TCP_EV_CLOSE, TCP_EV_POLL, 
+              TCP_EV_PPOLL].include?(syscall)
         it "#{failing} should log no ERROR" do
           run_c_program(failing)
           assert no_error_log
@@ -68,8 +71,8 @@ describe "libc overrides" do
       # SOCKET: No JSON if no TCP connection.
       # LISTEN: How to fail listen() on valid TCP socket? 
       # CLOSE: How to fail close() on valid TCP socket?
-      unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE, 
-              TCP_EV_DUP].include?(syscall)
+      unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE, TCP_EV_DUP, 
+              TCP_EV_POLL, TCP_EV_PPOLL].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
           assert_event_present(syscall, false)

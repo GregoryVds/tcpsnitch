@@ -46,6 +46,7 @@ TCP_EV_SENDMSG="sendmsg"
 TCP_EV_RECVMSG="recvmsg"
 TCP_EV_SENDMMSG="sendmmsg"
 TCP_EV_RECVMMSG="recvmmsg"
+TCP_EV_GETSOCKNAME="getsockname"
 
 # unistd.h
 TCP_EV_WRITE="write"
@@ -59,6 +60,19 @@ TCP_EV_DUP3="dup3"
 TCP_EV_WRITEV="writev"
 TCP_EV_READV="readv"
 TCP_EV_IOCTL="ioctl"
+
+# sys/sendfile.h
+TCP_EV_SENDFILE="sendfile"
+
+# poll.h
+TCP_EV_POLL="poll"
+TCP_EV_PPOLL="ppoll"
+
+# sys/select.h
+TCP_EV_SELECT="select"
+TCP_EV_PSELECT="pselect"
+
+TCP_EV_TCP_INFO="tcp_info"
 
 SOCKET_SYSCALLS = [
   TCP_EV_SOCKET,
@@ -76,6 +90,7 @@ SOCKET_SYSCALLS = [
   TCP_EV_RECVMSG,
   TCP_EV_SENDMMSG,
 	TCP_EV_RECVMMSG,
+  TCP_EV_GETSOCKNAME,  
   TCP_EV_WRITE,
   TCP_EV_READ,
   TCP_EV_CLOSE,
@@ -84,13 +99,12 @@ SOCKET_SYSCALLS = [
   TCP_EV_DUP3,
   TCP_EV_WRITEV,
   TCP_EV_READV,
-  TCP_EV_IOCTL
+  TCP_EV_IOCTL,
+  TCP_EV_SENDFILE,
+  TCP_EV_POLL,
+  TCP_EV_PPOLL,
+  TCP_EV_SELECT,
+  TCP_EV_PSELECT
 ]
 
-# sys/sendfile.h
-TCP_EV_SENDFILE="sendfile"
 
-# pool.h
-TCP_EV_POLL="poll"
-
-TCP_EV_TCP_INFO="tcp_info"

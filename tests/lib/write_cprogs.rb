@@ -421,6 +421,32 @@ RECVMMSG_FAIL = CProg.new(<<-EOT, 'recvmmsg_fail')
 		return(EXIT_FAILURE);
 EOT
 
+GETSOCKNAME = CProg.new(<<-EOT, 'getsockname')
+#{CONNECT}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = sizeof(sa);
+
+	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0)
+		return(EXIT_FAILURE);
+EOT
+
+GETSOCKNAME_DGRAM = CProg.new(<<-EOT, 'getsockname_dgram')
+#{CONNECT_DGRAM}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = sizeof(sa);
+
+	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0)
+		return(EXIT_FAILURE);
+EOT
+
+GETSOCKNAME_FAIL = CProg.new(<<-EOT, 'getsockname_fail')
+#{CONNECT}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = -1;
+  if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 WRITE = CProg.new(<<-EOT, 'write')
 #{CONNECT}
   int data = 42;
@@ -598,23 +624,168 @@ EOT
 IOCTL = CProg.new(<<-EOT, 'ioctl')
 #{CONNECT}
 #{send_http_get}
-int bytes;
-if (ioctl(sock, FIONREAD, &bytes) == -1)
-  return(EXIT_FAILURE);
+  int bytes;
+  if (ioctl(sock, FIONREAD, &bytes) == -1)
+    return(EXIT_FAILURE);
 EOT
 
 IOCTL_DGRAM = CProg.new(<<-EOT, 'ioctl_dgram')
 #{SOCKET_DGRAM}
-int bytes;
-if (ioctl(sock, FIONREAD, &bytes) == -1)
-  return(EXIT_FAILURE);
+  int bytes;
+  if (ioctl(sock, FIONREAD, &bytes) == -1)
+    return(EXIT_FAILURE);
 EOT
 
 IOCTL_FAIL = CProg.new(<<-EOT, 'ioctl_fail')
 #{SOCKET}
-int bytes;
-if (ioctl(sock, 42, &bytes) != -1)
-  return(EXIT_FAILURE);
+  int bytes;
+  if (ioctl(sock, 42, &bytes) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+SENDFILE = CProg.new(<<-EOT, 'sendfile')
+#{CONNECT}
+  int fd = open("./c_programs/sendfile.c", O_RDONLY);
+  if (sendfile(sock, fd, NULL, 10) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+SENDFILE_DGRAM = CProg.new(<<-EOT, 'sendfile_dgram')
+#{CONNECT_DGRAM}
+  int fd = open("./c_programs/sendfile_dgram.c", O_RDONLY);
+  if (sendfile(sock, fd, NULL, 10) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+SENDFILE_FAIL = CProg.new(<<-EOT, 'sendfile_fail')
+#{SOCKET}
+  if (sendfile(sock, 42, NULL, 10) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+def two_sockets(type, proto)
+  <<-EOT
+  int sock1, sock2;
+  if ((sock1 = socket(AF_INET, #{type}, #{proto})) < 0)
+    return(EXIT_FAILURE);
+  if ((sock2 = socket(AF_INET, #{type}, #{proto})) < 0)
+    return(EXIT_FAILURE);
+  EOT
+end
+
+def pollfds
+  <<-EOT
+  struct pollfd pollfds[2];
+  pollfds[0].fd = sock1;
+  pollfds[0].events = POLLHUP;
+  pollfds[1].fd = sock2;
+  pollfds[1].events = POLLIN;
+  EOT
+end
+
+POLL = CProg.new(<<-EOT, 'poll')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{pollfds}
+  if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+POLL_DGRAM = CProg.new(<<-EOT, 'poll_dgram')
+#{two_sockets('SOCK_DGRAM', 'IPPROTO_UDP')}
+#{pollfds}
+  if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+def timespec
+  <<-EOT
+  struct timespec timeout;
+  timeout.tv_sec = 1;
+  timeout.tv_nsec = 1000;
+  EOT
+end
+
+PPOLL = CProg.new(<<-EOT, 'ppoll')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{pollfds}
+#{timespec}
+  if (ppoll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), &timeout, NULL) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+PPOLL_DGRAM = CProg.new(<<-EOT, 'ppoll_dgram')
+#{two_sockets('SOCK_DGRAM', 'IPPROTO_UDP')}
+#{pollfds}
+#{timespec}
+  if (ppoll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), &timeout, NULL) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+def fdset
+  <<-EOT
+  fd_set fdset;
+  FD_ZERO(&fdset);
+  FD_SET(sock1, &fdset);
+  FD_SET(sock2, &fdset);
+  EOT
+end
+
+def timeval
+  <<-EOT
+  struct timeval timeout;
+  timeout.tv_sec = 1;
+  timeout.tv_usec = 1;
+  EOT
+end
+
+SELECT = CProg.new(<<-EOT, 'select')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{fdset}
+#{timeval}
+  if (select(sock2+1, &fdset, NULL, NULL, &timeout) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+SELECT_DGRAM = CProg.new(<<-EOT, 'select_dgram')
+#{two_sockets('SOCK_DGRAM', 'IPPROTO_UDP')}
+#{fdset}
+#{timeval}
+  if (select(sock2+1, &fdset, NULL, NULL, &timeout) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+SELECT_FAIL = CProg.new(<<-EOT, 'select_fail')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{fdset}
+#{timeval}
+  close(sock2);
+  if (select(sock2+1, &fdset, NULL, NULL, &timeout) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+PSELECT = CProg.new(<<-EOT, 'pselect')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{fdset}
+#{timespec}
+  if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+PSELECT_DGRAM = CProg.new(<<-EOT, 'pselect_dgram')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{fdset}
+#{timespec}
+  if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+PSELECT_FAIL = CProg.new(<<-EOT, 'pselect_fail')
+#{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
+#{fdset}
+#{timespec}
+  close(sock2);
+  if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) != -1)
+    return(EXIT_FAILURE);
 EOT
 
 CONSECUTIVE_CONNECTIONS = CProg.new(<<-EOT, 'consecutive_connections')

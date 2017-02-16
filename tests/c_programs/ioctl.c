@@ -9,6 +9,7 @@
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/unistd.h>
@@ -31,9 +32,9 @@ int main(void) {
   char *req = "GET / HTTP/1.0\r\n\r\n";
   send(sock, req, sizeof(char)*strlen(req), 0);
 
-int bytes;
-if (ioctl(sock, FIONREAD, &bytes) == -1)
-  return(EXIT_FAILURE);
+  int bytes;
+  if (ioctl(sock, FIONREAD, &bytes) == -1)
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

@@ -22,6 +22,7 @@ class CProg
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/unistd.h>

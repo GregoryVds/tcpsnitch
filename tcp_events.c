@@ -872,7 +872,7 @@ void tcp_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
 	// Inst. local vars TcpConnection *con & TcpEvGetsockname *ev
 	TCP_EV_PRELUDE(TCP_EV_GETSOCKNAME, TcpEvGetsockname);
 
-        fill_addr(&(ev->addr), addr, *addrlen);
+        if (ret != -1) fill_addr(&(ev->addr), addr, *addrlen);
 
 	TCP_EV_POSTLUDE(TCP_EV_GETSOCKNAME);
 }

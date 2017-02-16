@@ -9,6 +9,7 @@
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/unistd.h>
@@ -20,9 +21,9 @@ int main(void) {
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
     return(EXIT_FAILURE);
 
-int bytes;
-if (ioctl(sock, FIONREAD, &bytes) == -1)
-  return(EXIT_FAILURE);
+  int bytes;
+  if (ioctl(sock, FIONREAD, &bytes) == -1)
+    return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);
 }

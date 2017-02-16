@@ -363,6 +363,26 @@ describe 'tcp_spy' do
     end
   end
 
+  describe "a #{TCP_EV_GETSOCKNAME} event" do
+    it "#{TCP_EV_GETSOCKNAME} should have the correct JSON fields" do
+      run_c_program(TCP_EV_GETSOCKNAME)
+      pattern = [
+        {
+          type: TCP_EV_GETSOCKNAME,
+          details: {
+            addr: {
+              ip: String,
+              port: String,
+              name: String,
+              serv: String
+            }
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
   describe "a #{TCP_EV_READ} event" do
     it "#{TCP_EV_READ} should have the correct JSON fields" do
       run_c_program(TCP_EV_READ)
@@ -464,6 +484,164 @@ describe 'tcp_spy' do
             iovec: {
               iovec_count: Integer,
               iovec_sizes: Array
+            }
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_IOCTL} event" do
+    it "#{TCP_EV_IOCTL} should have the correct JSON fields" do
+      run_c_program(TCP_EV_IOCTL)
+      pattern = [
+        {
+          type: TCP_EV_IOCTL,
+          details: {
+            request: Integer
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_SENDFILE} event" do
+    it "#{TCP_EV_SENDFILE} should have the correct JSON fields" do
+      run_c_program(TCP_EV_SENDFILE)
+      pattern = [
+        {
+          type: TCP_EV_SENDFILE,
+          details: {
+            bytes: Integer
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_POLL} event" do
+    it "#{TCP_EV_POLL} should have the correct JSON fields" do
+      run_c_program(TCP_EV_POLL)
+      pattern = [
+        {
+          type: TCP_EV_POLL,
+          details: {
+            timeout: {
+              seconds: Integer,
+              nanoseconds: Integer
+            },
+            requested_events: {
+              pollin: Boolean,
+              pollpri: Boolean,
+              pollout: Boolean,
+              pollrdhup: Boolean,
+              pollerr: Boolean,
+              pollhup: Boolean,
+              pollnval: Boolean
+            },
+            returned_events: {
+              pollin: Boolean,
+              pollpri: Boolean,
+              pollout: Boolean,
+              pollrdhup: Boolean,
+              pollerr: Boolean,
+              pollhup: Boolean,
+              pollnval: Boolean
+            }
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_PPOLL} event" do
+    it "#{TCP_EV_PPOLL} should have the correct JSON fields" do
+      run_c_program(TCP_EV_PPOLL)
+      pattern = [
+        {
+          type: TCP_EV_PPOLL,
+          details: {
+            timeout: {
+              seconds: Integer,
+              nanoseconds: Integer
+            },
+            requested_events: {
+              pollin: Boolean,
+              pollpri: Boolean,
+              pollout: Boolean,
+              pollrdhup: Boolean,
+              pollerr: Boolean,
+              pollhup: Boolean,
+              pollnval: Boolean
+            },
+            returned_events: {
+              pollin: Boolean,
+              pollpri: Boolean,
+              pollout: Boolean,
+              pollrdhup: Boolean,
+              pollerr: Boolean,
+              pollhup: Boolean,
+              pollnval: Boolean
+            }
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_SELECT} event" do
+    it "#{TCP_EV_SELECT} should have the correct JSON fields" do
+      run_c_program(TCP_EV_SELECT)
+      pattern = [
+        {
+          type: TCP_EV_SELECT,
+          details: {
+            timeout: {
+              seconds: Integer,
+              nanoseconds: Integer
+            },
+            requested_events: {
+              read: Boolean,
+              write: Boolean,
+              except: Boolean
+            },
+            returned_events: {
+              read: Boolean,
+              write: Boolean,
+              except: Boolean
+            }
+          }
+        }.ignore_extra_keys!
+      ].ignore_extra_values!
+      assert_json_match(pattern, read_json_as_array)
+    end
+  end
+
+  describe "a #{TCP_EV_PSELECT} event" do
+    it "#{TCP_EV_PSELECT} should have the correct JSON fields" do
+      run_c_program(TCP_EV_PSELECT)
+      pattern = [
+        {
+          type: TCP_EV_PSELECT,
+          details: {
+            timeout: {
+              seconds: Integer,
+              nanoseconds: Integer
+            },
+            requested_events: {
+              read: Boolean,
+              write: Boolean,
+              except: Boolean
+            },
+            returned_events: {
+              read: Boolean,
+              write: Boolean,
+              except: Boolean
             }
           }
         }.ignore_extra_keys!
