@@ -1074,7 +1074,10 @@ void tcp_close_unclosed_connections(void) {
 
 void tcp_free(void) {
 	ra_free();
-	mutex_destroy(&connections_count_mutex);
+        // We don't check for errors on this one. This is called
+        // after fork() and will logically failed if the mutex
+        // was lock at the time of forking. This is normal.
+	pthread_mutex_destroy(&connections_count_mutex);
 }
 
 void tcp_reset(void) {

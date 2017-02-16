@@ -62,8 +62,7 @@ static bool is_index_in_bounds(int index) { return index < size; }
 bool ra_put_elem(int index, ELEM_TYPE elem) {
         pthread_rwlock_wrlock(&rwlock);
         if (!array && !init(index + 1)) goto error;
-        if (index > size - 1 && !double_size(index))
-                goto error;
+        if (index > size - 1 && !double_size(index)) goto error;
 
         ElemWrapper *ew = (ElemWrapper *)my_malloc(sizeof(ElemWrapper));
         if (!ew) goto error;
@@ -158,7 +157,10 @@ void ra_free() {
         pthread_rwlock_rdlock(&rwlock);
         for (int i = 0; i < size; i++) {
                 if (array[i]) {
-                        mutex_destroy(&array[i]->mutex);
+                        // We don't check for errors on this one. This is called
+                        // after fork() and will logically failed if the mutex
+                        // was lock at the time of forking. This is normal.
+                        pthread_mutex_destroy(&array[i]->mutex);
                         FREE_ELEM(array[i]->elem);
                         free(array[i]);
                 }

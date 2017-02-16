@@ -95,7 +95,10 @@ static void tcpsnitch_free(void) {
         free(conf_opt_d);
 #endif
         free(logs_dir_path);
-        mutex_destroy(&init_mutex);
+        // We don't check for errors on this one. This is called
+        // after fork() and will logically failed if the mutex
+        // was lock at the time of forking. This is normal.
+        pthread_mutex_destroy(&init_mutex);
 }
 
 #ifndef __ANDROID__
@@ -194,12 +197,10 @@ error:
 
 void reset_tcpsnitch(void) {
         if (!initialized) return;  // Nothing to do.
-
         tcpsnitch_free();
         logger_init(NULL, WARN, WARN);
         initialized = false;
         mutex_init(&init_mutex);
-
         tcp_free();
         tcp_reset();
 }
