@@ -144,7 +144,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 prefix="package:"
-match=$(echo $(adb shell pm list packages | grep -s "$1") | tr -d '\r')
+match=$(echo $(adb shell pm list packages | grep -m 1 -s "$1") | tr -d '\r')
 
 # Check that package exists
 if [ -z "$match" ]; then
