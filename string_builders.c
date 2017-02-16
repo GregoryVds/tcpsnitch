@@ -186,7 +186,7 @@ char *alloc_android_opt_d(void) {
         int n = 11 + strlen(app_name) + 1;  // "/data/data/" + APP_NAME + '\0'
         char *opt_d = (char *)my_malloc(sizeof(char) * n);
         if (!opt_d) goto error;
-        sprintf(opt_d, "/data/data/%s", app_name);
+        sprintf(opt_d, "/data/data/%s/tcpsnitch", app_name);
         free(app_name);
         return opt_d;
 error:

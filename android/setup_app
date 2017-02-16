@@ -15,7 +15,7 @@ OPT_C=0
 OPT_D=""
 OPT_E=1024
 OPT_F=2
-OPT_L=2
+OPT_L=4
 OPT_P=0
 OPT_U=0
 OPT_T=1000
@@ -132,27 +132,7 @@ done
 # Consume option args
 shift $((OPTIND - 1))
 
-# Check that adb sees exactly 1 device
-if [ $(adb devices | wc -l) -ne 3 ]; then
-        error "adb must see exactly 1 device"
-fi
-
-# Verify number of arguments
-if [[ $# -ne 1 ]]; then
-        error "missing package argument"
-        exit 1
-fi
-
-prefix="package:"
-match=$(echo $(adb shell pm list packages | grep -m 1 -s "$1") | tr -d '\r')
-
-# Check that package exists
-if [ -z "$match" ]; then
-        error "invalid argument: package '${package}' not found"
-        exit 1
-fi
-
-package=${match#${prefix}}
+package=$(./get_package.sh)
 echo "Setting up tcpsnitch for: '${package}'"
 
 # Set system properties
@@ -161,8 +141,9 @@ adb shell su -c chmod 777 /data
 adb shell su -c rm -f /data/libtcpsnitch.so
 
 echo "Uploading library to ${LIBPATH}/${LIB}"
-adb push ${LIB} ${LIBPATH}
+adb push ../${LIB} ${LIBPATH}
 
+adb shell su -c mkdir -m 777 -p /data/data/${package}/tcpsnitch
 adb shell setprop wrap.${package} LD_PRELOAD=/data/libtcpsnitch.so
 adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
 adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"

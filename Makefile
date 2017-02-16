@@ -103,5 +103,5 @@ tests: tcpsnitch install
 index: 
 	ctags -R .
 
-.PHONY: tcpsnitch tests clean index
+.PHONY: tcpsnitch tests clean index android
 

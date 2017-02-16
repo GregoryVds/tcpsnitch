@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -o nounset
+# set -o xtrace
+
+# Verify number of arguments
+if [[ $# -ne 1 ]]; then
+        echo "$0: missing package argument."
+        exit 1
+fi
+
+package=$(./get_package $1)
+echo "Killing '${package}'..."
+
+adb shell am force-stop ${package}

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -o nounset
+# set -o xtrace
+
+if [[ $# -ne 1 ]]; then
+        echo "$0: missing package argument."
+        exit 1
+fi
+
+# Check that adb sees exactly 1 device
+if [ $(adb devices | wc -l) -ne 3 ]; then
+        error "adb must see exactly 1 device"
+fi
+
+prefix="package:"
+match=$(echo $(adb shell pm list packages | grep -m 1 -s "$1") | tr -d '\r')
+
+# Check that package exists
+if [ -z "$match" ]; then
+        error "invalid argument: package '${package}' not found"
+        exit 1
+fi
+
+package=${match#${prefix}}
+echo $package
