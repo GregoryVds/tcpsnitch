@@ -6,6 +6,8 @@ NAME="tcpsnitch_android"
 VERSION=1.0
 VERSION_STR="${NAME} version ${VERSION}"
 BASE_PROP="be.ucl.tcpsnitch"
+LIB="libtcpsnitch.so"
+LIBPATH="/data"
 
 # Option default values
 OPT_B=0
@@ -142,25 +144,26 @@ if [[ $# -ne 1 ]]; then
 fi
 
 prefix="package:"
-match=$(adb shell pm list packages | grep -s "$1") 
-echo $match
+match=$(echo $(adb shell pm list packages | grep -s "$1") | tr -d '\r')
 
 # Check that package exists
 if [ -z "$match" ]; then
-        error "invalid argument: package '$package' not found"
+        error "invalid argument: package '${package}' not found"
         exit 1
 fi
 
-package=${match#$prefix}
-echo "Setting up tcpsnitch for: $package"
+package=${match#${prefix}}
+echo "Setting up tcpsnitch for: '${package}'"
 
 # Set system properties
 adb shell su -c setenforce 0
 adb shell su -c chmod 777 /data
 adb shell su -c rm -f /data/libtcpsnitch.so
-adb push libtcpsnitch.so /data
 
-adb shell setprop wrap.$package LD_PRELOAD=/data/libtcpsnitch.so
+echo "Uploading library to ${LIBPATH}/${LIB}"
+adb push ${LIB} ${LIBPATH}
+
+adb shell setprop wrap.${package} LD_PRELOAD=/data/libtcpsnitch.so
 adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
 adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"
 adb shell setprop "$BASE_PROP.opt_e" "$OPT_E"
