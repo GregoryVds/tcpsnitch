@@ -94,8 +94,7 @@ describe 'tcp_spy' do
               port: String,
               name: String,
               serv: String
-            },
-            force_bind: Boolean
+            }
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!

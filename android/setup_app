@@ -141,7 +141,7 @@ adb shell su -c chmod 777 /data
 adb shell su -c rm -f /data/libtcpsnitch.so
 
 echo "Uploading library to ${LIBPATH}/${LIB}"
-adb push ../${LIB} ${LIBPATH}
+adb push ${LIB} ${LIBPATH}
 
 adb shell su -c mkdir -m 777 -p /data/data/${package}/tcpsnitch
 adb shell setprop wrap.${package} LD_PRELOAD=/data/libtcpsnitch.so

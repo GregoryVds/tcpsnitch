@@ -6,8 +6,8 @@ This folder contains several helper bash scripts to deal with Android devices.
 
 tcpsnitch has been sucessfully compiled with the NDK for Android API 23.
 
-Just issue `make android` from the root folder to compile the Android version.
-Before that, you must adjust the `CC_ANDROID` variable to point to the NDK compiler.
+Just issue `make` from here to compile the Android version (or `make android` from the root diretory).
+Before that, you must adjust the `CC_ANDROID` variable in the root Makefile to point to the NDK compiler.
 
 ## Helper scripts
 

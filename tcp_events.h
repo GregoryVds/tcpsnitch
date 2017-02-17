@@ -81,7 +81,6 @@ typedef struct {
 
 typedef struct {
 	TcpEvent super;
-	bool force_bind;
 	TcpAddr addr;
 } TcpEvBind;
 
@@ -351,7 +350,6 @@ typedef struct {
 	long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
 	long last_json_dump_micros;
 	long last_json_dump_evcount;
-	bool force_bind;
 	bool bound;
 	struct sockaddr_storage bound_addr;
 	int rtt;

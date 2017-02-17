@@ -1,0 +1,2 @@
+android:
+	cd .. && make android

@@ -74,7 +74,7 @@ tcpsnitch: checkdeps $(HEADERS) $(SOURCES)
 	@echo "[-] Done!"
 
 android:
-	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LINKER_NAME) $(SOURCES) $(DEPS_ANDROID)
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./android/$(LINKER_NAME) $(SOURCES) $(DEPS_ANDROID)
 install:
 	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
 	@test -d $(LIB_AMD64_PATH) || mkdir $(LIB_AMD64_PATH) 

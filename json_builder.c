@@ -206,7 +206,6 @@ static json_t *build_tcp_ev_bind(const TcpEvBind *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "addr", build_addr(&ev->addr));
-        add(json_details, "force_bind", json_boolean(ev->force_bind));
 
         return json_ev;
 }
