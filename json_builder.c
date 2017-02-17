@@ -150,6 +150,35 @@ error:
         return NULL;
 }
 
+static json_t *build_timeval(const struct timeval *tv) {
+        json_t *json_timeval = json_object();
+        if (!json_timeval) goto error;
+
+        add(json_timeval, "tv_sec", json_integer(tv->tv_sec));
+        add(json_timeval, "tv_usec", json_integer(tv->tv_usec));
+
+        return json_timeval;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
+static json_t *build_optval(const TcpSockopt *sockopt) {
+        switch (sockopt->level) {
+                case SOL_SOCKET:
+                        switch (sockopt->optname) {
+                                case SO_RCVTIMEO:
+                                case SO_SNDTIMEO:
+                                        return build_timeval(
+                                            (struct timeval *)sockopt->optval);
+                                        break;
+                        }
+                        break;
+        }
+        return NULL;
+}
+
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         const char *type_str = string_from_tcp_event_type(ev->type);
         add(json_ev, "type", json_string(type_str));
@@ -250,6 +279,7 @@ static json_t *build_tcp_ev_getsockopt(const TcpEvGetsockopt *ev) {
         add(json_details, "level_str", json_string(ev->sockopt.level_str));
         add(json_details, "optname", json_integer(ev->sockopt.optname));
         add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
+        add(json_details, "optval", build_optval(&ev->sockopt));
 
         return json_ev;
 }
@@ -261,6 +291,7 @@ static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         add(json_details, "level_str", json_string(ev->sockopt.level_str));
         add(json_details, "optname", json_integer(ev->sockopt.optname));
         add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
+        add(json_details, "optval", build_optval(&ev->sockopt));
 
         return json_ev;
 }

@@ -135,6 +135,8 @@ shift $((OPTIND - 1))
 package=$(./get_package $1)
 echo "Setting up tcpsnitch for: '${package}'"
 
+make 
+
 # Set system properties
 adb shell su -c setenforce 0
 adb shell su -c chmod 777 /data

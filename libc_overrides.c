@@ -153,7 +153,7 @@ int getsockopt(int fd, int level, int optname, void *optval,
         int err = errno;
         if (is_tcp_socket(fd))
                 tcp_ev_getsockopt(fd, ret, err, level, optname, optval,
-                                  uoptlen);
+                                  *optlen);
 
         errno = err;
         return ret;
