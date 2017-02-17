@@ -132,7 +132,7 @@ done
 # Consume option args
 shift $((OPTIND - 1))
 
-package=$(./get_package.sh)
+package=$(./get_package $1)
 echo "Setting up tcpsnitch for: '${package}'"
 
 # Set system properties

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -o nounset
+# set -o xtrace
+
+# Verify number of arguments
+if [[ $# -ne 1 ]]; then
+        echo "$0: missing package argument."
+        exit 1
+fi
+
+package=$(./get_package $1)
+echo "$0: fetching traces for '${package}'..."
+
+tracesdir="/data/data/${package}/tcpsnitch"
+
+if [ ! $(adb shell su -c ls ${tracesdir}) ]; then
+        echo "$0: no traces for '${package}'."
+        exit 0
+fi
+
+adb shell su -c ls ${tracesdir} | while read -r line; do
+        trace=$(echo $line | tr -d '\r')
+        adb shell su -c mv ${tracesdir}/${trace} /data/${trace} 
+        adb shell su busybox chmod -R 777 /data/${trace}
+        adb pull /data/${trace} ./traces/${trace}
+        echo "$0: ${trace} pulled."
+done

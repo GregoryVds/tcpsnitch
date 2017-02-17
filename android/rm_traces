@@ -9,6 +9,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 package=$(./get_package $1)
-echo "Removing traces for: '${package}'"
+echo "$0: removing traces for: '${package}'..."
 
 adb shell su -c rm -rf /data/data/${package}/tcpsnitch/*
+echo "$0: done!"
