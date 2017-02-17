@@ -218,7 +218,10 @@ static void free_addr(TcpAddr *addr) {
         free(addr->serv);
 }
 
-static void free_sockopt(TcpSockopt *sockopt) { free(sockopt->optname_str); }
+static void free_sockopt(TcpSockopt *sockopt) { 
+        free(sockopt->optname_str); 
+        free(sockopt->optval);
+}
 
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
@@ -344,12 +347,21 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
-static void fill_sockopt(TcpSockopt *sockopt, int level, int optname) {
+static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
+                         const void *optval, socklen_t optlen) {
         struct protoent *p = getprotobynumber(level);
         sockopt->level = level;
         sockopt->level_str = p ? p->p_name : NULL;
         sockopt->optname = optname;
         sockopt->optname_str = alloc_sock_optname_str(optname);
+
+        sockopt->optval = my_malloc(optlen);
+        if (!sockopt->optval) goto error;
+        memcpy(sockopt->optval, optval, optlen);
+
+        return;
+error:
+        LOG_FUNC_FAIL;
 }
 
 typedef int (*orig_bind_type)(int fd, const struct sockaddr *addr,
@@ -738,20 +750,22 @@ error:
         ra_unlock_elem(fd);
 }
 
-void tcp_ev_getsockopt(int fd, int ret, int err, int level, int optname) {
+void tcp_ev_getsockopt(int fd, int ret, int err, int level, int optname,
+                       const void *optval, socklen_t optlen) {
         // Inst. local vars TcpConnection *con & TcpEvGetsockopt *ev
         TCP_EV_PRELUDE(TCP_EV_GETSOCKOPT, TcpEvGetsockopt);
 
-        fill_sockopt(&ev->sockopt, level, optname);
+        fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
 
         TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT);
 }
 
-void tcp_ev_setsockopt(int fd, int ret, int err, int level, int optname) {
+void tcp_ev_setsockopt(int fd, int ret, int err, int level, int optname,
+                       const void *optval, socklen_t optlen) {
         // Inst. local vars TcpConnection *con & TcpEvSetsockopt *ev
         TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
 
-        fill_sockopt(&ev->sockopt, level, optname);
+        fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
 
         TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT);
 }

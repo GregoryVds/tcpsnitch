@@ -151,7 +151,9 @@ int getsockopt(int fd, int level, int optname, void *optval,
 
         int ret = orig_getsockopt(fd, level, optname, optval, optlen);
         int err = errno;
-        if (is_tcp_socket(fd)) tcp_ev_getsockopt(fd, ret, err, level, optname);
+        if (is_tcp_socket(fd))
+                tcp_ev_getsockopt(fd, ret, err, level, optname, optval,
+                                  uoptlen);
 
         errno = err;
         return ret;
@@ -169,7 +171,8 @@ int setsockopt(int fd, int level, int optname, const void *optval,
 
         int ret = orig_setsockopt(fd, level, optname, optval, optlen);
         int err = errno;
-        if (is_tcp_socket(fd)) tcp_ev_setsockopt(fd, ret, err, level, optname);
+        if (is_tcp_socket(fd))
+                tcp_ev_setsockopt(fd, ret, err, level, optname, optval, optlen);
 
         errno = err;
         return ret;
@@ -798,12 +801,12 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
         for (fd = 0; fd < nfds; fd++) {
                 if (is_tcp_socket(fd) && req_ev[fd]) {
                         tcp_ev_pselect(fd, ret, err, (req_ev[fd] & READ_FLAG),
-                                      (req_ev[fd] & WRITE_FLAG),
-                                      (req_ev[fd] & EXCEPT_FLAG),
-                                      readfds && FD_ISSET(fd, readfds),
-                                      writefds && FD_ISSET(fd, writefds),
-                                      exceptfds && FD_ISSET(fd, exceptfds),
-                                      timeout);
+                                       (req_ev[fd] & WRITE_FLAG),
+                                       (req_ev[fd] & EXCEPT_FLAG),
+                                       readfds && FD_ISSET(fd, readfds),
+                                       writefds && FD_ISSET(fd, writefds),
+                                       exceptfds && FD_ISSET(fd, exceptfds),
+                                       timeout);
                 }
         }
 
