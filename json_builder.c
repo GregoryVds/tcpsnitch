@@ -17,10 +17,25 @@ static json_t *build_addr(const TcpAddr *addr) {
         json_t *json_addr = json_object();
         if (!json_addr) goto error;
 
-        add(json_addr, "ip", json_string(addr->ip));
-        add(json_addr, "hostname", json_string(addr->hostname));
-        add(json_addr, "port", json_string(addr->port));
-        add(json_addr, "service", json_string(addr->service));
+        if (addr->sockaddr.sa_family == AF_INET)
+                add(json_addr, "sa_family", json_string("AF_INET"));
+        else if (addr->sockaddr.sa_family == AF_INET6)
+                add(json_addr, "sa_family", json_string("AF_INET6"));
+
+        char *ip = alloc_ip_str(&addr->sockaddr);
+        add(json_addr, "ip", json_string(ip));
+        free(ip);
+
+        char *port = alloc_port_str(&addr->sockaddr);
+        add(json_addr, "port", json_string(port));
+        free(port);
+
+        char *hostname, *service;
+        alloc_name_str(&addr->sockaddr, addr->len, &hostname, &service);
+        add(json_addr, "hostname", json_string(hostname));
+        add(json_addr, "service", json_string(service));
+        free(hostname);
+        free(service);
 
         return json_addr;
 error:
@@ -182,7 +197,10 @@ static json_t *build_optval(const TcpSockopt *sockopt) {
 
 static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
         struct protoent *p = getprotobynumber(sockopt->level);
-        add(details, "level", json_string(p ? p->p_name : NULL));
+        if (p)
+                add(details, "level", json_string(p->p_name));
+        else
+                add(details, "level", json_integer(sockopt->level));
 
         char *optname = alloc_sock_optname_str(sockopt->optname);
         add(details, "optname", json_string(optname));
@@ -374,7 +392,7 @@ static json_t *build_tcp_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
 static json_t *build_tcp_ev_getsockname(const TcpEvGetsockname *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-        add(json_details, "addr", build_addr(&ev->addr));
+        if (ev->super.success) add(json_details, "addr", build_addr(&ev->addr));
 
         return json_ev;
 }
@@ -503,14 +521,14 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
         add(json_details, "cmd", json_string(cmd_str));
         free(cmd_str);
 
-        switch (ev->cmd) {  
+        switch (ev->cmd) {
                 case F_GETFD:
                 case F_GETFL:
                 case F_GETOWN:
                 case F_GETSIG:
                 case F_GETLEASE:
                 case F_GETPIPE_SZ:
-                        break; // Arg: void
+                        break;  // Arg: void
                 case F_SETFD:
                         add(d, "O_CLOEXEC", json_boolean(ev->arg & O_CLOEXEC));
                         break;
@@ -519,7 +537,8 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
                         add(d, "O_ASYNC", json_boolean(ev->arg & O_ASYNC));
                         add(d, "O_DIRECT", json_boolean(ev->arg & O_DIRECT));
                         add(d, "O_NOATIME", json_boolean(ev->arg & O_NOATIME));
-                        add(d, "O_NONBLOCK", json_boolean(ev->arg & O_NONBLOCK));
+                        add(d, "O_NONBLOCK",
+                            json_boolean(ev->arg & O_NONBLOCK));
                         break;
                 case F_DUPFD:
                 case F_DUPFD_CLOEXEC:

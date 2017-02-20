@@ -14,6 +14,14 @@ describe 'tcp_spy' do
     reset_dir(DEFAULT_PATH)
   end
 
+  addr = {
+    sa_family: String,
+    ip: String,
+    port: String,
+    hostname: String,
+    service: String
+  }
+
   describe '2 TCP connections' do
     it 'should properly handle 2 consecutive connections' do
       run_c_program('consecutive_connections')
@@ -89,12 +97,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_BIND,
           details: {
-            addr: {
-              ip: String,
-              port: String,
-              hostname: String,
-              service: String
-            }
+            addr: addr 
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -109,12 +112,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_CONNECT,
           details: {
-            addr: {
-              ip: String,
-              port: String,
-              hostname: String,
-              service: String
-            }
+            addr: addr 
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -365,12 +363,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_GETSOCKNAME,
           details: {
-            addr: {
-              ip: String,
-              port: String,
-              hostname: String,
-              service: String
-            }
+            addr: addr 
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!

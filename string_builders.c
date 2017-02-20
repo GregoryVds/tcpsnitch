@@ -14,20 +14,19 @@
 #include "logger.h"
 
 char *alloc_ip_str(const struct sockaddr *addr) {
-        static const int ADDR_WIDTH = 40;
-
-        char *addr_str = (char *)my_calloc(sizeof(char) * ADDR_WIDTH);
+        int n = INET6_ADDRSTRLEN;
+        char *addr_str = (char *)my_calloc(sizeof(char) * n);
         if (!addr_str) goto error_out;
 
         // Convert host from network to printable
         const char *r;
         if (addr->sa_family == AF_INET) {
                 const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
-                r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, ADDR_WIDTH);
+                r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, n);
         } else if (addr->sa_family == AF_INET6) {
                 const struct sockaddr_in6 *v6 =
                     (const struct sockaddr_in6 *)addr;
-                r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, ADDR_WIDTH);
+                r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, n);
         } else
                 goto error1;
 

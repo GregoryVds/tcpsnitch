@@ -216,28 +216,12 @@ error:
         return NULL;
 }
 
-static void free_addr(TcpAddr *addr) {
-        free(addr->ip);
-        free(addr->port);
-        free(addr->hostname);
-        free(addr->service);
-}
-
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
         switch (ev->type) {
                 case TCP_EV_SOCKET:
                         free(((TcpEvSocket *)ev)->domain_str);
                         free(((TcpEvSocket *)ev)->type_str);
-                        break;
-                case TCP_EV_BIND:
-                        free_addr(&((TcpEvBind *)ev)->addr);
-                        break;
-                case TCP_EV_CONNECT:
-                        free_addr(&((TcpEvConnect *)ev)->addr);
-                        break;
-                case TCP_EV_ACCEPT:
-                        free_addr(&((TcpEvAccept *)ev)->addr);
                         break;
                 case TCP_EV_GETSOCKOPT:
                         free(((TcpEvGetsockopt *)ev)->sockopt.optval);
@@ -286,10 +270,8 @@ error:
 }
 
 static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
-        memcpy(&(a->addr_sto), addr, len);
-        a->ip = alloc_ip_str(addr);
-        a->port = alloc_port_str(addr);
-        alloc_name_str(addr, len, &a->hostname, &a->service);
+        memcpy(&a->sockaddr, addr, len);
+        a->len = len;
 }
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
@@ -689,8 +671,7 @@ void tcp_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
         if (!ret) {
                 // Save bound addr as we will later use it for capture filter.
                 con->bound = true;
-                memcpy(&con->bound_addr, &ev->addr.addr_sto,
-                       sizeof(struct sockaddr_storage));
+                memcpy(&con->bound_addr, &ev->addr.sockaddr, ev->addr.len);
         }
 
         TCP_EV_POSTLUDE(TCP_EV_BIND);

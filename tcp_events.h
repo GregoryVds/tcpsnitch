@@ -76,11 +76,8 @@ typedef struct {
 } TcpEvSocket;
 
 typedef struct {
-        struct sockaddr_storage addr_sto;
-        char *ip;
-        char *port;
-        char *hostname;
-        char *service;
+        struct sockaddr sockaddr;
+        socklen_t len;
 } TcpAddr;
 
 typedef struct {
