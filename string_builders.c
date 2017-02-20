@@ -14,7 +14,7 @@
 #include "logger.h"
 
 char *alloc_ip_str(const struct sockaddr *addr) {
-        int n = INET6_ADDRSTRLEN;
+        static const int n = INET6_ADDRSTRLEN;
         char *addr_str = (char *)my_calloc(sizeof(char) * n);
         if (!addr_str) goto error_out;
 

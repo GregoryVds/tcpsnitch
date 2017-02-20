@@ -17,21 +17,23 @@ static json_t *build_addr(const TcpAddr *addr) {
         json_t *json_addr = json_object();
         if (!json_addr) goto error;
 
-        if (addr->sockaddr.sa_family == AF_INET)
+        const struct sockaddr *sockaddr =
+            (const struct sockaddr *)&addr->sockaddr_sto;
+
+        if (sockaddr->sa_family == AF_INET)
                 add(json_addr, "sa_family", json_string("AF_INET"));
-        else if (addr->sockaddr.sa_family == AF_INET6)
+        else if (sockaddr->sa_family == AF_INET6)
                 add(json_addr, "sa_family", json_string("AF_INET6"));
 
-        char *ip = alloc_ip_str(&addr->sockaddr);
+        char *ip = alloc_ip_str(sockaddr);
         add(json_addr, "ip", json_string(ip));
         free(ip);
-
-        char *port = alloc_port_str(&addr->sockaddr);
+        char *port = alloc_port_str(sockaddr);
         add(json_addr, "port", json_string(port));
         free(port);
 
         char *hostname, *service;
-        alloc_name_str(&addr->sockaddr, addr->len, &hostname, &service);
+        alloc_name_str(sockaddr, addr->len, &hostname, &service);
         add(json_addr, "hostname", json_string(hostname));
         add(json_addr, "service", json_string(service));
         free(hostname);

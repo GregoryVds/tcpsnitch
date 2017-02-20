@@ -270,7 +270,7 @@ error:
 }
 
 static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
-        memcpy(&a->sockaddr, addr, len);
+        memcpy(&a->sockaddr_sto, addr, len);
         a->len = len;
 }
 
@@ -671,7 +671,7 @@ void tcp_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
         if (!ret) {
                 // Save bound addr as we will later use it for capture filter.
                 con->bound = true;
-                memcpy(&con->bound_addr, &ev->addr.sockaddr, ev->addr.len);
+                memcpy(&con->bound_addr, &ev->addr.sockaddr_sto, ev->addr.len);
         }
 
         TCP_EV_POSTLUDE(TCP_EV_BIND);
