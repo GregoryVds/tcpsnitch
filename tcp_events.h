@@ -111,9 +111,7 @@ typedef struct {
 
 typedef struct {
         int level;
-        char *level_str;
         int optname;
-        char *optname_str;
         void *optval;
 } TcpSockopt;
 
@@ -331,7 +329,7 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
-        char *cmd; 
+        int cmd;
         int arg;
 } TcpEvFcntl;
 

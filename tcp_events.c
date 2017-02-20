@@ -223,11 +223,6 @@ static void free_addr(TcpAddr *addr) {
         free(addr->service);
 }
 
-static void free_sockopt(TcpSockopt *sockopt) {
-        free(sockopt->optname_str);
-        free(sockopt->optval);
-}
-
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
         switch (ev->type) {
@@ -245,19 +240,16 @@ static void free_event(TcpEvent *ev) {
                         free_addr(&((TcpEvAccept *)ev)->addr);
                         break;
                 case TCP_EV_GETSOCKOPT:
-                        free_sockopt(&((TcpEvGetsockopt *)ev)->sockopt);
+                        free(((TcpEvGetsockopt *)ev)->sockopt.optval);
                         break;
                 case TCP_EV_SETSOCKOPT:
-                        free_sockopt(&((TcpEvSetsockopt *)ev)->sockopt);
+                        free(((TcpEvSetsockopt *)ev)->sockopt.optval);
                         break;
                 case TCP_EV_READV:
                         free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
                         break;
                 case TCP_EV_WRITEV:
                         free(((TcpEvWritev *)ev)->iovec.iovec_sizes);
-                        break;
-                case TCP_EV_FCNTL:
-                        free(((TcpEvFcntl *)ev)->cmd);
                         break;
                 default:
                         break;
@@ -361,16 +353,11 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 
 static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
                          const void *optval, socklen_t optlen) {
-        struct protoent *p = getprotobynumber(level);
         sockopt->level = level;
-        sockopt->level_str = p ? p->p_name : NULL;
         sockopt->optname = optname;
-        sockopt->optname_str = alloc_sock_optname_str(optname);
-
         sockopt->optval = my_malloc(optlen);
         if (!sockopt->optval) goto error;
         memcpy(sockopt->optval, optval, optlen);
-
         return;
 error:
         LOG_FUNC_FAIL;
@@ -1080,6 +1067,8 @@ void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
 void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
         // Inst. local vars TcpConnection *con & TcpEvFcntl *ev
         TCP_EV_PRELUDE(TCP_EV_FCNTL, TcpEvFcntl);
+        
+        ev->cmd = cmd;
 
         switch (cmd) {
                 case F_GETFD:
@@ -1129,7 +1118,6 @@ void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
                         LOG(WARN, "cmd unknown: %d - fcntl dropped", cmd);
         }
 
-        ev->cmd = alloc_fcntl_cmd_str(cmd);
 
         TCP_EV_POSTLUDE(TCP_EV_FCNTL);
 }

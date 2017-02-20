@@ -3,6 +3,7 @@
 #include "json_builder.h"
 #include <jansson.h>
 #include <netdb.h>
+#include "fcntl.h"
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
@@ -179,6 +180,17 @@ static json_t *build_optval(const TcpSockopt *sockopt) {
         return NULL;
 }
 
+static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
+        struct protoent *p = getprotobynumber(sockopt->level);
+        add(details, "level", json_string(p ? p->p_name : NULL));
+
+        char *optname = alloc_sock_optname_str(sockopt->optname);
+        add(details, "optname", json_string(optname));
+        free(optname);
+
+        add(details, "optval", build_optval(sockopt));
+}
+
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         const char *type_str = string_from_tcp_event_type(ev->type);
         add(json_ev, "type", json_string(type_str));
@@ -270,25 +282,12 @@ static json_t *build_tcp_ev_accept(const TcpEvAccept *ev) {
 
 static json_t *build_tcp_ev_getsockopt(const TcpEvGetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
-        add(json_details, "level", json_integer(ev->sockopt.level));
-        add(json_details, "level_str", json_string(ev->sockopt.level_str));
-        add(json_details, "optname", json_integer(ev->sockopt.optname));
-        add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
-        add(json_details, "optval", build_optval(&ev->sockopt));
-
+        add_sockopt(json_details, &ev->sockopt);
         return json_ev;
 }
-
 static json_t *build_tcp_ev_setsockopt(const TcpEvSetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
-        add(json_details, "level", json_integer(ev->sockopt.level));
-        add(json_details, "level_str", json_string(ev->sockopt.level_str));
-        add(json_details, "optname", json_integer(ev->sockopt.optname));
-        add(json_details, "optname_str", json_string(ev->sockopt.optname_str));
-        add(json_details, "optval", build_optval(&ev->sockopt));
-
+        add_sockopt(json_details, &ev->sockopt);
         return json_ev;
 }
 
@@ -498,9 +497,40 @@ static json_t *build_tcp_ev_select(const TcpEvSelect *ev) {
 
 static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        json_t *d = json_details;
 
-        add(json_details, "cmd", json_string(ev->cmd));
-        add(json_details, "arg", json_integer(ev->arg));
+        char *cmd_str = alloc_fcntl_cmd_str(ev->cmd);
+        add(json_details, "cmd", json_string(cmd_str));
+        free(cmd_str);
+
+        switch (ev->cmd) {  
+                case F_GETFD:
+                case F_GETFL:
+                case F_GETOWN:
+                case F_GETSIG:
+                case F_GETLEASE:
+                case F_GETPIPE_SZ:
+                        break; // Arg: void
+                case F_SETFD:
+                        add(d, "O_CLOEXEC", json_boolean(ev->arg & O_CLOEXEC));
+                        break;
+                case F_SETFL:
+                        add(d, "O_APPEND", json_boolean(ev->arg & O_APPEND));
+                        add(d, "O_ASYNC", json_boolean(ev->arg & O_ASYNC));
+                        add(d, "O_DIRECT", json_boolean(ev->arg & O_DIRECT));
+                        add(d, "O_NOATIME", json_boolean(ev->arg & O_NOATIME));
+                        add(d, "O_NONBLOCK", json_boolean(ev->arg & O_NONBLOCK));
+                        break;
+                case F_DUPFD:
+                case F_DUPFD_CLOEXEC:
+                case F_SETOWN:
+                case F_SETSIG:
+                case F_SETLEASE:
+                case F_NOTIFY:
+                case F_SETPIPE_SZ:
+                        add(d, "arg", json_integer(ev->arg));
+                        break;
+        }
 
         return json_ev;
 }

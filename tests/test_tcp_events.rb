@@ -160,10 +160,8 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_GETSOCKOPT,
           details: {
-            level: Integer,
-            level_str: String,
-            optname: Integer,
-            optname_str: String
+            level: String,
+            optname: String,
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -178,10 +176,8 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_SETSOCKOPT,
           details: {
-            level: Integer,
-            level_str: String,
-            optname: Integer,
-            optname_str: String
+            level: String,
+            optname: String,
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
