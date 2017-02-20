@@ -788,6 +788,24 @@ PSELECT_FAIL = CProg.new(<<-EOT, 'pselect_fail')
     return(EXIT_FAILURE);
 EOT
 
+FCNTL = CProg.new(<<-EOT, 'fcntl')
+  #{SOCKET}
+  if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+FCNTL_DGRAM  = CProg.new(<<-EOT, 'fcntl_dgram')
+  #{SOCKET_DGRAM}
+  if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+    return(EXIT_FAILURE);
+EOT
+
+FCNTL_FAIL  = CProg.new(<<-EOT, 'fcntl_fail')
+  #{SOCKET}
+  if (fcntl(42, F_SETFL) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 CONSECUTIVE_CONNECTIONS = CProg.new(<<-EOT, 'consecutive_connections')
   int sock1, sock2;
   if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)

@@ -2,9 +2,14 @@
 set -o nounset
 # set -o xtrace
 
-if [[ $# -ne 1 ]]; then
-        echo "$0: missing package argument."
+error() {
+        msg=$1
+        >&2 echo "$0: ${msg}."
         exit 1
+}
+
+if [[ $# -ne 1 ]]; then
+        error "missing package argument"
 fi
 
 # Check that adb sees exactly 1 device
@@ -17,8 +22,7 @@ match=$(echo $(adb shell pm list packages | grep -m 1 -s "$1") | tr -d '\r')
 
 # Check that package exists
 if [ -z "$match" ]; then
-        error "invalid argument: package '${package}' not found"
-        exit 1
+        error "invalid argument: package '$0' not found"
 fi
 
 package=${match#${prefix}}

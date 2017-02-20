@@ -179,7 +179,7 @@ error:
         return NULL;
 }
 
-// On Android, we don't chose the logs directory. We always write under: 
+// On Android, we don't chose the logs directory. We always write under:
 // /data/data/[app_name], which the internal storage of the app.
 char *alloc_android_opt_d(void) {
         char *app_name = alloc_app_name();

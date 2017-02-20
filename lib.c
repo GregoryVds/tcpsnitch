@@ -34,7 +34,14 @@ int my_getsockopt(int sockfd, int level, int optname, void *optval,
 	return orig_getsockopt(sockfd, level, optname, optval, optlen);
 }
 
-bool is_fd(int fd) { return fcntl(fd, F_GETFD) != -1 || errno != EBADF; }
+typedef int (*orig_fcntl_type)(int fd, int cmd, ...);
+orig_fcntl_type orig_fcntl;
+
+bool is_fd(int fd) {
+        if (!orig_fcntl)
+                orig_fcntl = (orig_fcntl_type)dlsym(RTLD_NEXT, "fcntl");
+        return orig_fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
 
 bool is_socket(int fd) {
 	if (!is_fd(fd)) return false;

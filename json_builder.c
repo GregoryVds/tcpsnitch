@@ -17,9 +17,9 @@ static json_t *build_addr(const TcpAddr *addr) {
         if (!json_addr) goto error;
 
         add(json_addr, "ip", json_string(addr->ip));
+        add(json_addr, "hostname", json_string(addr->hostname));
         add(json_addr, "port", json_string(addr->port));
-        add(json_addr, "name", json_string(addr->name));
-        add(json_addr, "serv", json_string(addr->serv));
+        add(json_addr, "service", json_string(addr->service));
 
         return json_addr;
 error:
@@ -500,6 +500,14 @@ static json_t *build_tcp_ev_select(const TcpEvSelect *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "cmd", json_integer(ev->cmd));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_pselect(const TcpEvPselect *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
@@ -662,6 +670,9 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                         break;
                 case TCP_EV_PSELECT:
                         r = build_tcp_ev_pselect((const TcpEvPselect *)ev);
+                        break;
+                case TCP_EV_FCNTL:
+                        r = build_tcp_ev_fcntl((const TcpEvFcntl *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         r = build_tcp_ev_tcp_info((const TcpEvTcpInfo *)ev);

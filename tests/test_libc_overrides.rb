@@ -61,7 +61,7 @@ describe "libc overrides" do
       # SOCKET: No log file if no TCP connection.
       # CLOSE: No log file if no TCP connection. How to fail close() with con?
       unless [TCP_EV_SOCKET, TCP_EV_CLOSE, TCP_EV_POLL, 
-              TCP_EV_PPOLL].include?(syscall)
+              TCP_EV_PPOLL, TCP_EV_FCNTL].include?(syscall)
         it "#{failing} should log no ERROR" do
           run_c_program(failing)
           assert no_error_log
@@ -72,7 +72,7 @@ describe "libc overrides" do
       # LISTEN: How to fail listen() on valid TCP socket? 
       # CLOSE: How to fail close() on valid TCP socket?
       unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE, TCP_EV_DUP, 
-              TCP_EV_POLL, TCP_EV_PPOLL].include?(syscall)
+              TCP_EV_POLL, TCP_EV_PPOLL, TCP_EV_FCNTL].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
           assert_event_present(syscall, false)

@@ -92,8 +92,8 @@ describe 'tcp_spy' do
             addr: {
               ip: String,
               port: String,
-              name: String,
-              serv: String
+              hostname: String,
+              service: String
             }
           }
         }.ignore_extra_keys!
@@ -112,8 +112,8 @@ describe 'tcp_spy' do
             addr: {
               ip: String,
               port: String,
-              name: String,
-              serv: String
+              hostname: String,
+              service: String
             }
           }
         }.ignore_extra_keys!
@@ -372,8 +372,8 @@ describe 'tcp_spy' do
             addr: {
               ip: String,
               port: String,
-              name: String,
-              serv: String
+              hostname: String,
+              service: String
             }
           }
         }.ignore_extra_keys!

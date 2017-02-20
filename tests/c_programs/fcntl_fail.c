@@ -17,22 +17,11 @@
 #include <unistd.h>
 
 int main(void) {
-  int sock1, sock2;
-  if ((sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-    return(EXIT_FAILURE);
-  if ((sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    int sock;
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     return(EXIT_FAILURE);
 
-  fd_set fdset;
-  FD_ZERO(&fdset);
-  FD_SET(sock1, &fdset);
-  FD_SET(sock2, &fdset);
-
-  struct timeval timeout;
-  timeout.tv_sec = 1;
-  timeout.tv_usec = 1;
-
-  if (select(sock2+1, &fdset, NULL, NULL, &timeout) == -1)
+  if (fcntl(sock, -42) != -1)
     return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);

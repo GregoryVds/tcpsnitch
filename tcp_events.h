@@ -49,6 +49,8 @@ typedef enum TcpEventType {
         // sys/select.h
         TCP_EV_SELECT,
         TCP_EV_PSELECT,
+        // fcntl.h
+        TCP_EV_FCNTL,
         // others
         TCP_EV_TCP_INFO
 } TcpEventType;
@@ -75,8 +77,8 @@ typedef struct {
         struct sockaddr_storage addr_sto;
         char *ip;
         char *port;
-        char *name;
-        char *serv;
+        char *hostname;
+        char *service;
 } TcpAddr;
 
 typedef struct {
@@ -327,6 +329,12 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
+        int cmd; 
+        int val;
+} TcpEvFcntl;
+
+typedef struct {
+        TcpEvent super;
         struct tcp_info info;
 } TcpEvTcpInfo;
 
@@ -464,6 +472,8 @@ void tcp_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
 void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
                     bool req_except, bool ret_read, bool ret_write,
                     bool ret_except, const struct timespec *timeout);
+
+void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...);
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 

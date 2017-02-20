@@ -193,6 +193,10 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvPselect));
                         break;
+                case TCP_EV_FCNTL:
+                        success = (return_value != -1);
+                        ev = (TcpEvent *)my_calloc(sizeof(TcpEvFcntl));
+                        break;
                 case TCP_EV_TCP_INFO:
                         success = (return_value != -1);
                         ev = (TcpEvent *)my_calloc(sizeof(TcpEvTcpInfo));
@@ -214,8 +218,8 @@ error:
 static void free_addr(TcpAddr *addr) {
         free(addr->ip);
         free(addr->port);
-        free(addr->name);
-        free(addr->serv);
+        free(addr->hostname);
+        free(addr->service);
 }
 
 static void free_sockopt(TcpSockopt *sockopt) { 
@@ -285,7 +289,7 @@ static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
         memcpy(&(a->addr_sto), addr, len);
         a->ip = alloc_ip_str(addr);
         a->port = alloc_port_str(addr);
-        alloc_name_str(addr, len, &a->name, &a->serv);
+        alloc_name_str(addr, len, &a->hostname, &a->service);
 }
 
 static void fill_send_flags(TcpSendFlags *s, int flags) {
@@ -648,6 +652,7 @@ const char *string_from_tcp_event_type(TcpEventType type) {
                 "ppoll",
                 "select",
                 "pselect",
+                "fcntl",
                 "tcp_info"
         };
         assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
@@ -1060,6 +1065,15 @@ void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
         ev->returned_events.except = ret_except;
 
         TCP_EV_POSTLUDE(TCP_EV_PSELECT);
+}
+
+void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
+        // Inst. local vars TcpConnection *con & TcpEvFcntl *ev
+        TCP_EV_PRELUDE(TCP_EV_FCNTL, TcpEvFcntl);
+
+        ev->cmd = cmd;
+
+        TCP_EV_POSTLUDE(TCP_EV_FCNTL);
 }
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {

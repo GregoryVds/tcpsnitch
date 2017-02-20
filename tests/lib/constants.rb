@@ -72,6 +72,9 @@ TCP_EV_PPOLL="ppoll"
 TCP_EV_SELECT="select"
 TCP_EV_PSELECT="pselect"
 
+# fcntl.h
+TCP_EV_FCNTL="fcntl"
+
 TCP_EV_TCP_INFO="tcp_info"
 
 SOCKET_SYSCALLS = [
@@ -104,7 +107,8 @@ SOCKET_SYSCALLS = [
   TCP_EV_POLL,
   TCP_EV_PPOLL,
   TCP_EV_SELECT,
-  TCP_EV_PSELECT
+  TCP_EV_PSELECT,
+  TCP_EV_FCNTL
 ]
 
 

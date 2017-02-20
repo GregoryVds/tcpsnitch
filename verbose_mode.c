@@ -166,6 +166,10 @@ static void output_ev_tcpinfo(const TcpEvTcpInfo *ev) {
         OUTPUT_EV("tcp_info=%d", ev->super.return_value);
 }
 
+static void output_ev_fcntl(const TcpEvFcntl *ev) {
+        OUTPUT_EV("fcntl=%d", ev->super.return_value);
+}
+
 void output_event(const TcpEvent *ev) {
 #ifndef __ANDROID__
         if (!_stdout) return;  // We don't bother handling a fdopen() fail.
@@ -267,6 +271,9 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_PSELECT:
                         output_ev_pselect((const TcpEvPselect *)ev);
+                        break;
+                case TCP_EV_FCNTL:
+                        output_ev_fcntl((const TcpEvFcntl *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         output_ev_tcpinfo((const TcpEvTcpInfo *)ev);
