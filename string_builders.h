@@ -27,6 +27,7 @@ char *alloc_kernel_str(void);
 char *alloc_sock_domain_str(int domain);
 char *alloc_sock_type_str(int type);
 char *alloc_sock_optname_str(int optname);
+char *alloc_fcntl_cmd_str(int cmd);
 
 char *alloc_error_str(int err);
 

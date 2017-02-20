@@ -865,14 +865,14 @@ int fcntl(int fd, int cmd, ...) {
                 case F_SETLK:
                 case F_SETLKW:
                 case F_GETLK:
-#ifndef __ANDROID__
-                case F_OFD_SETLK:
-                case F_OFD_SETLKW:
-                case F_OFD_GETLK:
-#else
+#ifdef __ANDROID__
                 case F_GETLK64:
                 case F_SETLK64:
                 case F_SETLKW64:
+#else
+                case F_OFD_SETLK:
+                case F_OFD_SETLKW:
+                case F_OFD_GETLK:
 #endif
                         // Arg: struct flock *
                         FORWARD_FCNTL(struct flock *);

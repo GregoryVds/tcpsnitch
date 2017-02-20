@@ -67,7 +67,9 @@ typedef struct {
 typedef struct {
         TcpEvent super;
         int domain;
+        char *domain_str;
         int type;
+        char *type_str;
         int protocol;
         bool sock_cloexec;
         bool sock_nonblock;
@@ -329,7 +331,7 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
-        int cmd; 
+        char *cmd; 
         int val;
 } TcpEvFcntl;
 

@@ -2,6 +2,7 @@
 
 #include "string_builders.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -359,6 +360,25 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 #endif
 };
 
+static const IntStrPair FCNTL_CMDS[] = {
+    {F_GETFD, "F_GETFD"},           {F_GETFL, "F_GETFL"},
+    {F_GETOWN, "F_GETOWN"},         {F_GETSIG, "F_GETSIG"},
+    {F_GETLEASE, "F_GETLEASE"},     {F_GETPIPE_SZ, "F_GETPIPE_SZ"},
+    {F_DUPFD, "F_DUPFD"},           {F_DUPFD_CLOEXEC, "F_DUPFD_CLOEXEC"},
+    {F_SETFD, "F_SETFD"},           {F_SETFL, "F_SETFL"},
+    {F_SETOWN, "F_SETOWN"},         {F_SETSIG, "F_SETSIG"},
+    {F_SETLEASE, "F_SETLEASE"},     {F_NOTIFY, "F_NOTIFY"},
+    {F_SETPIPE_SZ, "F_SETPIPE_SZ"}, {F_SETLK, "F_SETLK"},
+    {F_SETLKW, "F_SETLKW"},         {F_GETLK, "F_GETLK"},
+#ifdef __ANDROID__
+    {F_GETLK64, "F_GETLK64"},       {F_SETLK64, "F_SETLK64"},
+    {F_SETLKW64, "F_SETLKW64"},
+#else
+    {F_OFD_SETLK, "F_OFD_SETLK"},   {F_OFD_SETLKW, "F_OFD_SETLKW"},
+    {F_OFD_GETLK, "F_OFD_GETLK"},
+#endif
+    {F_GETOWN_EX, "F_GETOWN_EX"},   {F_SETOWN_EX, "F_SETOWN_EX"}};
+
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
 static char *alloc_string_from_cons(int cons, const IntStrPair *map,
@@ -398,6 +418,11 @@ char *alloc_sock_type_str(int type) {
 char *alloc_sock_optname_str(int optname) {
         int map_size = sizeof(SOCKET_OPTIONS) / sizeof(IntStrPair);
         return alloc_string_from_cons(optname, SOCKET_OPTIONS, map_size);
+}
+
+char *alloc_fcntl_cmd_str(int cmd) {
+        int map_size = sizeof(FCNTL_CMDS) / sizeof(IntStrPair);
+        return alloc_string_from_cons(cmd, FCNTL_CMDS, map_size);
 }
 
 char *alloc_error_str(int err) {

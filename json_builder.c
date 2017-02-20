@@ -217,17 +217,13 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
 
 static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-        char *dom_str = alloc_sock_domain_str(ev->domain);
-        char *type_str = alloc_sock_type_str(ev->type);
 
-        add(json_details, "domain", json_string(dom_str));
-        add(json_details, "type", json_string(type_str));
+        add(json_details, "domain", json_string(ev->domain_str));
+        add(json_details, "type", json_string(ev->type_str));
         add(json_details, "protocol", json_integer(ev->protocol));
         add(json_details, "sock_cloexec", json_boolean(ev->sock_cloexec));
         add(json_details, "sock_nonblock", json_boolean(ev->sock_nonblock));
 
-        free(dom_str);
-        free(type_str);
         return json_ev;
 }
 
@@ -503,7 +499,7 @@ static json_t *build_tcp_ev_select(const TcpEvSelect *ev) {
 static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-        add(json_details, "cmd", json_integer(ev->cmd));
+        add(json_details, "cmd", json_string(ev->cmd));
 
         return json_ev;
 }

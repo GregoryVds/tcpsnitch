@@ -230,6 +230,10 @@ static void free_sockopt(TcpSockopt *sockopt) {
 static void free_event(TcpEvent *ev) {
         free(ev->error_str);
         switch (ev->type) {
+                case TCP_EV_SOCKET:
+                        free(((TcpEvSocket *)ev)->domain_str);
+                        free(((TcpEvSocket *)ev)->type_str);
+                        break;
                 case TCP_EV_BIND:
                         free_addr(&((TcpEvBind *)ev)->addr);
                         break;
@@ -250,6 +254,9 @@ static void free_event(TcpEvent *ev) {
                         break;
                 case TCP_EV_WRITEV:
                         free(((TcpEvWritev *)ev)->iovec.iovec_sizes);
+                        break;
+                case TCP_EV_FCNTL:
+                        free(((TcpEvFcntl *)ev)->cmd);
                         break;
                 default:
                         break;
@@ -670,7 +677,9 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
 
         ev->domain = domain;
+        ev->domain_str = alloc_sock_domain_str(ev->domain);
         ev->type = type & SOCK_TYPE_MASK;
+        ev->type_str = alloc_sock_type_str(ev->type);
         ev->protocol = protocol;
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         ev->sock_cloexec = type & SOCK_CLOEXEC;
@@ -1071,7 +1080,7 @@ void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
         // Inst. local vars TcpConnection *con & TcpEvFcntl *ev
         TCP_EV_PRELUDE(TCP_EV_FCNTL, TcpEvFcntl);
 
-        ev->cmd = cmd;
+        ev->cmd = alloc_fcntl_cmd_str(cmd);
 
         TCP_EV_POSTLUDE(TCP_EV_FCNTL);
 }
