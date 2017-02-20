@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <poll.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -222,8 +223,8 @@ static void free_addr(TcpAddr *addr) {
         free(addr->service);
 }
 
-static void free_sockopt(TcpSockopt *sockopt) { 
-        free(sockopt->optname_str); 
+static void free_sockopt(TcpSockopt *sockopt) {
+        free(sockopt->optname_str);
         free(sockopt->optval);
 }
 
@@ -1079,6 +1080,54 @@ void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
 void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
         // Inst. local vars TcpConnection *con & TcpEvFcntl *ev
         TCP_EV_PRELUDE(TCP_EV_FCNTL, TcpEvFcntl);
+
+        switch (cmd) {
+                case F_GETFD:
+                case F_GETFL:
+                case F_GETOWN:
+                case F_GETSIG:
+                case F_GETLEASE:
+                case F_GETPIPE_SZ:
+                        break;  // Arg: void
+                case F_DUPFD:
+                case F_DUPFD_CLOEXEC:
+                case F_SETFD:
+                case F_SETFL:
+                case F_SETOWN:
+                case F_SETSIG:
+                case F_SETLEASE:
+                case F_NOTIFY:
+                case F_SETPIPE_SZ:
+                        // Arg: int
+                        {
+                                va_list argp;
+                                int arg;
+                                va_start(argp, cmd);
+                                arg = va_arg(argp, int);
+                                va_end(argp);
+                                ev->arg = arg;
+                        }
+                case F_SETLK:
+                case F_SETLKW:
+                case F_GETLK:
+#ifdef __ANDROID__
+                case F_GETLK64:
+                case F_SETLK64:
+                case F_SETLKW64:
+#else
+                case F_OFD_SETLK:
+                case F_OFD_SETLKW:
+                case F_OFD_GETLK:
+#endif
+                        // Arg: struct flock *
+                        break;
+                case F_GETOWN_EX:
+                case F_SETOWN_EX:
+                        // Arg: struct f_owner_ex *
+                        break;
+                default:
+                        LOG(WARN, "cmd unknown: %d - fcntl dropped", cmd);
+        }
 
         ev->cmd = alloc_fcntl_cmd_str(cmd);
 

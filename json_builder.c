@@ -500,6 +500,7 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "cmd", json_string(ev->cmd));
+        add(json_details, "arg", json_integer(ev->arg));
 
         return json_ev;
 }

@@ -332,7 +332,7 @@ typedef struct {
 typedef struct {
         TcpEvent super;
         char *cmd; 
-        int val;
+        int arg;
 } TcpEvFcntl;
 
 typedef struct {

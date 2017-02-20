@@ -834,60 +834,16 @@ int fcntl(int fd, int cmd, ...) {
         if (!orig_fcntl)
                 orig_fcntl = (orig_fcntl_type)dlsym(RTLD_NEXT, "fcntl");
 
-        switch (cmd) {
-                case F_GETFD:
-                case F_GETFL:
-                case F_GETOWN:
-                case F_GETSIG:
-                case F_GETLEASE:
-                case F_GETPIPE_SZ:
-                        //                case F_GET_SEALS:
-                        // Arg: void
-                        {
-                                int ret = orig_fcntl(fd, cmd);
-                                int err = errno;
-                                if (is_tcp_socket(fd))
-                                        tcp_ev_fcntl(fd, ret, err, cmd);
-                                return ret;
-                        }
-                case F_DUPFD:
-                case F_DUPFD_CLOEXEC:
-                case F_SETFD:
-                case F_SETFL:
-                case F_SETOWN:
-                case F_SETSIG:
-                case F_SETLEASE:
-                case F_NOTIFY:
-                case F_SETPIPE_SZ:
-                        //                case F_ADD_SEALS:
-                        // Arg: int
-                        FORWARD_FCNTL(int);
-                case F_SETLK:
-                case F_SETLKW:
-                case F_GETLK:
-#ifdef __ANDROID__
-                case F_GETLK64:
-                case F_SETLK64:
-                case F_SETLKW64:
-#else
-                case F_OFD_SETLK:
-                case F_OFD_SETLKW:
-                case F_OFD_GETLK:
-#endif
-                        // Arg: struct flock *
-                        FORWARD_FCNTL(struct flock *);
-                case F_GETOWN_EX:
-                case F_SETOWN_EX:
-                        // Arg: struct f_owner_ex *
-                        FORWARD_FCNTL(struct f_owner_ex *);
-                default: {
-                        va_list argp;
-                        void *arg;
-                        va_start(argp, cmd);
-                        arg = va_arg(argp, void *);
-                        va_end(argp);
-                        LOG(WARN, "cmd unknown: %d - fcntl dropped", cmd);
-                        return orig_fcntl(fd, cmd, arg);
-                }
-        }
+        va_list argp;
+        void *arg;
+        va_start(argp, cmd);
+        arg = va_arg(argp, void *);
+        va_end(argp);
+
+        int ret = orig_fcntl(fd, cmd, arg);
+        int err = errno;
+        if (is_tcp_socket(fd)) tcp_ev_fcntl(fd, ret, err, cmd, arg);
+
+        return ret;
 }
+
