@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "constants.h"
+#include "constant_strings.h"
 #include "init.h"
 #include "json_builder.h"
 #include "lib.h"

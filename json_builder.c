@@ -8,6 +8,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
+#include "constant_strings.h"
 
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
@@ -466,7 +467,9 @@ static json_t *build_tcp_ev_readv(const TcpEvReadv *ev) {
 static json_t *build_tcp_ev_ioctl(const TcpEvIoctl *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-        add(json_details, "request", json_integer(ev->request));
+        char *request = alloc_ioctl_request_str(ev->request);
+        add(json_details, "request", json_string(request));
+        free(request);
 
         return json_ev;
 }

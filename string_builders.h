@@ -1,8 +1,6 @@
 #ifndef STRING_HELPERS_H
 #define STRING_HELPERS_H
 
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include "tcp_events.h"
 
@@ -23,11 +21,6 @@ char *alloc_json_path_str(TcpConnection *con);
 char *alloc_cmdline_str(void);
 char *alloc_app_name(void);
 char *alloc_kernel_str(void);
-
-char *alloc_sock_domain_str(int domain);
-char *alloc_sock_type_str(int type);
-char *alloc_sock_optname_str(int optname);
-char *alloc_fcntl_cmd_str(int cmd);
 
 char *alloc_error_str(int err);
 

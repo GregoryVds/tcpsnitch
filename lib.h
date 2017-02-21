@@ -2,12 +2,13 @@
 #define LIB_H
 
 #include <netinet/tcp.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #define UNUSED(x) (void)(x)
 
