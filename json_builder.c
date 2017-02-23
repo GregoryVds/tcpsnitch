@@ -246,7 +246,8 @@ static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
         add(details, "optname", json_string(optname));
         free(optname);
 
-        add(details, "optval", build_optval(sockopt));
+        add(details, "optlen", json_integer(sockopt->optlen));
+        if (sockopt->optlen) add(details, "optval", build_optval(sockopt));
 }
 
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {

@@ -326,12 +326,13 @@ static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
                          const void *optval, socklen_t optlen) {
         sockopt->level = level;
         sockopt->optname = optname;
+
         sockopt->optval = my_malloc(optlen);
-        if (!sockopt->optval) goto error;
-        memcpy(sockopt->optval, optval, optlen);
+        if (sockopt->optval) { 
+                sockopt->optlen = optlen;
+                memcpy(sockopt->optval, optval, optlen);
+        }
         return;
-error:
-        LOG_FUNC_FAIL;
 }
 
 typedef int (*orig_bind_type)(int fd, const struct sockaddr *addr,

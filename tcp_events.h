@@ -110,6 +110,7 @@ typedef struct {
         int level;
         int optname;
         void *optval;
+        socklen_t optlen;
 } TcpSockopt;
 
 typedef struct {
