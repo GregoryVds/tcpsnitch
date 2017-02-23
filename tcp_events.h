@@ -123,48 +123,28 @@ typedef struct {
 } TcpEvSetsockopt;
 
 typedef struct {
-        bool msg_confirm;
-        bool msg_dontroute;
-        bool msg_dontwait;
-        bool msg_eor;
-        bool msg_more;
-        bool msg_nosignal;
-        bool msg_oob;
-} TcpSendFlags;
-
-typedef struct {
-        bool msg_cmsg_cloexec;
-        bool msg_dontwait;
-        bool msg_errqueue;
-        bool msg_oob;
-        bool msg_peek;
-        bool msg_trunc;
-        bool msg_waitall;
-} TcpRecvFlags;
-
-typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpSendFlags flags;
+        int flags;
 } TcpEvSend;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpRecvFlags flags;
+        int flags;
 } TcpEvRecv;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpSendFlags flags;
+        int flags;
         struct sockaddr_storage addr;
 } TcpEvSendto;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpRecvFlags flags;
+        int flags;
         struct sockaddr_storage addr;
 } TcpEvRecvfrom;
 
@@ -175,21 +155,23 @@ typedef struct {
 
 typedef struct {
         TcpIovec iovec;
-        bool control_data;
         struct sockaddr_storage addr;
+        void *ancillary_data;
+        size_t ancillary_data_len;
+        int flags;
 } TcpMsghdr;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpSendFlags flags;
+        int flags;
         TcpMsghdr msghdr;
 } TcpEvSendmsg;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpRecvFlags flags;
+        int flags;
         TcpMsghdr msghdr;
 } TcpEvRecvmsg;
 
@@ -202,7 +184,7 @@ typedef struct {
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpSendFlags flags;
+        int flags;
         int mmsghdr_count;
         TcpMmsghdr **msghdr;
 } TcpEvSendmmsg;
@@ -210,7 +192,7 @@ typedef struct {
 typedef struct {
         TcpEvent super;
         size_t bytes;
-        TcpRecvFlags flags;
+        int flags;
         int mmsghdr_count;
         TcpMmsghdr **msghdr;
 } TcpEvRecvmmsg;

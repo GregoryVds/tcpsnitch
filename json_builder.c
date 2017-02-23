@@ -47,17 +47,17 @@ error:
         return NULL;
 }
 
-static json_t *build_send_flags(const TcpSendFlags *flags) {
+static json_t *build_send_flags(int flags) {
         json_t *json_flags = json_object();
         if (!json_flags) goto error;
 
-        add(json_flags, "msg_confirm", json_boolean(flags->msg_confirm));
-        add(json_flags, "msg_dontroute", json_boolean(flags->msg_dontroute));
-        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
-        add(json_flags, "msg_eor", json_boolean(flags->msg_eor));
-        add(json_flags, "msg_more", json_boolean(flags->msg_more));
-        add(json_flags, "msg_nosignal", json_boolean(flags->msg_nosignal));
-        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
+        add(json_flags, "msg_confirm", json_boolean(flags & MSG_CONFIRM));
+        add(json_flags, "msg_dontroute", json_boolean(flags & MSG_DONTROUTE));
+        add(json_flags, "msg_dontwait", json_boolean(flags & MSG_DONTWAIT));
+        add(json_flags, "msg_eor", json_boolean(flags & MSG_EOR));
+        add(json_flags, "msg_more", json_boolean(flags & MSG_MORE));
+        add(json_flags, "msg_nosignal", json_boolean(flags & MSG_NOSIGNAL));
+        add(json_flags, "msg_oob", json_boolean(flags & MSG_OOB));
 
         return json_flags;
 error:
@@ -66,18 +66,21 @@ error:
         return NULL;
 }
 
-static json_t *build_recv_flags(const TcpRecvFlags *flags) {
+static json_t *build_recv_flags(int flags) {
         json_t *json_flags = json_object();
         if (!json_flags) goto error;
 
-        add(json_flags, "msg_cmsg_cloexec",
-            json_boolean(flags->msg_cmsg_cloexec));
-        add(json_flags, "msg_dontwait", json_boolean(flags->msg_dontwait));
-        add(json_flags, "msg_errqueue", json_boolean(flags->msg_errqueue));
-        add(json_flags, "msg_oob", json_boolean(flags->msg_oob));
-        add(json_flags, "msg_peek", json_boolean(flags->msg_peek));
-        add(json_flags, "msg_trunc", json_boolean(flags->msg_trunc));
-        add(json_flags, "msg_waitall", json_boolean(flags->msg_waitall));
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+        add(json_flags, "msg_cmsg_cloexec", json_boolean(flags & MSG_CMSG_CLOEXEC));
+#else
+        add(json_flags, "msg_cmsg_cloexec", json_boolean(false));
+#endif
+        add(json_flags, "msg_dontwait", json_boolean(flags & MSG_DONTWAIT));
+        add(json_flags, "msg_errqueue", json_boolean(flags & MSG_ERRQUEUE));
+        add(json_flags, "msg_oob", json_boolean(flags & MSG_OOB));
+        add(json_flags, "msg_peek", json_boolean(flags & MSG_PEEK));
+        add(json_flags, "msg_trunc", json_boolean(flags & MSG_TRUNC));
+        add(json_flags, "msg_waitall", json_boolean(flags & MSG_WAITALL));
 
         return json_flags;
 error:
@@ -158,8 +161,10 @@ error:
 static json_t *build_msghdr(const TcpMsghdr *msg) {
         json_t *json_msghdr = json_object();
         if (!json_msghdr) goto error;
-
-        add(json_msghdr, "control_data", json_boolean(msg->control_data));
+        
+        // Only on message received (not sent via sendmsg)
+        if (msg->flags) add(json_msghdr, "flags", build_recv_flags(msg->flags));
+        add(json_msghdr, "ancillary_data", json_boolean(msg->ancillary_data_len > 0));
         add(json_msghdr, "iovec", build_iovec(&msg->iovec));
 
         return json_msghdr;
@@ -316,7 +321,7 @@ static json_t *build_tcp_ev_send(const TcpEvSend *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_send_flags(&(ev->flags)));
+        add(json_details, "flags", build_send_flags(ev->flags));
 
         return json_ev;
 }
@@ -325,7 +330,7 @@ static json_t *build_tcp_ev_recv(const TcpEvRecv *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_recv_flags(&(ev->flags)));
+        add(json_details, "flags", build_recv_flags(ev->flags));
 
         return json_ev;
 }
@@ -338,7 +343,7 @@ static json_t *build_tcp_ev_sendto(const TcpEvSendto *ev) {
         // add(json_details, "addr", json_string(addr_str));
         // add(json_details, "port", json_string(port_str));
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_send_flags(&(ev->flags)));
+        add(json_details, "flags", build_send_flags(ev->flags));
 
         // free(addr_str);
         // free(port_str);
@@ -353,7 +358,7 @@ static json_t *build_tcp_ev_recvfrom(const TcpEvRecvfrom *ev) {
         // add(json_details, "addr", json_string(addr_str));
         // add(json_details, "port", json_string(port_str));
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_recv_flags(&(ev->flags)));
+        add(json_details, "flags", build_recv_flags(ev->flags));
 
         // free(addr_str);
         // free(port_str);
@@ -364,7 +369,7 @@ static json_t *build_tcp_ev_sendmsg(const TcpEvSendmsg *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_send_flags(&(ev->flags)));
+        add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
 
         return json_ev;
@@ -374,7 +379,7 @@ static json_t *build_tcp_ev_recvmsg(const TcpEvRecvmsg *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         add(json_details, "bytes", json_integer(ev->bytes));
-        add(json_details, "flags", build_recv_flags(&(ev->flags)));
+        add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
 
         return json_ev;

@@ -275,30 +275,6 @@ static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
         a->len = len;
 }
 
-static void fill_send_flags(TcpSendFlags *s, int flags) {
-        s->msg_confirm = (flags & MSG_CONFIRM);
-        s->msg_dontroute = (flags & MSG_DONTROUTE);
-        s->msg_dontwait = (flags & MSG_DONTWAIT);
-        s->msg_eor = (flags & MSG_EOR);
-        s->msg_more = (flags & MSG_MORE);
-        s->msg_nosignal = (flags & MSG_NOSIGNAL);
-        s->msg_oob = (flags & MSG_OOB);
-}
-
-static void fill_recv_flags(TcpRecvFlags *s, int flags) {
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
-        s->msg_cmsg_cloexec = (flags & MSG_CMSG_CLOEXEC);
-#else
-        s->msg_cmsg_cloexec = false;
-#endif
-        s->msg_dontwait = (flags & MSG_DONTWAIT);
-        s->msg_errqueue = (flags & MSG_ERRQUEUE);
-        s->msg_oob = (flags & MSG_OOB);
-        s->msg_peek = (flags & MSG_PEEK);
-        s->msg_trunc = (flags & MSG_TRUNC);
-        s->msg_waitall = (flags & MSG_WAITALL);
-}
-
 static void fill_poll_events(TcpPollEvents *pe, int events) {
         pe->pollin = (events & POLLIN);
         pe->pollpri = (events & POLLPRI);
@@ -329,9 +305,19 @@ error:
 }
 
 static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
+        // Msg name
         memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
-        m1->control_data = (m2->msg_control != NULL);
+
+        // Control data (ancillary data)
+        memcpy(&m1->ancillary_data, m2->msg_control, m2->msg_controllen);
+        m1->ancillary_data_len = m2->msg_controllen;
+       
+        // Flags
+        m1->flags = m2->msg_flags;
+
+        // Iovec
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
+
 }
 
 static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
@@ -759,8 +745,8 @@ void tcp_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
         TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
 
         ev->bytes = bytes;
+        ev->flags = flags;
         con->bytes_sent += bytes;
-        fill_send_flags(&(ev->flags), flags);
 
         TCP_EV_POSTLUDE(TCP_EV_SEND);
 }
@@ -770,9 +756,9 @@ void tcp_ev_recv(int fd, int ret, int err, size_t bytes, int flags) {
         TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
 
         ev->bytes = bytes;
+        ev->flags = flags;
         con->bytes_received += bytes;
-        fill_recv_flags(&(ev->flags), flags);
-
+        
         TCP_EV_POSTLUDE(TCP_EV_RECV);
 }
 
@@ -782,8 +768,8 @@ void tcp_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
         TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
 
         ev->bytes = bytes;
+        ev->flags = flags;
         con->bytes_sent += bytes;
-        fill_send_flags(&(ev->flags), flags);
         memcpy(&(ev->addr), addr, len);
 
         TCP_EV_POSTLUDE(TCP_EV_SENDTO);
@@ -795,8 +781,8 @@ void tcp_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
         TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
 
         ev->bytes = bytes;
+        ev->flags = flags;
         con->bytes_received += bytes;
-        fill_recv_flags(&(ev->flags), flags);
         if (len) memcpy(&(ev->addr), addr, *len);
 
         TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
@@ -807,8 +793,8 @@ void tcp_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
         // Inst. local vars TcpConnection *con & TcpEvSendmsg *ev
         TCP_EV_PRELUDE(TCP_EV_SENDMSG, TcpEvSendmsg);
 
-        fill_send_flags(&(ev->flags), flags);
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
+        ev->flags = flags;
         con->bytes_sent += ev->bytes;
 
         TCP_EV_POSTLUDE(TCP_EV_SENDMSG);
@@ -819,8 +805,8 @@ void tcp_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
         // Inst. local vars TcpConnection *con & TcpEvRecvmsg *ev
         TCP_EV_PRELUDE(TCP_EV_RECVMSG, TcpEvRecvmsg);
 
-        fill_recv_flags(&(ev->flags), flags);
         ev->bytes = fill_msghdr(&ev->msghdr, msg);
+        ev->flags = flags;
         con->bytes_received += ev->bytes;
 
         TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
@@ -854,6 +840,7 @@ void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
         TCP_EV_PRELUDE(TCP_EV_RECVMMSG, TcpEvRecvmmsg);
         UNUSED(vmessages);
         UNUSED(vlen);
+        ev->flags = flags;
         UNUSED(flags);
         UNUSED(tmo);
         TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
