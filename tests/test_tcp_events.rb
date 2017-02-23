@@ -297,7 +297,8 @@ describe 'tcp_spy' do
               msg_oob: Boolean
             },
             msghdr: {
-              control_data: Boolean,
+              control_data_len: Integer,
+              control_data: Array,
               iovec: {
                 iovec_count: Integer,
                 iovec_sizes: Array
@@ -328,7 +329,8 @@ describe 'tcp_spy' do
               msg_waitall: Boolean
             },
             msghdr: {
-              control_data: Boolean,
+              control_data_len: Integer,
+              control_data: Array,
               iovec: {
                 iovec_count: Integer,
                 iovec_sizes: Array
@@ -487,7 +489,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_IOCTL,
           details: {
-            request: Integer
+            request: String
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!

@@ -3,12 +3,12 @@
 #include "json_builder.h"
 #include <jansson.h>
 #include <netdb.h>
+#include "constant_strings.h"
 #include "fcntl.h"
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
-#include "constant_strings.h"
 
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
@@ -71,7 +71,8 @@ static json_t *build_recv_flags(int flags) {
         if (!json_flags) goto error;
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
-        add(json_flags, "msg_cmsg_cloexec", json_boolean(flags & MSG_CMSG_CLOEXEC));
+        add(json_flags, "msg_cmsg_cloexec",
+            json_boolean(flags & MSG_CMSG_CLOEXEC));
 #else
         add(json_flags, "msg_cmsg_cloexec", json_boolean(false));
 #endif
@@ -142,7 +143,9 @@ static json_t *build_iovec(const TcpIovec *iovec) {
         if (!json_iovec) goto error;
 
         add(json_iovec, "iovec_count", json_integer(iovec->iovec_count));
+
         json_t *iovec_sizes = json_array();
+        if (!iovec_sizes) goto error;
         if (iovec_sizes) {
                 for (int i = 0; i < iovec->iovec_count; i++) {
                         json_array_append_new(
@@ -158,14 +161,43 @@ error:
         return NULL;
 }
 
+static json_t *build_control_data(const TcpMsghdr *msg) {
+        json_t *json_cd_list = json_array();
+        if (!json_cd_list) goto error;
+
+        size_t read = 0;
+        while (read < msg->control_data_len) {
+                struct cmsghdr *cmsgptr =
+                    (struct cmsghdr *)(((uint8_t *)msg->control_data) + read);
+
+                json_t *json_cd = json_object();
+                if (!json_cd) goto error;
+                add(json_cd, "cmsg_level", json_integer(cmsgptr->cmsg_level));
+                add(json_cd, "cmsg_type", json_integer(cmsgptr->cmsg_type));
+                json_array_append_new(json_cd_list, json_cd);
+
+                read += cmsgptr->cmsg_len;
+        }
+
+        return json_cd_list;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
 static json_t *build_msghdr(const TcpMsghdr *msg) {
         json_t *json_msghdr = json_object();
         if (!json_msghdr) goto error;
-        
+
         // Only on message received (not sent via sendmsg)
         if (msg->flags) add(json_msghdr, "flags", build_recv_flags(msg->flags));
-        add(json_msghdr, "ancillary_data", json_boolean(msg->ancillary_data_len > 0));
         add(json_msghdr, "iovec", build_iovec(&msg->iovec));
+
+        // Ancillary data
+        add(json_msghdr, "control_data_len",
+            json_integer(msg->control_data_len));
+        add(json_msghdr, "control_data", build_control_data(msg));
 
         return json_msghdr;
 error:

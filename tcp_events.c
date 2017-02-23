@@ -309,15 +309,17 @@ static socklen_t fill_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
 
         // Control data (ancillary data)
-        memcpy(&m1->ancillary_data, m2->msg_control, m2->msg_controllen);
-        m1->ancillary_data_len = m2->msg_controllen;
+        m1->control_data = my_malloc(sizeof(m2->msg_controllen)); 
+        if (m1->control_data) {
+                memcpy(m1->control_data, m2->msg_control, m2->msg_controllen); 
+                m1->control_data_len = m2->msg_controllen;
+        }
        
         // Flags
         m1->flags = m2->msg_flags;
 
         // Iovec
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
-
 }
 
 static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
