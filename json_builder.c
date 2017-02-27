@@ -314,8 +314,8 @@ static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
 	add(json_details, "domain", json_string(ev->domain_str));
 	add(json_details, "type", json_string(ev->type_str));
 	add(json_details, "protocol", json_integer(ev->protocol));
-	add(json_details, "sock_cloexec", json_boolean(ev->sock_cloexec));
-	add(json_details, "sock_nonblock", json_boolean(ev->sock_nonblock));
+	add(json_details, "SOCK_CLOEXEC", json_boolean(ev->sock_cloexec));
+	add(json_details, "SOCK_NONBLOCK", json_boolean(ev->sock_nonblock));
 
 	return json_ev;
 }
@@ -339,8 +339,8 @@ static json_t *build_tcp_ev_connect(const TcpEvConnect *ev) {
 static json_t *build_tcp_ev_shutdown(const TcpEvShutdown *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-	add(json_details, "shut_rd", json_boolean(ev->shut_rd));
-	add(json_details, "shut_wr", json_boolean(ev->shut_wr));
+	add(json_details, "SHUT_RD", json_boolean(ev->shut_rd));
+	add(json_details, "SHUT_WR", json_boolean(ev->shut_wr));
 
 	return json_ev;
 }
@@ -501,7 +501,7 @@ static json_t *build_tcp_ev_dup3(const TcpEvDup3 *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
 	add(json_details, "newfd", json_integer(ev->newfd));
-	add(json_details, "o_cloexec", json_boolean(ev->o_cloexec));
+	add(json_details, "O_CLOEXEC", json_boolean(ev->o_cloexec));
 
 	return json_ev;
 }
@@ -857,3 +857,4 @@ error:
 	LOG_FUNC_FAIL;
 	return NULL;
 }
+
