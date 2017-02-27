@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <time.h>
 
 typedef enum TcpEventType {
@@ -51,6 +52,10 @@ typedef enum TcpEventType {
         TCP_EV_PSELECT,
         // fcntl.h
         TCP_EV_FCNTL,
+        // epoll.h
+        TCP_EV_EPOLL_CTL,
+        TCP_EV_EPOLL_WAIT,
+        TCP_EV_EPOLL_PWAIT,
         // others
         TCP_EV_TCP_INFO
 } TcpEventType;
@@ -315,6 +320,24 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
+        int op;
+        uint32_t requested_events;
+} TcpEvEpollCtl;
+
+typedef struct {
+        TcpEvent super;
+        int timeout;
+        uint32_t returned_events;
+} TcpEvEpollWait;
+
+typedef struct {
+        TcpEvent super;
+        int timeout;
+        uint32_t returned_events;
+} TcpEvEpollPwait;
+
+typedef struct {
+        TcpEvent super;
         struct tcp_info info;
 } TcpEvTcpInfo;
 
@@ -454,6 +477,15 @@ void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
                     bool ret_except, const struct timespec *timeout);
 
 void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...);
+
+void tcp_ev_epoll_ctl(int fd, int ret, int err, int op,
+                      uint32_t requested_events);
+
+void tcp_ev_epoll_wait(int fd, int ret, int err, int timeout,
+                       uint32_t returned_events);
+
+void tcp_ev_epoll_pwait(int fd, int ret, int err, int timeout,
+                        uint32_t returned_events);
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 

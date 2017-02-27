@@ -170,6 +170,19 @@ static void output_ev_fcntl(const TcpEvFcntl *ev) {
         OUTPUT_EV("fcntl=%d", ev->super.return_value);
 }
 
+static void output_ev_epoll_ctl(const TcpEvEpollCtl *ev) {
+	OUTPUT_EV("epoll_ctl=%d", ev->super.return_value);
+}
+
+
+static void output_ev_epoll_wait(const TcpEvEpollWait *ev) {
+	OUTPUT_EV("epoll_wait=%d", ev->super.return_value);
+}
+
+static void output_ev_epoll_pwait(const TcpEvEpollPwait *ev) {
+	OUTPUT_EV("epoll_pwait=%d", ev->super.return_value);
+}
+ 
 void output_event(const TcpEvent *ev) {
 #ifndef __ANDROID__
         if (!_stdout) return;  // We don't bother handling a fdopen() fail.
@@ -274,6 +287,15 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_FCNTL:
                         output_ev_fcntl((const TcpEvFcntl *)ev);
+                        break;
+                case TCP_EV_EPOLL_CTL:
+                        output_ev_epoll_ctl((const TcpEvEpollCtl *)ev);
+                        break;
+                case TCP_EV_EPOLL_WAIT:
+                        output_ev_epoll_wait((const TcpEvEpollWait *)ev);
+                        break;
+                case TCP_EV_EPOLL_PWAIT:
+                        output_ev_epoll_pwait((const TcpEvEpollPwait *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         output_ev_tcpinfo((const TcpEvTcpInfo *)ev);

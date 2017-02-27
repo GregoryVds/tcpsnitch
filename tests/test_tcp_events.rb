@@ -14,14 +14,6 @@ describe 'tcp_spy' do
     reset_dir(DEFAULT_PATH)
   end
 
-  addr = {
-    sa_family: String,
-    ip: String,
-    port: String,
-    hostname: String,
-    service: String
-  }
-
   describe '2 TCP connections' do
     it 'should properly handle 2 consecutive connections' do
       run_c_program('consecutive_connections')
@@ -90,6 +82,14 @@ describe 'tcp_spy' do
     end
   end
 
+  addr = {
+    sa_family: String,
+    ip: String,
+    port: String,
+    hostname: String,
+    service: String
+  }
+
   describe "a #{TCP_EV_BIND} event" do
     it "#{TCP_EV_BIND} should have the correct JSON fields" do
       run_c_program(TCP_EV_BIND)
@@ -97,7 +97,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_BIND,
           details: {
-            addr: addr 
+           	addr: addr
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -112,7 +112,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_CONNECT,
           details: {
-            addr: addr 
+            addr: addr,
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -151,17 +151,19 @@ describe 'tcp_spy' do
     end
   end
 
+	sock_opt = {
+		level: String,
+   	optname: String,
+		optlen: Integer
+	}
+
   describe "a #{TCP_EV_GETSOCKOPT} event" do
     it "#{TCP_EV_GETSOCKOPT} should have the correct JSON fields" do
       run_c_program(TCP_EV_GETSOCKOPT)
       pattern = [
         {
           type: TCP_EV_GETSOCKOPT,
-          details: {
-            level: String,
-            optname: String,
-            optlen: Integer
-          }
+          details: sock_opt
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
@@ -174,16 +176,32 @@ describe 'tcp_spy' do
       pattern = [
         {
           type: TCP_EV_SETSOCKOPT,
-          details: {
-            level: String,
-            optname: String,
-            optlen: Integer
-          }
+          details: sock_opt
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
     end
   end
+
+	send_flags = {
+		MSG_CONFIRM: Boolean,
+		MSG_DONTROUTE: Boolean,
+		MSG_DONTWAIT: Boolean,
+		MSG_EOR: Boolean,
+		MSG_MORE: Boolean,
+		MSG_NOSIGNAL: Boolean,
+		MSG_OOB: Boolean
+	}
+	
+	recv_flags = {
+		MSG_CMSG_CLOEXEC: Boolean,
+		MSG_DONTWAIT: Boolean,
+		MSG_ERRQUEUE: Boolean,
+		MSG_OOB: Boolean,
+		MSG_PEEK: Boolean,
+		MSG_TRUNC: Boolean,
+		MSG_WAITALL: Boolean	
+	}
 
   describe "a #{TCP_EV_SEND} event" do
     it "#{TCP_EV_SEND} should have the correct JSON fields" do
@@ -193,15 +211,7 @@ describe 'tcp_spy' do
           type: TCP_EV_SEND,
           details: {
             bytes: Integer,
-            flags: {
-              msg_confirm: Boolean,
-              msg_dontroute: Boolean,
-              msg_dontwait: Boolean,
-              msg_eor: Boolean,
-              msg_more: Boolean,
-              msg_nosignal: Boolean,
-              msg_oob: Boolean
-            }
+            flags: send_flags
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -217,16 +227,8 @@ describe 'tcp_spy' do
           type: TCP_EV_RECV,
           details: {
             bytes: Integer,
-            flags: {
-              msg_cmsg_cloexec: Boolean,
-              msg_dontwait: Boolean,
-              msg_errqueue: Boolean,
-              msg_oob: Boolean,
-              msg_peek: Boolean,
-              msg_trunc: Boolean,
-              msg_waitall: Boolean
-            }
-          }
+            flags: recv_flags
+					}
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
@@ -241,15 +243,7 @@ describe 'tcp_spy' do
           type: TCP_EV_SENDTO,
           details: {
             bytes: Integer,
-            flags: {
-              msg_confirm: Boolean,
-              msg_dontroute: Boolean,
-              msg_dontwait: Boolean,
-              msg_eor: Boolean,
-              msg_more: Boolean,
-              msg_nosignal: Boolean,
-              msg_oob: Boolean
-            }
+            flags: send_flags
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -265,15 +259,7 @@ describe 'tcp_spy' do
           type: TCP_EV_RECVFROM,
           details: {
             bytes: Integer,
-            flags: {
-              msg_cmsg_cloexec: Boolean,
-              msg_dontwait: Boolean,
-              msg_errqueue: Boolean,
-              msg_oob: Boolean,
-              msg_peek: Boolean,
-              msg_trunc: Boolean,
-              msg_waitall: Boolean
-            }
+            flags: recv_flags
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -281,6 +267,15 @@ describe 'tcp_spy' do
     end
   end
 
+	msghdr = {
+		control_data_len: Integer,
+		control_data: Array,
+		iovec: {
+			iovec_count: Integer,
+			iovec_sizes: Array
+		}
+	}
+ 
   describe "a #{TCP_EV_SENDMSG} event" do
     it "#{TCP_EV_SENDMSG} should have the correct JSON fields" do
       run_c_program(TCP_EV_SENDMSG)
@@ -289,23 +284,8 @@ describe 'tcp_spy' do
           type: TCP_EV_SENDMSG,
           details: {
             bytes: Integer,
-            flags: {
-              msg_confirm: Boolean,
-              msg_dontroute: Boolean,
-              msg_dontwait: Boolean,
-              msg_eor: Boolean,
-              msg_more: Boolean,
-              msg_nosignal: Boolean,
-              msg_oob: Boolean
-            },
-            msghdr: {
-              control_data_len: Integer,
-              control_data: Array,
-              iovec: {
-                iovec_count: Integer,
-                iovec_sizes: Array
-              }
-            }
+            flags: send_flags,
+            msghdr: msghdr
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -321,25 +301,10 @@ describe 'tcp_spy' do
           type: TCP_EV_RECVMSG,
           details: {
             bytes: Integer,
-            flags: {
-              msg_cmsg_cloexec: Boolean,
-              msg_dontwait: Boolean,
-              msg_errqueue: Boolean,
-              msg_oob: Boolean,
-              msg_peek: Boolean,
-              msg_trunc: Boolean,
-              msg_waitall: Boolean
-            },
-            msghdr: {
-              control_data_len: Integer,
-              control_data: Array,
-              iovec: {
-                iovec_count: Integer,
-                iovec_sizes: Array
-              }
-            }
-          }
-        }.ignore_extra_keys!
+            flags: recv_flags,
+            msghdr: msghdr
+					}
+				}.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
     end
@@ -367,7 +332,7 @@ describe 'tcp_spy' do
         {
           type: TCP_EV_GETSOCKNAME,
           details: {
-            addr: addr 
+            addr: addr
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -513,6 +478,16 @@ describe 'tcp_spy' do
       assert_json_match(pattern, read_json_as_array)
     end
   end
+	
+	poll_events = {
+		POLLIN: Boolean,
+		POLLPRI: Boolean,
+		POLLOUT: Boolean,
+		POLLRDHUP: Boolean,
+		POLLERR: Boolean,
+		POLLHUP: Boolean,
+		POLLNVAL: Boolean
+	}
 
   describe "a #{TCP_EV_POLL} event" do
     it "#{TCP_EV_POLL} should have the correct JSON fields" do
@@ -525,25 +500,9 @@ describe 'tcp_spy' do
               seconds: Integer,
               nanoseconds: Integer
             },
-            requested_events: {
-              pollin: Boolean,
-              pollpri: Boolean,
-              pollout: Boolean,
-              pollrdhup: Boolean,
-              pollerr: Boolean,
-              pollhup: Boolean,
-              pollnval: Boolean
-            },
-            returned_events: {
-              pollin: Boolean,
-              pollpri: Boolean,
-              pollout: Boolean,
-              pollrdhup: Boolean,
-              pollerr: Boolean,
-              pollhup: Boolean,
-              pollnval: Boolean
-            }
-          }
+            requested_events: poll_events,
+            returned_events: poll_events
+					}
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
@@ -561,30 +520,20 @@ describe 'tcp_spy' do
               seconds: Integer,
               nanoseconds: Integer
             },
-            requested_events: {
-              pollin: Boolean,
-              pollpri: Boolean,
-              pollout: Boolean,
-              pollrdhup: Boolean,
-              pollerr: Boolean,
-              pollhup: Boolean,
-              pollnval: Boolean
-            },
-            returned_events: {
-              pollin: Boolean,
-              pollpri: Boolean,
-              pollout: Boolean,
-              pollrdhup: Boolean,
-              pollerr: Boolean,
-              pollhup: Boolean,
-              pollnval: Boolean
-            }
-          }
+            requested_events: poll_events,
+            returned_events: poll_events
+					}
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
     end
   end
+
+	select_events = {
+		READ: Boolean,
+		WRITE: Boolean,
+		EXCEPT: Boolean
+	}
 
   describe "a #{TCP_EV_SELECT} event" do
     it "#{TCP_EV_SELECT} should have the correct JSON fields" do
@@ -597,17 +546,9 @@ describe 'tcp_spy' do
               seconds: Integer,
               nanoseconds: Integer
             },
-            requested_events: {
-              read: Boolean,
-              write: Boolean,
-              except: Boolean
-            },
-            returned_events: {
-              read: Boolean,
-              write: Boolean,
-              except: Boolean
-            }
-          }
+          	requested_events: select_events,
+          	returned_events: select_events
+					}
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
@@ -625,17 +566,9 @@ describe 'tcp_spy' do
               seconds: Integer,
               nanoseconds: Integer
             },
-            requested_events: {
-              read: Boolean,
-              write: Boolean,
-              except: Boolean
-            },
-            returned_events: {
-              read: Boolean,
-              write: Boolean,
-              except: Boolean
-            }
-          }
+			    	requested_events: select_events,
+          	returned_events: select_events
+					}
         }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)

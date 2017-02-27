@@ -851,6 +851,7 @@ int fcntl(int fd, int cmd, ...) {
 	int err = errno;
 	if (is_tcp_socket(fd)) tcp_ev_fcntl(fd, ret, err, cmd, arg);
 
+	errno = err;
 	return ret;
 }
 
@@ -863,36 +864,8 @@ int fcntl(int fd, int cmd, ...) {
 
   sys/epoll.h
 
-  functions: epoll_create(), epoll_create1(), epoll_ctl(), epoll_wait()
+  functions: epoll_ctl(), epoll_wait(), epoll_pwait().
 */
-
-typedef int (*epoll_create_type)(int size);
-
-epoll_create_type orig_epoll_create;
-
-int epoll_create(int size) {
-	if (!orig_epoll_create)
-		orig_epoll_create =
-		    (epoll_create_type)dlsym(RTLD_NEXT, "epoll_create");
-
-	LOG(ERROR, "epoll_create() not implemented.");
-
-	return orig_epoll_create(size);
-}
-
-typedef int (*epoll_create1_type)(int size);
-
-epoll_create1_type orig_epoll_create1;
-
-int epoll_create1(int flags) {
-	if (!orig_epoll_create1)
-		orig_epoll_create1 =
-		    (epoll_create1_type)dlsym(RTLD_NEXT, "epoll_create1");
-
-	LOG(ERROR, "epoll_create1() not implemented.");
-
-	return orig_epoll_create1(flags);
-}
 
 typedef int (*epoll_ctl_type)(int epfd, int op, int fd,
 			      struct epoll_event *event);
@@ -903,9 +876,12 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
 	if (!orig_epoll_ctl)
 		orig_epoll_ctl = (epoll_ctl_type)dlsym(RTLD_NEXT, "epoll_ctl");
 
-	LOG(ERROR, "epoll_ctl() not implemented.");
+	int ret = orig_epoll_ctl(epfd, op, fd, event);
+	int err = errno;
+	tcp_ev_epoll_ctl(epfd, ret, err, op, event->events); 	
 
-	return orig_epoll_ctl(epfd, op, fd, event);
+	errno = err;
+	return ret;
 }
 
 typedef int (*epoll_wait_type)(int epfd, struct epoll_event *events,
@@ -919,7 +895,37 @@ int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
 		orig_epoll_wait =
 		    (epoll_wait_type)dlsym(RTLD_NEXT, "epoll_wait");
 
-	LOG(ERROR, "epoll_wait() not implemented.");
+	int ret = orig_epoll_wait(epfd, events, maxevents, timeout);
+	int err = errno;
+	for (int i = 0; i < ret; i++) {
+		int fd = events[i].data.fd;	
+		uint32_t returned_events = events[i].events;	
+		tcp_ev_epoll_wait(fd, ret, err, timeout, returned_events);
+	}
 
-	return orig_epoll_wait(epfd, events, maxevents, timeout);
+	errno = err;
+	return ret; 
+}
+
+typedef int (*epoll_pwait_type)(int epfd, struct epoll_event *events,
+			       int maxevents, int timeout, const sigset_t *sigmask);
+
+epoll_pwait_type orig_epoll_pwait;
+
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+	       int timeout, const sigset_t *sigmask) {
+	if (!orig_epoll_pwait)
+		orig_epoll_pwait =
+		    (epoll_pwait_type)dlsym(RTLD_NEXT, "epoll_pwait");
+
+	int ret = orig_epoll_pwait(epfd, events, maxevents, timeout, sigmask);
+	int err = errno;
+	for (int i = 0; i < ret; i++) {
+		int fd = events[i].data.fd;	
+		uint32_t returned_events = events[i].events;	
+		tcp_ev_epoll_pwait(fd, ret, err, timeout, returned_events);
+	}
+	
+	errno = err;
+	return ret; 
 }
