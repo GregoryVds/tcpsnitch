@@ -48,24 +48,24 @@
 
 */
 
-typedef int (*orig_socket_type)(int domain, int type, int protocol);
-orig_socket_type orig_socket;
+typedef int (*socket_type)(int domain, int type, int protocol);
+socket_type orig_socket;
 
 int socket(int domain, int type, int protocol) {
 	if (!orig_socket)
-		orig_socket = (orig_socket_type)dlsym(RTLD_NEXT, "socket");
+		orig_socket = (socket_type)dlsym(RTLD_NEXT, "socket");
 
 	int fd = orig_socket(domain, type, protocol);
 	if (is_tcp_socket(fd)) tcp_ev_socket(fd, domain, type, protocol);
 	return fd;
 }
 
-typedef int (*orig_bind_type)(int fd, const struct sockaddr *addr,
+typedef int (*bind_type)(int fd, const struct sockaddr *addr,
 			      socklen_t len);
-orig_bind_type orig_bind;
+bind_type orig_bind;
 
 int bind(int fd, const struct sockaddr *addr, socklen_t len) {
-	if (!orig_bind) orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
+	if (!orig_bind) orig_bind = (bind_type)dlsym(RTLD_NEXT, "bind");
 
 	int ret = orig_bind(fd, addr, len);
 	int err = errno;
@@ -75,13 +75,13 @@ int bind(int fd, const struct sockaddr *addr, socklen_t len) {
 	return ret;
 }
 
-typedef int (*orig_connect_type)(int fd, const struct sockaddr *addr,
+typedef int (*connect_type)(int fd, const struct sockaddr *addr,
 				 socklen_t len);
-orig_connect_type orig_connect;
+connect_type orig_connect;
 
 int connect(int fd, const struct sockaddr *addr, socklen_t len) {
 	if (!orig_connect)
-		orig_connect = (orig_connect_type)dlsym(RTLD_NEXT, "connect");
+		orig_connect = (connect_type)dlsym(RTLD_NEXT, "connect");
 
 	if (is_tcp_socket(fd) && conf_opt_c) tcp_start_capture(fd, addr);
 	int ret = orig_connect(fd, addr, len);
@@ -92,13 +92,13 @@ int connect(int fd, const struct sockaddr *addr, socklen_t len) {
 	return ret;
 }
 
-typedef int (*orig_shutdown_type)(int fd, int how);
-orig_shutdown_type orig_shutdown;
+typedef int (*shutdown_type)(int fd, int how);
+shutdown_type orig_shutdown;
 
 int shutdown(int fd, int how) {
 	if (!orig_shutdown)
 		orig_shutdown =
-		    (orig_shutdown_type)dlsym(RTLD_NEXT, "shutdown");
+		    (shutdown_type)dlsym(RTLD_NEXT, "shutdown");
 
 	int ret = orig_shutdown(fd, how);
 	int err = errno;
@@ -108,12 +108,12 @@ int shutdown(int fd, int how) {
 	return ret;
 }
 
-typedef int (*orig_listen_type)(int fd, int n);
-orig_listen_type orig_listen;
+typedef int (*listen_type)(int fd, int n);
+listen_type orig_listen;
 
 int listen(int fd, int n) {
 	if (!orig_listen)
-		orig_listen = (orig_listen_type)dlsym(RTLD_NEXT, "listen");
+		orig_listen = (listen_type)dlsym(RTLD_NEXT, "listen");
 
 	int ret = orig_listen(fd, n);
 	int err = errno;
@@ -123,13 +123,13 @@ int listen(int fd, int n) {
 	return ret;
 }
 
-typedef int (*orig_accept_type)(int fd, struct sockaddr *addr,
+typedef int (*accept_type)(int fd, struct sockaddr *addr,
 				socklen_t *addr_len);
-orig_accept_type orig_accept;
+accept_type orig_accept;
 
 int accept(int fd, struct sockaddr *addr, socklen_t *addr_len) {
 	if (!orig_accept)
-		orig_accept = (orig_accept_type)dlsym(RTLD_NEXT, "accept");
+		orig_accept = (accept_type)dlsym(RTLD_NEXT, "accept");
 
 	int ret = orig_accept(fd, addr, addr_len);
 	int err = errno;
@@ -139,16 +139,15 @@ int accept(int fd, struct sockaddr *addr, socklen_t *addr_len) {
 	return ret;
 }
 
-typedef int (*orig_getsockopt_type)(int fd, int level, int optname,
+typedef int (*getsockopt_type)(int fd, int level, int optname,
 				    void *optval, socklen_t *optlen);
-
-orig_getsockopt_type orig_getsockopt;
+getsockopt_type orig_getsockopt;
 
 int getsockopt(int fd, int level, int optname, void *optval,
 	       socklen_t *optlen) {
 	if (!orig_getsockopt)
 		orig_getsockopt =
-		    (orig_getsockopt_type)dlsym(RTLD_NEXT, "getsockopt");
+		    (getsockopt_type)dlsym(RTLD_NEXT, "getsockopt");
 
 	int ret = orig_getsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
@@ -160,15 +159,15 @@ int getsockopt(int fd, int level, int optname, void *optval,
 	return ret;
 }
 
-typedef int (*orig_setsockopt_type)(int fd, int level, int optname,
+typedef int (*setsockopt_type)(int fd, int level, int optname,
 				    const void *optval, socklen_t optlen);
-orig_setsockopt_type orig_setsockopt;
+setsockopt_type orig_setsockopt;
 
 int setsockopt(int fd, int level, int optname, const void *optval,
 	       socklen_t optlen) {
 	if (!orig_setsockopt)
 		orig_setsockopt =
-		    (orig_setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
+		    (setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
 
 	int ret = orig_setsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
@@ -180,20 +179,20 @@ int setsockopt(int fd, int level, int optname, const void *optval,
 }
 
 #if defined(__ANDROID__)
-typedef ssize_t (*orig_send_type)(int fd, const void *buf, size_t n,
+typedef ssize_t (*send_type)(int fd, const void *buf, size_t n,
 				  unsigned int flags);
 #else
-typedef ssize_t (*orig_send_type)(int fd, const void *buf, size_t n, int flags);
+typedef ssize_t (*send_type)(int fd, const void *buf, size_t n, int flags);
 #endif
 
-orig_send_type orig_send;
+send_type orig_send;
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 ssize_t send(int fd, const void *buf, size_t n, unsigned int flags) {
 #else
 ssize_t send(int fd, const void *buf, size_t n, int flags) {
 #endif
-	if (!orig_send) orig_send = (orig_send_type)dlsym(RTLD_NEXT, "send");
+	if (!orig_send) orig_send = (send_type)dlsym(RTLD_NEXT, "send");
 
 	ssize_t ret = orig_send(fd, buf, n, flags);
 	int err = errno;
@@ -204,20 +203,20 @@ ssize_t send(int fd, const void *buf, size_t n, int flags) {
 }
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
-typedef ssize_t (*orig_recv_type)(int fd, void *buf, size_t n,
+typedef ssize_t (*recv_type)(int fd, void *buf, size_t n,
 				  unsigned int flags);
 #else
-typedef ssize_t (*orig_recv_type)(int fd, void *buf, size_t n, int flags);
+typedef ssize_t (*recv_type)(int fd, void *buf, size_t n, int flags);
 #endif
 
-orig_recv_type orig_recv;
+recv_type orig_recv;
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 ssize_t recv(int fd, void *buf, size_t n, unsigned int flags) {
 #else
 ssize_t recv(int fd, void *buf, size_t n, int flags) {
 #endif
-	if (!orig_recv) orig_recv = (orig_recv_type)dlsym(RTLD_NEXT, "recv");
+	if (!orig_recv) orig_recv = (recv_type)dlsym(RTLD_NEXT, "recv");
 
 	ssize_t ret = orig_recv(fd, buf, n, flags);
 	int err = errno;
@@ -227,15 +226,15 @@ ssize_t recv(int fd, void *buf, size_t n, int flags) {
 	return ret;
 }
 
-typedef ssize_t (*orig_sendto_type)(int fd, const void *buf, size_t n,
+typedef ssize_t (*sendto_type)(int fd, const void *buf, size_t n,
 				    int flags, const struct sockaddr *addr,
 				    socklen_t addr_len);
-orig_sendto_type orig_sendto;
+sendto_type orig_sendto;
 
 ssize_t sendto(int fd, const void *buf, size_t n, int flags,
 	       const struct sockaddr *addr, socklen_t addr_len) {
 	if (!orig_sendto)
-		orig_sendto = (orig_sendto_type)dlsym(RTLD_NEXT, "sendto");
+		orig_sendto = (sendto_type)dlsym(RTLD_NEXT, "sendto");
 
 	ssize_t ret = orig_sendto(fd, buf, n, flags, addr, addr_len);
 	int err = errno;
@@ -247,21 +246,21 @@ ssize_t sendto(int fd, const void *buf, size_t n, int flags,
 }
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
-typedef ssize_t (*orig_recvfrom_type)(int fd, void *buf, size_t n,
+typedef ssize_t (*recvfrom_type)(int fd, void *buf, size_t n,
 				      unsigned int flags,
 				      const struct sockaddr *__addr,
 				      socklen_t *addr_len);
 #elif defined(__ANDROID__)
-typedef ssize_t (*orig_recvfrom_type)(int fd, void *buf, size_t n, int flags,
+typedef ssize_t (*recvfrom_type)(int fd, void *buf, size_t n, int flags,
 				      const struct sockaddr *__addr,
 				      socklen_t *addr_len);
 #else
-typedef ssize_t (*orig_recvfrom_type)(int fd, void *buf, size_t n, int flags,
+typedef ssize_t (*recvfrom_type)(int fd, void *buf, size_t n, int flags,
 				      struct sockaddr *__addr,
 				      socklen_t *addr_len);
 #endif
 
-orig_recvfrom_type orig_recvfrom;
+recvfrom_type orig_recvfrom;
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 ssize_t recvfrom(int fd, void *buf, size_t n, unsigned int flags,
@@ -275,7 +274,7 @@ ssize_t recvfrom(int fd, void *buf, size_t n, int flags, struct sockaddr *addr,
 #endif
 	if (!orig_recvfrom)
 		orig_recvfrom =
-		    (orig_recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
+		    (recvfrom_type)dlsym(RTLD_NEXT, "recvfrom");
 
 	ssize_t ret = orig_recvfrom(fd, buf, n, flags, addr, addr_len);
 	int err = errno;
@@ -287,14 +286,14 @@ ssize_t recvfrom(int fd, void *buf, size_t n, int flags, struct sockaddr *addr,
 }
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
-typedef ssize_t (*orig_sendmsg_type)(int fd, const struct msghdr *message,
+typedef ssize_t (*sendmsg_type)(int fd, const struct msghdr *message,
 				     unsigned int flags);
 #else
-typedef ssize_t (*orig_sendmsg_type)(int fd, const struct msghdr *message,
+typedef ssize_t (*sendmsg_type)(int fd, const struct msghdr *message,
 				     int flags);
 #endif
 
-orig_sendmsg_type orig_sendmsg;
+sendmsg_type orig_sendmsg;
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 ssize_t sendmsg(int fd, const struct msghdr *message, unsigned int flags) {
@@ -302,7 +301,7 @@ ssize_t sendmsg(int fd, const struct msghdr *message, unsigned int flags) {
 ssize_t sendmsg(int fd, const struct msghdr *message, int flags) {
 #endif
 	if (!orig_sendmsg)
-		orig_sendmsg = (orig_sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
+		orig_sendmsg = (sendmsg_type)dlsym(RTLD_NEXT, "sendmsg");
 
 	ssize_t ret = orig_sendmsg(fd, message, flags);
 	int err = errno;
@@ -313,13 +312,13 @@ ssize_t sendmsg(int fd, const struct msghdr *message, int flags) {
 }
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
-typedef ssize_t (*orig_recvmsg_type)(int fd, struct msghdr *message,
+typedef ssize_t (*recvmsg_type)(int fd, struct msghdr *message,
 				     unsigned int flags);
 #else
-typedef ssize_t (*orig_recvmsg_type)(int fd, struct msghdr *message, int flags);
+typedef ssize_t (*recvmsg_type)(int fd, struct msghdr *message, int flags);
 #endif
 
-orig_recvmsg_type orig_recvmsg;
+recvmsg_type orig_recvmsg;
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
 ssize_t recvmsg(int fd, struct msghdr *message, unsigned int flags) {
@@ -327,7 +326,7 @@ ssize_t recvmsg(int fd, struct msghdr *message, unsigned int flags) {
 ssize_t recvmsg(int fd, struct msghdr *message, int flags) {
 #endif
 	if (!orig_recvmsg)
-		orig_recvmsg = (orig_recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
+		orig_recvmsg = (recvmsg_type)dlsym(RTLD_NEXT, "recvmsg");
 
 	ssize_t ret = orig_recvmsg(fd, message, flags);
 	int err = errno;
@@ -340,14 +339,14 @@ ssize_t recvmsg(int fd, struct msghdr *message, int flags) {
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
 #if !defined(__ANDROID__)
-typedef int (*orig_sendmmsg_type)(int fd, struct mmsghdr *vmessages,
+typedef int (*sendmmsg_type)(int fd, struct mmsghdr *vmessages,
 				  unsigned int vlen, int flags);
 #elif __ANDROID_API__ >= 21
-typedef int (*orig_sendmmsg_type)(int fd, const struct mmsghdr *vmessages,
+typedef int (*sendmmsg_type)(int fd, const struct mmsghdr *vmessages,
 				  unsigned int vlen, int flags);
 #endif
 
-orig_sendmmsg_type orig_sendmmsg;
+sendmmsg_type orig_sendmmsg;
 
 #if !defined(__ANDROID__)
 int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags) {
@@ -357,7 +356,7 @@ int sendmmsg(int fd, const struct mmsghdr *vmessages, unsigned int vlen,
 #endif
 	if (!orig_sendmmsg)
 		orig_sendmmsg =
-		    (orig_sendmmsg_type)dlsym(RTLD_NEXT, "sendmmsg");
+		    (sendmmsg_type)dlsym(RTLD_NEXT, "sendmmsg");
 
 	int ret = orig_sendmmsg(fd, vmessages, vlen, flags);
 	int err = errno;
@@ -369,16 +368,16 @@ int sendmmsg(int fd, const struct mmsghdr *vmessages, unsigned int vlen,
 }
 
 #if !defined(__ANDROID__)
-typedef int (*orig_recvmmsg_type)(int fd, struct mmsghdr *vmessages,
+typedef int (*recvmmsg_type)(int fd, struct mmsghdr *vmessages,
 				  unsigned int vlen, int flags,
 				  struct timespec *tmo);
 #elif __ANDROID_API__ >= 21
-typedef int (*orig_recvmmsg_type)(int fd, struct mmsghdr *vmessages,
+typedef int (*recvmmsg_type)(int fd, struct mmsghdr *vmessages,
 				  unsigned int vlen, int flags,
 				  const struct timespec *tmo);
 #endif
 
-orig_recvmmsg_type orig_recvmmsg;
+recvmmsg_type orig_recvmmsg;
 
 #if !defined(__ANDROID__)
 int recvmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
@@ -389,7 +388,7 @@ int recvmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
 #endif
 	if (!orig_recvmmsg)
 		orig_recvmmsg =
-		    (orig_recvmmsg_type)dlsym(RTLD_NEXT, "recvmmsg");
+		    (recvmmsg_type)dlsym(RTLD_NEXT, "recvmmsg");
 
 	int ret = orig_recvmmsg(fd, vmessages, vlen, flags, tmo);
 	int err = errno;
@@ -402,15 +401,14 @@ int recvmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
 
 #endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
-typedef int (*orig_getsockname_type)(int fd, struct sockaddr *addr,
+typedef int (*getsockname_type)(int fd, struct sockaddr *addr,
 				     socklen_t *len);
-
-orig_getsockname_type orig_getsockname;
+getsockname_type orig_getsockname;
 
 int getsockname(int fd, struct sockaddr *addr, socklen_t *len) {
 	if (!orig_getsockname)
 		orig_getsockname =
-		    (orig_getsockname_type)dlsym(RTLD_NEXT, "getsockname");
+		    (getsockname_type)dlsym(RTLD_NEXT, "getsockname");
 
 	int ret = orig_getsockname(fd, addr, len);
 	int err = errno;
@@ -433,12 +431,12 @@ int getsockname(int fd, struct sockaddr *addr, socklen_t *len) {
 
 */
 
-typedef ssize_t (*orig_write_type)(int fd, const void *buf, size_t n);
-orig_write_type orig_write;
+typedef ssize_t (*write_type)(int fd, const void *buf, size_t n);
+write_type orig_write;
 
 ssize_t write(int fd, const void *buf, size_t n) {
 	if (!orig_write)
-		orig_write = (orig_write_type)dlsym(RTLD_NEXT, "write");
+		orig_write = (write_type)dlsym(RTLD_NEXT, "write");
 
 	int ret = orig_write(fd, buf, n);
 	int err = errno;
@@ -448,11 +446,11 @@ ssize_t write(int fd, const void *buf, size_t n) {
 	return ret;
 }
 
-typedef ssize_t (*orig_read_type)(int fd, void *buf, size_t nbytes);
-orig_read_type orig_read;
+typedef ssize_t (*read_type)(int fd, void *buf, size_t nbytes);
+read_type orig_read;
 
 ssize_t read(int fd, void *buf, size_t nbytes) {
-	if (!orig_read) orig_read = (orig_read_type)dlsym(RTLD_NEXT, "read");
+	if (!orig_read) orig_read = (read_type)dlsym(RTLD_NEXT, "read");
 
 	int ret = orig_read(fd, buf, nbytes);
 	int err = errno;
@@ -462,12 +460,12 @@ ssize_t read(int fd, void *buf, size_t nbytes) {
 	return ret;
 }
 
-typedef int (*orig_close_type)(int fd);
-orig_close_type orig_close;
+typedef int (*close_type)(int fd);
+close_type orig_close;
 
 int close(int fd) {
 	if (!orig_close)
-		orig_close = (orig_close_type)dlsym(RTLD_NEXT, "close");
+		orig_close = (close_type)dlsym(RTLD_NEXT, "close");
 
 	bool is_tcp = is_tcp_socket(fd);
 	int ret = orig_close(fd);
@@ -478,11 +476,11 @@ int close(int fd) {
 	return ret;
 }
 
-typedef pid_t (*orig_fork_type)(void);
-orig_fork_type orig_fork;
+typedef pid_t (*fork_type)(void);
+fork_type orig_fork;
 
 pid_t fork(void) {
-	if (!orig_fork) orig_fork = (orig_fork_type)dlsym(RTLD_NEXT, "fork");
+	if (!orig_fork) orig_fork = (fork_type)dlsym(RTLD_NEXT, "fork");
 	LOG(INFO, "fork() called.");
 
 	pid_t ret = orig_fork();
@@ -493,11 +491,12 @@ pid_t fork(void) {
 	return ret;
 }
 
-typedef int (*orig_dup_type)(int fd);
-orig_dup_type orig_dup;
+typedef int (*dup_type)(int fd);
+dup_type orig_dup;
 
 int dup(int fd) {
-	if (!orig_dup) orig_dup = (orig_dup_type)dlsym(RTLD_NEXT, "dup");
+	if (!orig_dup) orig_dup = (dup_type)dlsym(RTLD_NEXT, "dup");
+        
 
 	int ret = orig_dup(fd);
 	int err = errno;
@@ -507,11 +506,11 @@ int dup(int fd) {
 	return ret;
 }
 
-typedef int (*orig_dup2_type)(int fd, int newfd);
-orig_dup2_type orig_dup2;
+typedef int (*dup2_type)(int fd, int newfd);
+dup2_type orig_dup2;
 
 int dup2(int fd, int newfd) {
-	if (!orig_dup2) orig_dup2 = (orig_dup2_type)dlsym(RTLD_NEXT, "dup2");
+	if (!orig_dup2) orig_dup2 = (dup2_type)dlsym(RTLD_NEXT, "dup2");
 
 	int ret = orig_dup2(fd, newfd);
 	int err = errno;
@@ -521,11 +520,11 @@ int dup2(int fd, int newfd) {
 	return ret;
 }
 
-typedef int (*orig_dup3_type)(int fd, int newfd, int flags);
-orig_dup3_type orig_dup3;
+typedef int (*dup3_type)(int fd, int newfd, int flags);
+dup3_type orig_dup3;
 
 int dup3(int fd, int newfd, int flags) {
-	if (!orig_dup3) orig_dup3 = (orig_dup3_type)dlsym(RTLD_NEXT, "dup3");
+	if (!orig_dup3) orig_dup3 = (dup3_type)dlsym(RTLD_NEXT, "dup3");
 
 	int ret = orig_dup3(fd, newfd, flags);
 	int err = errno;
@@ -548,13 +547,13 @@ int dup3(int fd, int newfd, int flags) {
 
 */
 
-typedef ssize_t (*orig_writev_type)(int fd, const struct iovec *iovec,
+typedef ssize_t (*writev_type)(int fd, const struct iovec *iovec,
 				    int count);
-orig_writev_type orig_writev;
+writev_type orig_writev;
 
 ssize_t writev(int fd, const struct iovec *iovec, int count) {
 	if (!orig_writev)
-		orig_writev = (orig_writev_type)dlsym(RTLD_NEXT, "writev");
+		orig_writev = (writev_type)dlsym(RTLD_NEXT, "writev");
 
 	int ret = orig_writev(fd, iovec, count);
 	int err = errno;
@@ -564,13 +563,13 @@ ssize_t writev(int fd, const struct iovec *iovec, int count) {
 	return ret;
 }
 
-typedef ssize_t (*orig_readv_type)(int fd, const struct iovec *iovec,
+typedef ssize_t (*readv_type)(int fd, const struct iovec *iovec,
 				   int count);
-orig_readv_type orig_readv;
+readv_type orig_readv;
 
 ssize_t readv(int fd, const struct iovec *iovec, int count) {
 	if (!orig_readv)
-		orig_readv = (orig_readv_type)dlsym(RTLD_NEXT, "readv");
+		orig_readv = (readv_type)dlsym(RTLD_NEXT, "readv");
 
 	int ret = orig_readv(fd, iovec, count);
 	int err = errno;
@@ -593,12 +592,12 @@ ssize_t readv(int fd, const struct iovec *iovec, int count) {
 */
 
 #ifdef __ANDROID__
-typedef int (*orig_ioctl_type)(int fd, int request, ...);
+typedef int (*ioctl_type)(int fd, int request, ...);
 #else
-typedef int (*orig_ioctl_type)(int fd, unsigned long int request, ...);
+typedef int (*ioctl_type)(int fd, unsigned long int request, ...);
 #endif
 
-orig_ioctl_type orig_ioctl;
+ioctl_type orig_ioctl;
 
 #ifdef __ANDROID__
 int ioctl(int fd, int request, ...) {
@@ -611,7 +610,7 @@ int ioctl(int fd, unsigned long int request, ...) {
 	va_end(argp);
 
 	if (!orig_ioctl)
-		orig_ioctl = (orig_ioctl_type)dlsym(RTLD_NEXT, "ioctl");
+		orig_ioctl = (ioctl_type)dlsym(RTLD_NEXT, "ioctl");
 
 	int ret = orig_ioctl(fd, request, value);
 	int err = errno;
@@ -633,14 +632,14 @@ int ioctl(int fd, unsigned long int request, ...) {
  functions: sendfile()
 */
 
-typedef ssize_t (*orig_sendfile_type)(int out_fd, int in_fd, off_t *offset,
+typedef ssize_t (*sendfile_type)(int out_fd, int in_fd, off_t *offset,
 				      size_t count);
-orig_sendfile_type orig_sendfile;
+sendfile_type orig_sendfile;
 
 ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count) {
 	if (!orig_sendfile)
 		orig_sendfile =
-		    (orig_sendfile_type)dlsym(RTLD_NEXT, "sendfile");
+		    (sendfile_type)dlsym(RTLD_NEXT, "sendfile");
 
 	int ret = orig_sendfile(out_fd, in_fd, offset, count);
 	int err = errno;
@@ -662,12 +661,11 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count) {
  functions: poll(), ppoll()
 */
 
-typedef int (*orig_poll_type)(struct pollfd *fds, nfds_t nfds, int timeout);
-
-orig_poll_type orig_poll;
+typedef int (*poll_type)(struct pollfd *fds, nfds_t nfds, int timeout);
+poll_type orig_poll;
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
-	if (!orig_poll) orig_poll = (orig_poll_type)dlsym(RTLD_NEXT, "poll");
+	if (!orig_poll) orig_poll = (poll_type)dlsym(RTLD_NEXT, "poll");
 
 	int ret = orig_poll(fds, nfds, timeout);
 	int err = errno;
@@ -683,16 +681,15 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 	return ret;
 }
 
-typedef int (*orig_ppoll_type)(struct pollfd *fds, nfds_t nfds,
+typedef int (*ppoll_type)(struct pollfd *fds, nfds_t nfds,
 			       const struct timespec *tmo_p,
 			       const sigset_t *sigmask);
-
-orig_ppoll_type orig_ppoll;
+ppoll_type orig_ppoll;
 
 int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
 	  const sigset_t *sigmask) {
 	if (!orig_ppoll)
-		orig_ppoll = (orig_ppoll_type)dlsym(RTLD_NEXT, "ppoll");
+		orig_ppoll = (ppoll_type)dlsym(RTLD_NEXT, "ppoll");
 
 	int ret = orig_ppoll(fds, nfds, tmo_p, sigmask);
 	int err = errno;
@@ -720,10 +717,9 @@ int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
  functions: select(), pselect().
 */
 
-typedef int (*orig_select_type)(int nfds, fd_set *readfds, fd_set *writefds,
+typedef int (*select_type)(int nfds, fd_set *readfds, fd_set *writefds,
 				fd_set *exceptfds, struct timeval *timeout);
-
-orig_select_type orig_select;
+select_type orig_select;
 
 #define READ_FLAG 0b1
 #define WRITE_FLAG 0b10
@@ -732,7 +728,7 @@ orig_select_type orig_select;
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	   struct timeval *timeout) {
 	if (!orig_select)
-		orig_select = (orig_select_type)dlsym(RTLD_NEXT, "select");
+		orig_select = (select_type)dlsym(RTLD_NEXT, "select");
 
 	short req_ev[nfds - 1];
 	memset(req_ev, 0, sizeof(req_ev));
@@ -768,17 +764,16 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	return ret;
 }
 
-typedef int (*orig_pselect_type)(int nfds, fd_set *readfds, fd_set *writefds,
+typedef int (*pselect_type)(int nfds, fd_set *readfds, fd_set *writefds,
 				 fd_set *exceptfds,
 				 const struct timespec *timeout,
 				 const sigset_t *sigmask);
-
-orig_pselect_type orig_pselect;
+pselect_type orig_pselect;
 
 int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	    const struct timespec *timeout, const sigset_t *sigmask) {
 	if (!orig_pselect)
-		orig_pselect = (orig_pselect_type)dlsym(RTLD_NEXT, "pselect");
+		orig_pselect = (pselect_type)dlsym(RTLD_NEXT, "pselect");
 
 	short req_ev[nfds - 1];
 	memset(req_ev, 0, sizeof(req_ev));
@@ -815,9 +810,20 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	return ret;
 }
 
-typedef int (*orig_fcntl_type)(int fd, int cmd, ...);
+/*
+  _____ ____ _   _ _____ _          _    ____ ___ 
+ |  ___/ ___| \ | |_   _| |        / \  |  _ \_ _|
+ | |_ | |   |  \| | | | | |       / _ \ | |_) | | 
+ |  _|| |___| |\  | | | | |___   / ___ \|  __/| | 
+ |_|   \____|_| \_| |_| |_____| /_/   \_\_|  |___|
+                                                  
+ fcntl.h
+	
+ functions: fcntl()
+*/
 
-orig_fcntl_type orig_fcntl;
+typedef int (*fcntl_type)(int fd, int cmd, ...);
+fcntl_type orig_fcntl;
 
 #define FORWARD_FCNTL(TYPE)                                                    \
 	{                                                                      \
@@ -833,7 +839,7 @@ orig_fcntl_type orig_fcntl;
 
 int fcntl(int fd, int cmd, ...) {
 	if (!orig_fcntl)
-		orig_fcntl = (orig_fcntl_type)dlsym(RTLD_NEXT, "fcntl");
+		orig_fcntl = (fcntl_type)dlsym(RTLD_NEXT, "fcntl");
 
 	va_list argp;
 	void *arg;
