@@ -160,6 +160,7 @@ describe 'tcp_spy' do
           details: {
             level: String,
             optname: String,
+            optlen: Integer
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
@@ -176,6 +177,7 @@ describe 'tcp_spy' do
           details: {
             level: String,
             optname: String,
+            optlen: Integer
           }
         }.ignore_extra_keys!
       ].ignore_extra_values!
