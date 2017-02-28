@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
@@ -17,7 +18,7 @@
 #include <unistd.h>
 
 int main(void) {
-    int sock;
+  int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
     fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);

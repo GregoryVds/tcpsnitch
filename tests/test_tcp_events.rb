@@ -127,6 +127,18 @@ describe 'tcp_spy' do
 		EXCEPT: Boolean
 	}
 
+	epoll_events = {
+		EPOLLIN: Boolean,
+		EPOLLOUT: Boolean,
+	  EPOLLRDHUP: Boolean,
+		EPOLLPRI: Boolean,
+		EPOLLERR: Boolean,
+		EPOLLHUP: Boolean,
+		EPOLLET: Boolean,
+    EPOLLONESHOT: Boolean,
+    EPOLLWAKEUP: Boolean
+	}
+
   DETAILS = {
     TCP_EV_SOCKET => { 
       domain: String,
@@ -262,6 +274,18 @@ describe 'tcp_spy' do
     TCP_EV_FCNTL => {
       cmd: String
     }.ignore_extra_keys!,
+    TCP_EV_EPOLL_CTL => {
+      op: String,
+      requested_events: epoll_events
+    },
+    TCP_EV_EPOLL_WAIT => {
+      timeout: Integer,
+      returned_events: epoll_events
+    },
+    TCP_EV_EPOLL_PWAIT => {
+      timeout: Integer,
+      returned_events: epoll_events
+    },
     TCP_EV_TCP_INFO => {
       state: Integer,
       ca_state: Integer,

@@ -889,7 +889,7 @@ PSELECT_FAIL = CProg.new(<<-EOT, 'pselect_fail')
 EOT
 
 FCNTL = CProg.new(<<-EOT, 'fcntl')
-  #{SOCKET}
+#{SOCKET}
   if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
     fprintf(stderr, "fcntl() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
@@ -897,7 +897,7 @@ FCNTL = CProg.new(<<-EOT, 'fcntl')
 EOT
 
 FCNTL_DGRAM  = CProg.new(<<-EOT, 'fcntl_dgram')
-  #{SOCKET_DGRAM}
+#{SOCKET_DGRAM}
   if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
     fprintf(stderr, "fcntl() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
@@ -905,8 +905,92 @@ FCNTL_DGRAM  = CProg.new(<<-EOT, 'fcntl_dgram')
 EOT
 
 FCNTL_FAIL  = CProg.new(<<-EOT, 'fcntl_fail')
-  #{SOCKET}
+#{SOCKET}
   if (fcntl(42, F_SETFL) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+EPOLL_CTL = CProg.new(<<-EOT, 'epoll_ctl')
+#{SOCKET}
+  int efd = epoll_create1(0);
+  struct epoll_event event;
+  event.data.fd = sock;
+  event.events = EPOLLIN|EPOLLOUT;
+  if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
+    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_CTL_DGRAM = CProg.new(<<-EOT, 'epoll_ctl_dgram')
+#{SOCKET_DGRAM}
+  int efd = epoll_create1(0);
+  struct epoll_event event;
+  event.data.fd = sock;
+  event.events = EPOLLIN|EPOLLOUT;
+  if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
+    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_CTL_FAIL = CProg.new(<<-EOT, 'epoll_ctl_fail')
+#{SOCKET}
+  int efd = epoll_create1(0);
+  struct epoll_event event;
+  event.data.fd = sock;
+  event.events = EPOLLIN|EPOLLOUT;
+  if (epoll_ctl(efd, EPOLL_CTL_MOD, sock, &event) == 0)
+    return(EXIT_FAILURE);
+EOT
+
+EPOLL_WAIT = CProg.new(<<-EOT, 'epoll_wait')
+#{EPOLL_CTL}
+  struct epoll_event events[2];
+  if (epoll_wait(efd, events, 2, 0) < 0) {
+    fprintf(stderr, "epoll_wait() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_WAIT_DGRAM = CProg.new(<<-EOT, 'epoll_wait_dgram')
+#{EPOLL_CTL_DGRAM}
+  struct epoll_event events[2];
+  if (epoll_wait(efd, events, 2, 0) < 0) {
+    fprintf(stderr, "epoll_wait() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_WAIT_FAIL = CProg.new(<<-EOT, 'epoll_wait_fail')
+#{EPOLL_CTL}
+  struct epoll_event events[2];
+  if (epoll_wait(efd, events, -1, 0) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+EPOLL_PWAIT = CProg.new(<<-EOT, 'epoll_pwait')
+#{EPOLL_CTL}
+  struct epoll_event events[2];
+  if (epoll_pwait(efd, events, 2, 0, NULL) < 0) {
+    fprintf(stderr, "epoll_pwait() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_PWAIT_DGRAM = CProg.new(<<-EOT, 'epoll_pwait_dgram')
+#{EPOLL_CTL_DGRAM}
+  struct epoll_event events[2];
+  if (epoll_pwait(efd, events, 2, 0, NULL) < 0) {
+    fprintf(stderr, "epoll_pwait() failed: %s", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+EPOLL_PWAIT_FAIL = CProg.new(<<-EOT, 'epoll_pwait_fail')
+#{EPOLL_CTL}
+  struct epoll_event events[2];
+  if (epoll_pwait(efd, events, -1, 0, NULL) != -1)
     return(EXIT_FAILURE);
 EOT
 

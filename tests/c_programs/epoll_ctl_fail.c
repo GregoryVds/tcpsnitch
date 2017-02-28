@@ -19,17 +19,17 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
     fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
   }
 
-  int optval;
-  socklen_t optlen = sizeof(optval);
-  if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0) {
-    fprintf(stderr, "getsockopt() failed: %s", strerror(errno));
+  int efd = epoll_create1(0);
+  struct epoll_event event;
+  event.data.fd = sock;
+  event.events = EPOLLIN|EPOLLOUT;
+  if (epoll_ctl(efd, EPOLL_CTL_MOD, sock, &event) == 0)
     return(EXIT_FAILURE);
-  }
           
   return(EXIT_SUCCESS);
 }

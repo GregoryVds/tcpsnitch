@@ -878,7 +878,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
 
 	int ret = orig_epoll_ctl(epfd, op, fd, event);
 	int err = errno;
-	tcp_ev_epoll_ctl(epfd, ret, err, op, event->events); 	
+	tcp_ev_epoll_ctl(fd, ret, err, op, event->events); 	
 
 	errno = err;
 	return ret;
