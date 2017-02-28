@@ -18,22 +18,28 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(8000);
   inet_aton("127.0.0.1", &addr.sin_addr);
 
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    fprintf(stderr, "connect() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   struct sockaddr_storage sa;
   socklen_t sa_len = sizeof(sa);
 
-	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0)
+	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0) {
+    fprintf(stderr, "getsockname() failed: %s", strerror(errno));
 		return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

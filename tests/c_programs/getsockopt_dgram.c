@@ -18,13 +18,17 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   int optval;
   socklen_t optlen = sizeof(optval);
-  if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0)
+  if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0) {
+    fprintf(stderr, "getsockopt() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

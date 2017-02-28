@@ -29,8 +29,10 @@ int main(void) {
   pollfds[1].fd = sock2;
   pollfds[1].events = POLLIN;
 
-  if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) == -1)
+  if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) < 0) {
+    fprintf(stderr, "poll() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

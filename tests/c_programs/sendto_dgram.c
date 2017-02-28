@@ -18,8 +18,10 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -29,6 +31,7 @@ int main(void) {
   int data = 42;
   if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
              sizeof(addr)) < 0) {
+    fprintf(stderr, "sendto() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
   }
           

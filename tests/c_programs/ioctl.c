@@ -18,23 +18,29 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(8000);
   inet_aton("127.0.0.1", &addr.sin_addr);
 
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    fprintf(stderr, "connect() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   char *req = "GET / HTTP/1.0\r\n\r\n";
   send(sock, req, sizeof(char)*strlen(req), 0);
 
   int bytes;
-  if (ioctl(sock, FIONREAD, &bytes) == -1)
+  if (ioctl(sock, FIONREAD, &bytes) < 0) {
+    fprintf(stderr, "ioctl() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

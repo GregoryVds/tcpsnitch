@@ -18,12 +18,16 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   int bytes;
-  if (ioctl(sock, FIONREAD, &bytes) == -1)
+  if (ioctl(sock, FIONREAD, &bytes) < 0) {
+    fprintf(stderr, "ioctl() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

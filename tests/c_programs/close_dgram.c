@@ -18,11 +18,15 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
-  if (close(sock) < 0)
+  if (close(sock) < 0) {
+    fprintf(stderr, "close() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

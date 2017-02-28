@@ -171,20 +171,25 @@ typedef struct {
         TcpEvent super;
         size_t bytes;
         int flags;
-        TcpMsghdr msghdr;
+        TcpMsghdr tcp_msghdr;
 } TcpEvSendmsg;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
         int flags;
-        TcpMsghdr msghdr;
+        TcpMsghdr tcp_msghdr;
 } TcpEvRecvmsg;
+
+typedef struct {
+        time_t seconds;
+        long nanoseconds;
+} TcpTimeout;
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 typedef struct {
-        TcpMsghdr msghdr;
-        unsigned int msg_len;
+        TcpMsghdr tcp_msghdr;
+        unsigned int bytes_transmitted;
 } TcpMmsghdr;
 
 typedef struct {
@@ -192,15 +197,16 @@ typedef struct {
         size_t bytes;
         int flags;
         int mmsghdr_count;
-        TcpMmsghdr **msghdr;
+        TcpMmsghdr *mmsghdr_vec;
 } TcpEvSendmmsg;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
         int flags;
+        TcpTimeout timeout;
         int mmsghdr_count;
-        TcpMmsghdr **msghdr;
+        TcpMmsghdr *mmsghdr_vec;
 } TcpEvRecvmmsg;
 #endif
 
@@ -272,11 +278,6 @@ typedef struct {
         bool pollhup;
         bool pollnval;
 } TcpPollEvents;
-
-typedef struct {
-        time_t seconds;
-        long nanoseconds;
-} TcpTimeout;
 
 typedef struct {
         TcpEvent super;

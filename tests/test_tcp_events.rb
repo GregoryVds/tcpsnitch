@@ -102,7 +102,7 @@ describe 'tcp_spy' do
 		control_data: Array,
 		iovec: {
 			iovec_count: Integer,
-			iovec_sizes: Array
+      iovec_sizes: [Integer].ignore_extra_values!
 		}
 	}
 
@@ -176,6 +176,29 @@ describe 'tcp_spy' do
       flags: recv_flags,
       msghdr: msghdr
     },
+    TCP_EV_SENDMMSG => {
+      bytes: Integer,
+      flags: send_flags,
+      mmsghdr_count: Integer,
+      mmsghdr_vec: [
+        {
+          transmitted_bytes: Integer,
+          msghdr: msghdr
+        }
+      ].ignore_extra_values!
+    },
+    TCP_EV_RECVMMSG => {
+      bytes: Integer,
+      flags: recv_flags,
+      mmsghdr_count: Integer,
+      mmsghdr_vec: [
+        {
+          transmitted_bytes: Integer,
+          msghdr: msghdr
+        }
+      ].ignore_extra_values!,
+      timeout: timeout
+    },
     TCP_EV_WRITE => {
       bytes: Integer
     },
@@ -200,14 +223,14 @@ describe 'tcp_spy' do
       bytes: Integer,
       iovec: {
         iovec_count: Integer,
-        iovec_sizes: Array
+        iovec_sizes: [Integer].ignore_extra_values!
       }
     },
     TCP_EV_READV => {
       bytes: Integer,
       iovec: {
         iovec_count: Integer,
-        iovec_sizes: Array
+        iovec_sizes: [Integer].ignore_extra_values!
       }
     },
     TCP_EV_IOCTL => {
@@ -274,7 +297,7 @@ describe 'tcp_spy' do
       total_retrans: Integer
     }
   }
-  
+
   SOCKET_SYSCALLS.each do |syscall|
     describe "a #{syscall} event" do
       it "#{syscall} should have the correct JSON fields" do
@@ -289,5 +312,4 @@ describe 'tcp_spy' do
       end
     end
   end
-
 end

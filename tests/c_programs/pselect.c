@@ -32,8 +32,10 @@ int main(void) {
   timeout.tv_sec = 1;
   timeout.tv_nsec = 1000;
 
-  if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) == -1)
+  if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) < 0) {
+    fprintf(stderr, "pselect() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

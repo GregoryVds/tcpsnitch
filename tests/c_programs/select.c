@@ -32,8 +32,10 @@ int main(void) {
   timeout.tv_sec = 1;
   timeout.tv_usec = 1;
 
-  if (select(sock2+1, &fdset, NULL, NULL, &timeout) == -1)
+  if (select(sock2+1, &fdset, NULL, NULL, &timeout) < 0) {
+    fprintf(stderr, "select() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }

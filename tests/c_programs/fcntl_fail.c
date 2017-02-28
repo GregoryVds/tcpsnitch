@@ -18,10 +18,12 @@
 
 int main(void) {
     int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
-  if (fcntl(sock, -42) != -1)
+  if (fcntl(42, F_SETFL) != -1)
     return(EXIT_FAILURE);
           
   return(EXIT_SUCCESS);

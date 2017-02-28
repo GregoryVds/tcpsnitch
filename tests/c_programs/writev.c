@@ -18,16 +18,20 @@
 
 int main(void) {
   int sock;
-  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    fprintf(stderr, "socket() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(8000);
   inet_aton("127.0.0.1", &addr.sin_addr);
 
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    fprintf(stderr, "connect() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
 
   char *iovec_buf0 = "short string\n";
   char *iovec_buf1 = "This is a longer string\n";
@@ -41,8 +45,10 @@ int main(void) {
   iovec[2].iov_base = iovec_buf2;
   iovec[2].iov_len = strlen(iovec_buf2);
 
-  if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0)
+  if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0) {
+    fprintf(stderr, "writev() failed: %s", strerror(errno));
     return(EXIT_FAILURE);
+  }
           
   return(EXIT_SUCCESS);
 }
