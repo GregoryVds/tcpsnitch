@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
 #include <sys/types.h>
 #include "constants.h"
 #include "lib.h"
@@ -212,8 +215,9 @@ char *alloc_cmdline_str(void) {
         // Read cmdline file into cmdline array
         char *cmdline = (char *)my_malloc(sizeof(char) * cmd_line_length);
         if (!cmdline) goto error2;
-
+        LOG(ERROR, "cmdline2: %s", cmdline);
         int rc = fread(cmdline, 1, cmd_line_length, fp);
+        LOG(ERROR, "cmdline1: %s", cmdline);
         if (!rc) goto error3;
 
         fclose(fp);
@@ -289,4 +293,38 @@ char *alloc_error_str(int err) {
 error:
         LOG_FUNC_FAIL;
         return NULL;
+}
+
+#ifdef __ANDROID__
+char *alloc_property(const char *property) {
+        char *prop = my_malloc(sizeof(char)*(PROP_VALUE_MAX+1));
+        if (!prop) goto error;
+        int n = __system_property_get(property, prop);
+        if (!n) goto error1;
+        return prop;
+error1:
+        LOG(ERROR, "__system_property_get() failed.");
+error:
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+#endif
+
+char *alloc_str_opt(const char *opt) {
+#ifdef __ANDROID__
+        return alloc_property(opt);
+#else
+        char *env_val = get_str_env(opt);
+        if (!env_val) goto error;
+        int n = strlen(env_val) + 1;
+        char *opt_str = (char *)my_malloc(n * sizeof(char));
+        if (!opt_str) goto error1;
+        strncpy(opt_str, env_val, n);
+        return opt_str;
+error:
+        LOG(ERROR, "Env %s was not set", opt);
+error1:
+        LOG_FUNC_FAIL;
+        return NULL;
+#endif
 }

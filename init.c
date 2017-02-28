@@ -91,9 +91,7 @@ error_out:
 }
 
 static void tcpsnitch_free(void) {
-#ifdef __ANDROID__
         free(conf_opt_d);
-#endif
         free(logs_dir_path);
         // We don't check for errors on this one. This is called
         // after fork() and will logically failed if the mutex
@@ -124,11 +122,7 @@ error_out:
 static void get_options(void) {
         conf_opt_b = get_long_opt_or_defaultval(OPT_B, 4096);
         conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
-#ifdef __ANDROID__
-        conf_opt_d = alloc_android_opt_d();
-#else
-        conf_opt_d = get_str_env(OPT_D);
-#endif
+        conf_opt_d = alloc_str_opt(OPT_D);
         conf_opt_e = get_long_opt_or_defaultval(OPT_E, 1000);
         conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
 #ifdef __ANDROID__
@@ -213,6 +207,7 @@ void init_tcpsnitch(void) {
         open_std_streams();
 #endif
         get_options();
+        if (!conf_opt_d) goto exit1;
         if (!(logs_dir_path = create_logs_dir_at_path(conf_opt_d))) goto exit1;
         init_logs();
         log_options();

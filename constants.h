@@ -13,6 +13,7 @@
 #ifdef __ANDROID__
 #define OPT_B "be.ucl.tcpsnitch.opt_b"
 #define OPT_C "be.ucl.tcpsnitch.opt_c"
+#define OPT_D "be.ucl.tcpsnitch.opt_d"
 #define OPT_E "be.ucl.tcpsnitch.opt_e"
 #define OPT_F "be.ucl.tcpsnitch.opt_f"
 #define OPT_L "be.ucl.tcpsnitch.opt_l"

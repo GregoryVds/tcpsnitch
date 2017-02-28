@@ -24,4 +24,9 @@ char *alloc_kernel_str(void);
 
 char *alloc_error_str(int err);
 
+#ifdef __ANDROID__
+char *alloc_property(const char *property);
+#endif
+
+char *alloc_str_opt(const char *opt);
 #endif

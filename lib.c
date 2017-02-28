@@ -176,14 +176,10 @@ char *get_str_env(const char *env_var) {
 
 #ifdef __ANDROID__
 long get_property_as_long(const char *property) {
-	char val[PROP_VALUE_MAX + 1];
-	int n = __system_property_get(property, val);
-	if (!n) goto error;
-	return parse_long(val);
-error:
-	LOG(ERROR, "property not defined or empty.");
-	LOG_FUNC_FAIL;
-	return -1;
+        char *prop_str = alloc_property(property);
+        long val = parse_long(prop_str);
+        free(prop_str);
+	return val;
 }
 #endif
 
