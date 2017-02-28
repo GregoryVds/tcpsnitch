@@ -11,5 +11,5 @@ fi
 package=$(./get_package $1)
 echo "$0: removing traces for: '${package}'..."
 
-adb shell su -c rm -rf /data/data/${package}/tcpsnitch/*
+adb shell su -c rm -rf /data/data/${package}/tcpsnitch
 echo "$0: done!"

@@ -215,9 +215,7 @@ char *alloc_cmdline_str(void) {
         // Read cmdline file into cmdline array
         char *cmdline = (char *)my_malloc(sizeof(char) * cmd_line_length);
         if (!cmdline) goto error2;
-        LOG(ERROR, "cmdline2: %s", cmdline);
         int rc = fread(cmdline, 1, cmd_line_length, fp);
-        LOG(ERROR, "cmdline1: %s", cmdline);
         if (!rc) goto error3;
 
         fclose(fp);
