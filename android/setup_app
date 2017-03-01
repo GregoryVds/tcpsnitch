@@ -153,7 +153,10 @@ adb push ${LIB} ${LIBPATH}
 OPT_D="/data/data/${package}/tcpsnitch"
 adb shell su -c mkdir -m 777 -p ${OPT_D}
 
-adb shell setprop wrap.${package} LD_PRELOAD=/data/libtcpsnitch.so
+# Properties are limited to 32 chars includind the NULL byte.
+# With "wrap." being 5 chars, we have 26 chars left the app name.
+adb shell setprop wrap.${package:0:26} LD_PRELOAD=/data/libtcpsnitch.so
+
 adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
 adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"
 adb shell setprop "$BASE_PROP.opt_d" "$OPT_D"
