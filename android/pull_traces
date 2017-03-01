@@ -24,4 +24,5 @@ adb shell su -c ls ${tracesdir} | while read -r line; do
         adb shell su busybox chmod -R 777 /data/${trace}
         adb pull /data/${trace} ./traces/${trace}
         echo "$0: ${trace} pulled."
+        adb shell su -c rm -rf /data/${trace}
 done
