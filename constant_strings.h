@@ -4,6 +4,7 @@
 #define CONSTANT_STRING_H
 
 #include <arpa/inet.h>
+#include <asm-generic/ioctls.h>
 #include <fcntl.h>
 #include <linux/ax25.h>
 #include <linux/if_eql.h>
@@ -12,7 +13,6 @@
 #include <linux/ipx.h>
 #include <linux/mroute.h>
 #include <linux/sockios.h>
-#include <asm-generic/ioctls.h> 
 #include <linux/wireless.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -21,8 +21,8 @@
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
 typedef struct {
-        int cons;
-        const char str[30];
+	int cons;
+	const char str[30];
 } IntStrPair;
 
 char *alloc_string_from_cons(int cons, const IntStrPair *map, int map_size);
@@ -38,11 +38,11 @@ static const IntStrPair SOCKET_DOMAINS[] = {
     {AF_IPX, "AF_IPX"},   {AF_NETLINK, "AF_NETLINK"}, {AF_PACKET, "AF_PACKET"}};
 
 static const IntStrPair SOCKET_TYPES[] = {{SOCK_STREAM, "SOCK_STREAM"},
-                                          {SOCK_DGRAM, "SOCK_DGRAM"},
-                                          {SOCK_SEQPACKET, "SOCK_SEQPACKET"},
-                                          {SOCK_RAW, "SOCK_RAW"},
-                                          {SOCK_RDM, "SOCK_RDM"},
-                                          {SOCK_PACKET, "SOCK_PACKET"}};
+					  {SOCK_DGRAM, "SOCK_DGRAM"},
+					  {SOCK_SEQPACKET, "SOCK_SEQPACKET"},
+					  {SOCK_RAW, "SOCK_RAW"},
+					  {SOCK_RDM, "SOCK_RDM"},
+					  {SOCK_PACKET, "SOCK_PACKET"}};
 
 static const IntStrPair SOCKET_OPTIONS[] = {
     // Socket-level options (asm-generic/socket.h)
@@ -110,15 +110,15 @@ static const IntStrPair SOCKET_OPTIONS[] = {
 };
 
 static const IntStrPair FCNTL_CMDS[] = {
-    {F_GETFD, "F_GETFD"},           {F_GETFL, "F_GETFL"},
-    {F_GETOWN, "F_GETOWN"},         {F_GETSIG, "F_GETSIG"},
+    {F_GETFD, "F_GETFD"},	   {F_GETFL, "F_GETFL"},
+    {F_GETOWN, "F_GETOWN"},	 {F_GETSIG, "F_GETSIG"},
     {F_GETLEASE, "F_GETLEASE"},     {F_GETPIPE_SZ, "F_GETPIPE_SZ"},
-    {F_DUPFD, "F_DUPFD"},           {F_DUPFD_CLOEXEC, "F_DUPFD_CLOEXEC"},
-    {F_SETFD, "F_SETFD"},           {F_SETFL, "F_SETFL"},
-    {F_SETOWN, "F_SETOWN"},         {F_SETSIG, "F_SETSIG"},
+    {F_DUPFD, "F_DUPFD"},	   {F_DUPFD_CLOEXEC, "F_DUPFD_CLOEXEC"},
+    {F_SETFD, "F_SETFD"},	   {F_SETFL, "F_SETFL"},
+    {F_SETOWN, "F_SETOWN"},	 {F_SETSIG, "F_SETSIG"},
     {F_SETLEASE, "F_SETLEASE"},     {F_NOTIFY, "F_NOTIFY"},
     {F_SETPIPE_SZ, "F_SETPIPE_SZ"}, {F_SETLK, "F_SETLK"},
-    {F_SETLKW, "F_SETLKW"},         {F_GETLK, "F_GETLK"},
+    {F_SETLKW, "F_SETLKW"},	 {F_GETLK, "F_GETLK"},
 #ifdef __ANDROID__
     {F_GETLK64, "F_GETLK64"},       {F_SETLK64, "F_SETLK64"},
     {F_SETLKW64, "F_SETLKW64"},
@@ -137,6 +137,60 @@ static const IntStrPair IOCTL_REQUESTS[] = {
     {SIOCGPGRP, "SIOCGPGRP"},
     //    {SIOCATMAR, "SIOCATMAR"},
     {SIOCGSTAMP, "SIOCGSTAMP"},
+
+    // <include/asm-i386/termios.h>
+    {TCGETS, "TCGETS"},
+    {TCSETS, "TCSETS"},
+    {TCSETSW, "TCSETSW"},
+    {TCSETSF, "TCSETSF"},
+    {TCGETA, "TCGETA"},
+    {TCSETA, "TCSETA"},
+    {TCSETAW, "TCSETAW"},
+    {TCSETAF, "TCSETAF"},
+    {TCSBRK, "TCSBRK"},
+    {TCXONC, "TCXONC"},
+    {TCFLSH, "TCFLSH"},
+    {TIOCEXCL, "TIOCEXCL"},
+    {TIOCNXCL, "TIOCNXCL"},
+    {TIOCSCTTY, "TIOCSCTTY"},
+    {TIOCGPGRP, "TIOCGPGRP"},
+    {TIOCSPGRP, "TIOCSPGRP"},
+    {TIOCOUTQ, "TIOCOUTQ"},
+    {TIOCSTI, "TIOCSTI"},
+    {TIOCGWINSZ, "TIOCGWINSZ"},
+    {TIOCSWINSZ, "TIOCSWINSZ"},
+    {TIOCMGET, "TIOCMGET"},
+    {TIOCMBIS, "TIOCMBIS"},
+    {TIOCMBIC, "TIOCMBIC"},
+    {TIOCMSET, "TIOCMSET"},
+    {TIOCGSOFTCAR, "TIOCGSOFTCAR"},
+    {TIOCSSOFTCAR, "TIOCSSOFTCAR"},
+    {FIONREAD, "FIONREAD"},
+    {TIOCINQ, "TIOCINQ"},
+    {TIOCLINUX, "TIOCLINUX"},
+    {TIOCCONS, "TIOCCONS"},
+    {TIOCGSERIAL, "TIOCGSERIAL"},
+    {TIOCSSERIAL, "TIOCSSERIAL"},
+    {TIOCPKT, "TIOCPKT"},
+    {FIONBIO, "FIONBIO"},
+    {TIOCNOTTY, "TIOCNOTTY"},
+    {TIOCSETD, "TIOCSETD"},
+    {TIOCGETD, "TIOCGETD"},
+    {TCSBRKP, "TCSBRKP"},
+    // {TIOCTTYGSTRUCT, "TIOCTTYGSTRUCT"},
+    {FIONCLEX, "FIONCLEX"},
+    {FIOCLEX, "FIOCLEX"},
+    {FIOASYNC, "FIOASYNC"},
+    {TIOCSERCONFIG, "TIOCSERCONFIG"},
+    {TIOCSERGWILD, "TIOCSERGWILD"},
+    {TIOCSERSWILD, "TIOCSERSWILD"},
+    {TIOCGLCKTRMIOS, "TIOCGLCKTRMIOS"},
+    {TIOCSLCKTRMIOS, "TIOCSLCKTRMIOS"},
+    {TIOCSERGSTRUCT, "TIOCSERGSTRUCT"},
+    {TIOCSERGETLSR, "TIOCSERGETLSR"},
+
+    {TIOCSERGETMULTI, "TIOCSERGETMULTI"},
+    {TIOCSERSETMULTI, "TIOCSERSETMULTI"},
 
     // <include/linux/ax25.h>
     {SIOCAX25GETUID, "SIOCAX25GETUID"},
@@ -160,21 +214,21 @@ static const IntStrPair IOCTL_REQUESTS[] = {
 
     // <include/linux/if_ppp.h>
     /*
-        {PPPIOCGFLAGS, "PPPIOCGFLAGS"},
-        {PPPIOCSFLAGS, "PPPIOCSFLAGS"},
-        {PPPIOCGASYNCMAP, "PPPIOCGASYNCMAP"},
-        {PPPIOCSASYNCMAP, "PPPIOCSASYNCMAP"},
-        {PPPIOCGUNIT, "PPPIOCGUNIT"},
-        {PPPIOCSINPSIG, "PPPIOCSINPSIG"},
-        {PPPIOCSDEBUG, "PPPIOCSDEBUG"},
-        {PPPIOCGDEBUG, "PPPIOCGDEBUG"},
-        {PPPIOCGSTAT, "PPPIOCGSTAT"},
-        {PPPIOCGTIME, "PPPIOCGTIME"},
-        {PPPIOCGXASYNCMAP, "PPPIOCGXASYNCMAP"},
-        {PPPIOCSXASYNCMAP, "PPPIOCSXASYNCMAP"},
-        {PPPIOCSMRU, "PPPIOCSMRU"},
-        {PPPIOCRASYNCMAP, "PPPIOCRASYNCMAP"},
-        {PPPIOCSMAXCID, "PPPIOCSMAXCID"},
+	{PPPIOCGFLAGS, "PPPIOCGFLAGS"},
+	{PPPIOCSFLAGS, "PPPIOCSFLAGS"},
+	{PPPIOCGASYNCMAP, "PPPIOCGASYNCMAP"},
+	{PPPIOCSASYNCMAP, "PPPIOCSASYNCMAP"},
+	{PPPIOCGUNIT, "PPPIOCGUNIT"},
+	{PPPIOCSINPSIG, "PPPIOCSINPSIG"},
+	{PPPIOCSDEBUG, "PPPIOCSDEBUG"},
+	{PPPIOCGDEBUG, "PPPIOCGDEBUG"},
+	{PPPIOCGSTAT, "PPPIOCGSTAT"},
+	{PPPIOCGTIME, "PPPIOCGTIME"},
+	{PPPIOCGXASYNCMAP, "PPPIOCGXASYNCMAP"},
+	{PPPIOCSXASYNCMAP, "PPPIOCSXASYNCMAP"},
+	{PPPIOCSMRU, "PPPIOCSMRU"},
+	{PPPIOCRASYNCMAP, "PPPIOCRASYNCMAP"},
+	{PPPIOCSMAXCID, "PPPIOCSMAXCID"},
     */
     // <include/linux/ipx.h>
     {SIOCAIPXITFCRT, "SIOCAIPXITFCRT"},

@@ -358,15 +358,15 @@ static void *json_dumper_thread(void *params) {
         time.tv_nsec = (conf_opt_t % 1000) * 1000 * 1000;  // opt_t is in ms
 
         while (*args->switch_flag) {
-                nanosleep(&time, NULL);
                 TcpConnection *con = ra_get_and_lock_elem(args->con_fd);
                 if (!con) goto out;
                 tcp_dump_json(con);
                 ra_unlock_elem(args->con_fd);
+                nanosleep(&time, NULL);
         }
         goto out;
 out:
-        LOG(WARN, "json_dumper_thread for fd %d terminated.", args->con_fd);
+        LOG(INFO, "json_dumper_thread for fd %d terminated.", args->con_fd);
         free(args->switch_flag);
         free(args);
         return NULL;
@@ -841,8 +841,9 @@ void tcp_ev_close(int fd, int ret, int err, bool detected) {
 
         push_event(con, (TcpEvent *)ev);
         output_event((TcpEvent *)ev);
+        
+        *con->json_dump_switch = false; 
         tcp_dump_json(con);
-
         free_connection(con);
         return;
 error:

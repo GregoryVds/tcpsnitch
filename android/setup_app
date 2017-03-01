@@ -19,7 +19,7 @@ OPT_F=2
 OPT_L=5
 OPT_P=0
 OPT_U=0
-OPT_T=1000
+OPT_T=5000
 OPT_V=0
 
 usage() {
