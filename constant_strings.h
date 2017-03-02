@@ -57,7 +57,6 @@ static const IntStrPair SOCKOPT_LEVELS[] = {{IPPROTO_IP, "IPPROTO_IP"},
                                             {IPPROTO_IPV6, "IPROTO_IPV6"}};
 
 static const IntStrPair SOL_SOCKET_OPTIONS[] = {
-    {SOL_SOCKET, "SOL_SOCKET"},
     {SO_DEBUG, "SO_DEBUG"},
     {SO_REUSEADDR, "SO_REUSEADDR"},
     {SO_TYPE, "SO_TYPE"},
