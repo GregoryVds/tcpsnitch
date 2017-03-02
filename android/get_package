@@ -22,7 +22,7 @@ match=$(echo $(adb shell pm list packages | grep -m 1 -s "$1") | tr -d '\r')
 
 # Check that package exists
 if [ -z "$match" ]; then
-        error "invalid argument: package '$0' not found"
+        error "invalid argument: package '$1' not found"
 fi
 
 package=${match#${prefix}}
