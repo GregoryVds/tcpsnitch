@@ -20,13 +20,13 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-    fprintf(stderr, "setsockopt() failed: %s", strerror(errno));
+    fprintf(stderr, "setsockopt() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

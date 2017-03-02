@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -29,7 +29,7 @@ int main(void) {
   event.data.fd = sock;
   event.events = EPOLLIN|EPOLLOUT;
   if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
-    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_ctl() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

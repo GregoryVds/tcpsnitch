@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -30,7 +30,7 @@ int main(void) {
   inet_aton("127.0.0.1", &addr.sin_addr);
 
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "connect() failed: %s", strerror(errno));
+    fprintf(stderr, "connect() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -77,7 +77,7 @@ int main(void) {
   send(sock, req, sizeof(char)*strlen(req), 0);
 
 	if (recvmmsg(sock, mmsg, 2, 0, NULL) < 0) {
-    fprintf(stderr, "recvmmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "recvmmsg() failed: %s\n.", strerror(errno));
 		return(EXIT_FAILURE);
   }
           

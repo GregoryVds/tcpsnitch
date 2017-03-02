@@ -34,7 +34,7 @@ int main(void) {
   timeout.tv_nsec = 1000;
 
   if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) < 0) {
-    fprintf(stderr, "pselect() failed: %s", strerror(errno));
+    fprintf(stderr, "pselect() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

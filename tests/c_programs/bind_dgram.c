@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -30,7 +30,7 @@ int main(void) {
   inet_aton("127.0.0.1", &addr.sin_addr);
 
   if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "bind() failed: %s", strerror(errno));
+    fprintf(stderr, "bind() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

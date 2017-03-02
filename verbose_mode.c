@@ -60,6 +60,10 @@ static void output_ev_accept(const TcpEvAccept *ev) {
         OUTPUT_EV("accept()=%d", ev->super.return_value);
 }
 
+static void output_ev_accept4(const TcpEvAccept4 *ev) {
+        OUTPUT_EV("accept4()=%d", ev->super.return_value);
+}
+
 static void output_ev_getsockopt(const TcpEvGetsockopt *ev) {
         OUTPUT_EV("getsockopt()=%d", ev->super.return_value);
 }
@@ -104,6 +108,18 @@ static void output_ev_recvmmsg(const TcpEvRecvmmsg *ev) {
 
 static void output_ev_getsockname(const TcpEvGetsockname *ev) {
         OUTPUT_EV("getsockname()=%d", ev->super.return_value);
+}
+
+static void output_ev_getpeername(const TcpEvGetpeername *ev) {
+        OUTPUT_EV("getpeername()=%d", ev->super.return_value);
+}
+
+static void output_ev_sockatmark(const TcpEvSockatmark *ev) {
+        OUTPUT_EV("sockatmark()=%d", ev->super.return_value);
+}
+
+static void output_ev_isfdtype(const TcpEvIsfdtype *ev) {
+        OUTPUT_EV("isfdtype()=%d", ev->super.return_value);
 }
 
 static void output_ev_write(const TcpEvWrite *ev) {
@@ -182,6 +198,10 @@ static void output_ev_epoll_wait(const TcpEvEpollWait *ev) {
 static void output_ev_epoll_pwait(const TcpEvEpollPwait *ev) {
 	OUTPUT_EV("epoll_pwait=%d", ev->super.return_value);
 }
+
+static void output_ev_fdopen(const TcpEvFdopen *ev) {
+        OUTPUT_EV("fdopen()=%d", ev->super.return_value);
+}
  
 void output_event(const TcpEvent *ev) {
 #ifndef __ANDROID__
@@ -207,6 +227,9 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_ACCEPT:
                         output_ev_accept((const TcpEvAccept *)ev);
+                        break;
+                case TCP_EV_ACCEPT4:
+                        output_ev_accept4((const TcpEvAccept4 *)ev);
                         break;
                 case TCP_EV_GETSOCKOPT:
                         output_ev_getsockopt((const TcpEvGetsockopt *)ev);
@@ -242,6 +265,15 @@ void output_event(const TcpEvent *ev) {
 #endif
 		case TCP_EV_GETSOCKNAME:
 			output_ev_getsockname((const TcpEvGetsockname *)ev);
+			break;
+		case TCP_EV_GETPEERNAME:
+			output_ev_getpeername((const TcpEvGetpeername *)ev);
+			break;
+		case TCP_EV_SOCKATMARK:
+			output_ev_sockatmark((const TcpEvSockatmark *)ev);
+			break;
+		case TCP_EV_ISFDTYPE:
+			output_ev_isfdtype((const TcpEvIsfdtype *)ev);
 			break;
                 case TCP_EV_DUP:
                         output_ev_dup((const TcpEvDup *)ev);
@@ -296,6 +328,9 @@ void output_event(const TcpEvent *ev) {
                         break;
                 case TCP_EV_EPOLL_PWAIT:
                         output_ev_epoll_pwait((const TcpEvEpollPwait *)ev);
+                        break;
+                case TCP_EV_FDOPEN:
+                        output_ev_fdopen((const TcpEvFdopen *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         output_ev_tcpinfo((const TcpEvTcpInfo *)ev);

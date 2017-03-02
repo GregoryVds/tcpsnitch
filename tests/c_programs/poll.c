@@ -31,7 +31,7 @@ int main(void) {
   pollfds[1].events = POLLIN;
 
   if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) < 0) {
-    fprintf(stderr, "poll() failed: %s", strerror(errno));
+    fprintf(stderr, "poll() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

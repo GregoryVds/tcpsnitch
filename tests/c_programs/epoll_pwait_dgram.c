@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -29,13 +29,13 @@ int main(void) {
   event.data.fd = sock;
   event.events = EPOLLIN|EPOLLOUT;
   if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
-    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_ctl() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
   struct epoll_event events[2];
   if (epoll_pwait(efd, events, 2, 0, NULL) < 0) {
-    fprintf(stderr, "epoll_pwait() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_pwait() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

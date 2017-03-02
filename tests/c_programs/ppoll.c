@@ -35,7 +35,7 @@ int main(void) {
   timeout.tv_nsec = 1000;
 
   if (ppoll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), &timeout, NULL) < 0) {
-    fprintf(stderr, "ppoll() failed: %s", strerror(errno));
+    fprintf(stderr, "ppoll() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

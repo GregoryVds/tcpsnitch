@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -32,7 +32,7 @@ int main(void) {
   int data = 42;
   if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
              sizeof(addr)) < 0) {
-    fprintf(stderr, "sendto() failed: %s", strerror(errno));
+    fprintf(stderr, "sendto() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

@@ -46,13 +46,13 @@ describe "libc overrides" do
       end
 
       # LISTEN: Cannot listen() on DGRAM socket
-      unless [TCP_EV_LISTEN].include?(syscall)
+      unless [TCP_EV_LISTEN, TCP_EV_SOCKATMARK].include?(syscall)
         it "#{dgram} should not crash" do
           assert run_c_program(dgram)
         end
       end
 
-      unless [TCP_EV_POLL, TCP_EV_PPOLL].include?(syscall) 
+      unless [TCP_EV_POLL, TCP_EV_PPOLL, TCP_EV_SOCKATMARK].include?(syscall) 
         it "#{failing} should not crash" do
           assert run_c_program(failing)
         end
@@ -61,7 +61,7 @@ describe "libc overrides" do
       # SOCKET: No log file if no TCP connection.
       # CLOSE: No log file if no TCP connection. How to fail close() with con?
       unless [TCP_EV_SOCKET, TCP_EV_CLOSE, TCP_EV_POLL, 
-              TCP_EV_PPOLL].include?(syscall)
+              TCP_EV_PPOLL, TCP_EV_SOCKATMARK].include?(syscall)
         it "#{failing} should log no ERROR" do
           run_c_program(failing)
           assert no_error_log
@@ -73,7 +73,8 @@ describe "libc overrides" do
       # CLOSE: How to fail close() on valid TCP socket?
       unless [TCP_EV_SOCKET, TCP_EV_LISTEN, TCP_EV_CLOSE, TCP_EV_DUP, 
               TCP_EV_POLL, TCP_EV_PPOLL, TCP_EV_FCNTL, TCP_EV_EPOLL_WAIT,
-              TCP_EV_EPOLL_PWAIT].include?(syscall)
+              TCP_EV_EPOLL_PWAIT, TCP_EV_SOCKATMARK, 
+              TCP_EV_ISFDTYPE].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
           assert_event_present(syscall, false)

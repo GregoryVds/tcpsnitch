@@ -4,7 +4,7 @@ require './lib/webserver.rb'
 SOCKET = CProg.new(<<-EOT, 'socket')
   int sock;
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -12,7 +12,7 @@ EOT
 SOCKET_DGRAM = CProg.new(<<-EOT, 'socket_dgram')
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -36,7 +36,7 @@ BIND = CProg.new(<<-EOT, 'bind')
 #{SOCKET}
 #{sockaddr_in(55_555)}
   if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "bind() failed: %s", strerror(errno));
+    fprintf(stderr, "bind() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -45,7 +45,7 @@ BIND_DGRAM = CProg.new(<<-EOT, 'bind_dgram')
 #{SOCKET_DGRAM}
 #{sockaddr_in(55_555)}
   if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "bind() failed: %s", strerror(errno));
+    fprintf(stderr, "bind() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -61,7 +61,7 @@ CONNECT = CProg.new(<<-EOT, 'connect')
 #{SOCKET}
 #{sockaddr_in(WebServer::PORT)}
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "connect() failed: %s", strerror(errno));
+    fprintf(stderr, "connect() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -70,7 +70,7 @@ CONNECT_DGRAM = CProg.new(<<-EOT, 'connect_dgram')
 #{SOCKET_DGRAM}
 #{sockaddr_in(WebServer::PORT)}
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "connect() failed: %s", strerror(errno)); 
+    fprintf(stderr, "connect() failed: %s\\n.", strerror(errno)); 
     return(EXIT_FAILURE);
   }
 EOT
@@ -85,7 +85,7 @@ EOT
 SHUTDOWN = CProg.new(<<-EOT, 'shutdown')
 #{CONNECT}
   if (shutdown(sock, SHUT_WR) < 0) {
-    fprintf(stderr, "shutdown() failed: %s", strerror(errno));
+    fprintf(stderr, "shutdown() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -93,7 +93,7 @@ EOT
 SHUTDOWN_DGRAM = CProg.new(<<-EOT, 'shutdown_dgram')
 #{CONNECT_DGRAM}
  if (shutdown(sock, SHUT_WR) < 0) {
-    fprintf(stderr, "shutdown() failed: %s", strerror(errno));
+    fprintf(stderr, "shutdown() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -107,7 +107,7 @@ EOT
 LISTEN = CProg.new(<<-EOT, 'listen')
 #{SOCKET}
   if (listen(sock, 10) < 0) {
-    fprintf(stderr, "listen() failed: %s", strerror(errno));
+    fprintf(stderr, "listen() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -123,7 +123,7 @@ GETSOCKOPT = CProg.new(<<-EOT, 'getsockopt')
   int optval;
   socklen_t optlen = sizeof(optval);
   if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0) {
-    fprintf(stderr, "getsockopt() failed: %s", strerror(errno));
+    fprintf(stderr, "getsockopt() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -133,7 +133,7 @@ GETSOCKOPT_DGRAM = CProg.new(<<-EOT, 'getsockopt_dgram')
   int optval;
   socklen_t optlen = sizeof(optval);
   if (getsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, &optlen) < 0) {
-    fprintf(stderr, "getsockopt() failed: %s", strerror(errno));
+    fprintf(stderr, "getsockopt() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -150,7 +150,7 @@ SETSOCKOPT = CProg.new(<<-EOT, 'setsockopt')
 #{SOCKET}
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-    fprintf(stderr, "setsockopt() failed: %s", strerror(errno));
+    fprintf(stderr, "setsockopt() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -159,7 +159,7 @@ SETSOCKOPT_DGRAM = CProg.new(<<-EOT, 'setsockopt_dgram')
 #{SOCKET_DGRAM}
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-    fprintf(stderr, "setsockopt() failed: %s", strerror(errno));
+    fprintf(stderr, "setsockopt() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -175,7 +175,7 @@ SEND = CProg.new(<<-EOT, 'send')
 #{CONNECT}
   int data = 42;
   if (send(sock, &data, sizeof(data), 0) < 0) {
-    fprintf(stderr, "send() failed: %s", strerror(errno));
+    fprintf(stderr, "send() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -184,7 +184,7 @@ SEND_DGRAM = CProg.new(<<-EOT, 'send_dgram')
 #{CONNECT_DGRAM}
   int data = 42;
   if (send(sock, &data, sizeof(data), 0) < 0) {
-    fprintf(stderr, "send() failed: %s", strerror(errno));
+    fprintf(stderr, "send() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -208,7 +208,7 @@ RECV = CProg.new(<<-EOT, 'recv')
 #{send_http_get}
   char buf[42];
   if (recv(sock, &buf, sizeof(buf), 0) < 0) {
-    fprintf(stderr, "recv() failed: %s", strerror(errno));
+    fprintf(stderr, "recv() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -234,7 +234,7 @@ SENDTO = CProg.new(<<-EOT, 'sendto')
   int data = 42;
   if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
              sizeof(addr)) < 0) {
-    fprintf(stderr, "sendto() failed: %s", strerror(errno));
+    fprintf(stderr, "sendto() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -245,7 +245,7 @@ SENDTO_DGRAM = CProg.new(<<-EOT, 'sendto_dgram')
   int data = 42;
   if (sendto(sock, &data, sizeof(data), 0, (struct sockaddr *)&addr,
              sizeof(addr)) < 0) {
-    fprintf(stderr, "sendto() failed: %s", strerror(errno));
+    fprintf(stderr, "sendto() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -266,7 +266,7 @@ RECVFROM = CProg.new(<<-EOT, 'recvfrom')
   socklen_t fromlen = sizeof(buf);
   if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
                &fromlen) < 0) {
-    fprintf(stderr, "recvfrom() failed: %s", strerror(errno));
+    fprintf(stderr, "recvfrom() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -278,7 +278,7 @@ RECVFROM_DGRAM = CProg.new(<<-EOT, 'recvfrom_dgram')
   socklen_t fromlen = sizeof(buf);
   if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
                &fromlen) != -1) {
-    fprintf(stderr, "recvfrom() failed: %s", strerror(errno));
+    fprintf(stderr, "recvfrom() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -324,7 +324,7 @@ SENDMSG = CProg.new(<<-EOT, 'sendmsg')
 #{CONNECT}
 #{send_msghdr}
   if (sendmsg(sock, &msg, 0) < 0) {
-    fprintf(stderr, "sendmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "sendmsg() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -333,7 +333,7 @@ SENDMSG_DGRAM = CProg.new(<<-EOT, 'sendmsg_dgram')
 #{CONNECT_DGRAM}
 #{send_msghdr}
   if (sendmsg(sock, &msg, 0) < 0) {
-    fprintf(stderr, "sendmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "sendmsg() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -376,7 +376,7 @@ RECVMSG = CProg.new(<<-EOT, 'recvmsg')
 #{send_http_get}
 #{recv_msghdr}
   if (recvmsg(sock, &msg, 0) < 0) { 
-    fprintf(stderr, "recvmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "recvmsg() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
    }
 EOT
@@ -419,7 +419,7 @@ SENDMMSG_DGRAM = CProg.new(<<-EOT, 'sendmmsg_dgram')
 #{send_msghdr('msg2', 'iovec2')}
 #{MMSGHDR}
 	if (sendmmsg(sock, mmsg, 2, 0) < 0) {
-    fprintf(stderr, "sendmmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "sendmmsg() failed: %s\\n.", strerror(errno));
 		return(EXIT_FAILURE);
   }
 EOT
@@ -440,7 +440,7 @@ RECVMMSG = CProg.new(<<-EOT, 'recvmmsg')
 #{MMSGHDR}
 #{send_http_get}
 	if (recvmmsg(sock, mmsg, 2, 0, NULL) < 0) {
-    fprintf(stderr, "recvmmsg() failed: %s", strerror(errno));
+    fprintf(stderr, "recvmmsg() failed: %s\\n.", strerror(errno));
 		return(EXIT_FAILURE);
   }
 EOT
@@ -471,7 +471,7 @@ GETSOCKNAME = CProg.new(<<-EOT, 'getsockname')
   socklen_t sa_len = sizeof(sa);
 
 	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0) {
-    fprintf(stderr, "getsockname() failed: %s", strerror(errno));
+    fprintf(stderr, "getsockname() failed: %s\\n.", strerror(errno));
 		return(EXIT_FAILURE);
   }
 EOT
@@ -482,7 +482,7 @@ GETSOCKNAME_DGRAM = CProg.new(<<-EOT, 'getsockname_dgram')
   socklen_t sa_len = sizeof(sa);
 
 	if (getsockname(sock, (struct sockaddr *)&sa, &sa_len) < 0) {
-    fprintf(stderr, "getsockname() failed: %s", strerror(errno));
+    fprintf(stderr, "getsockname() failed: %s\\n.", strerror(errno));
 		return(EXIT_FAILURE);
   }
 EOT
@@ -495,11 +495,71 @@ GETSOCKNAME_FAIL = CProg.new(<<-EOT, 'getsockname_fail')
     return(EXIT_FAILURE);
 EOT
 
+GETPEERNAME = CProg.new(<<-EOT, 'getpeername')
+#{CONNECT}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = sizeof(sa);
+
+	if (getpeername(sock, (struct sockaddr *)&sa, &sa_len) < 0) {
+    fprintf(stderr, "getpeername() failed: %s\\n.", strerror(errno));
+		return(EXIT_FAILURE);
+  }
+EOT
+
+GETPEERNAME_DGRAM = CProg.new(<<-EOT, 'getpeername_dgram')
+#{CONNECT_DGRAM}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = sizeof(sa);
+
+	if (getpeername(sock, (struct sockaddr *)&sa, &sa_len) < 0) {
+    fprintf(stderr, "getpeername() failed: %s\\n.", strerror(errno));
+		return(EXIT_FAILURE);
+  }
+EOT
+
+GETPEERNAME_FAIL = CProg.new(<<-EOT, 'getpeername_fail')
+#{CONNECT}
+  struct sockaddr_storage sa;
+  socklen_t sa_len = -1;
+  if (getpeername(sock, (struct sockaddr *)&sa, &sa_len) != -1)
+    return(EXIT_FAILURE);
+EOT
+
+SOCKATMARK = CProg.new(<<-EOT, 'sockatmark')
+#{CONNECT}
+	if (sockatmark(sock) < 0) {
+    fprintf(stderr, "sockatmark() failed: %s\\n.", strerror(errno));
+		return(EXIT_FAILURE);
+  }
+EOT
+
+ISFDTYPE = CProg.new(<<-EOT, 'isfdtype')
+#{SOCKET}
+	if (isfdtype(sock, S_IFSOCK) < 0) {
+    fprintf(stderr, "isfdtype() failed: %s\\n.", strerror(errno));
+		return(EXIT_FAILURE);
+  }
+EOT
+
+ISFDTYPE_DGRAM = CProg.new(<<-EOT, 'isfdtype_dgram')
+#{SOCKET_DGRAM}
+	if (isfdtype(sock, S_IFSOCK) < 0) {
+    fprintf(stderr, "isfdtype() failed: %s\\n.", strerror(errno));
+		return(EXIT_FAILURE);
+  }
+EOT
+
+ISFDTYPE_FAIL = CProg.new(<<-EOT, 'isfdtype_fail')
+#{CONNECT}
+  if (isfdtype(42, S_IFSOCK) != -1)
+    return(EXIT_FAILURE);
+EOT
+
 WRITE = CProg.new(<<-EOT, 'write')
 #{CONNECT}
   int data = 42;
   if (write(sock, &data, sizeof(data)) < 0) {
-    fprintf(stderr, "write() failed: %s", strerror(errno));
+    fprintf(stderr, "write() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -508,7 +568,7 @@ WRITE_DGRAM = CProg.new(<<-EOT, 'write_dgram')
 #{CONNECT_DGRAM}
   int data = 42;
   if (write(sock, &data, sizeof(data)) < 0) {
-    fprintf(stderr, "write() failed: %s", strerror(errno));
+    fprintf(stderr, "write() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -525,7 +585,7 @@ READ = CProg.new(<<-EOT, 'read')
 #{send_http_get}
   char buf[42];
   if (read(sock, &buf, sizeof(buf)) < 0) {
-    fprintf(stderr, "read() failed: %s", strerror(errno));
+    fprintf(stderr, "read() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -549,7 +609,7 @@ EOT
 CLOSE = CProg.new(<<-EOT, 'close')
 #{SOCKET}
   if (close(sock) < 0) {
-    fprintf(stderr, "close() failed: %s", strerror(errno));
+    fprintf(stderr, "close() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -557,7 +617,7 @@ EOT
 CLOSE_DGRAM = CProg.new(<<-EOT, 'close_dgram')
 #{SOCKET_DGRAM}
   if (close(sock) < 0) {
-    fprintf(stderr, "close() failed: %s", strerror(errno));
+    fprintf(stderr, "close() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -570,7 +630,7 @@ EOT
 DUP = CProg.new(<<-EOT, 'dup')
 #{SOCKET}
   if (dup(sock) < 0) {
-    fprintf(stderr, "dup() failed: %s", strerror(errno));
+    fprintf(stderr, "dup() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -578,7 +638,7 @@ EOT
 DUP_DGRAM = CProg.new(<<-EOT, 'dup_dgram')
 #{SOCKET_DGRAM}
   if (dup(sock) < 0) {
-    fprintf(stderr, "dup() failed: %s", strerror(errno));
+    fprintf(stderr, "dup() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -592,7 +652,7 @@ EOT
 DUP2 = CProg.new(<<-EOT, 'dup2')
 #{SOCKET}
   if (dup2(sock, 42) < 0) {
-    fprintf(stderr, "dup2() failed: %s", strerror(errno));
+    fprintf(stderr, "dup2() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -600,7 +660,7 @@ EOT
 DUP2_DGRAM = CProg.new(<<-EOT, 'dup2_dgram')
 #{SOCKET_DGRAM}
   if (dup2(sock, 42) < 0) {
-    fprintf(stderr, "dup2() failed: %s", strerror(errno));
+    fprintf(stderr, "dup2() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -614,7 +674,7 @@ EOT
 DUP3 = CProg.new(<<-EOT, 'dup3')
 #{SOCKET}
   if (dup3(sock, 42, O_CLOEXEC) < 0) {
-    fprintf(stderr, "dup3() failed: %s", strerror(errno));
+    fprintf(stderr, "dup3() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -622,7 +682,7 @@ EOT
 DUP3_DGRAM = CProg.new(<<-EOT, 'dup3_dgram')
 #{SOCKET_DGRAM}
   if (dup3(sock, 42, O_CLOEXEC) < 0) {
-    fprintf(stderr, "dup3() failed: %s", strerror(errno));
+    fprintf(stderr, "dup3() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -650,7 +710,7 @@ WRITEV = CProg.new(<<-EOT, 'writev')
 #{CONNECT}
 #{write_iovec}
   if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0) {
-    fprintf(stderr, "writev() failed: %s", strerror(errno));
+    fprintf(stderr, "writev() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -659,7 +719,7 @@ WRITEV_DGRAM = CProg.new(<<-EOT, 'writev_dgram')
 #{CONNECT_DGRAM}
 #{write_iovec}
   if (writev(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0) {
-    fprintf(stderr, "writev() failed: %s", strerror(errno));
+    fprintf(stderr, "writev() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -676,7 +736,7 @@ READV = CProg.new(<<-EOT, 'readv')
 #{send_http_get}
 #{read_iovec}
   if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0) {
-    fprintf(stderr, "readv() failed: %s", strerror(errno));
+    fprintf(stderr, "readv() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -702,7 +762,7 @@ IOCTL = CProg.new(<<-EOT, 'ioctl')
 #{send_http_get}
   int bytes;
   if (ioctl(sock, FIONREAD, &bytes) < 0) {
-    fprintf(stderr, "ioctl() failed: %s", strerror(errno));
+    fprintf(stderr, "ioctl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -711,7 +771,7 @@ IOCTL_DGRAM = CProg.new(<<-EOT, 'ioctl_dgram')
 #{SOCKET_DGRAM}
   int bytes;
   if (ioctl(sock, FIONREAD, &bytes) < 0) {
-    fprintf(stderr, "ioctl() failed: %s", strerror(errno));
+    fprintf(stderr, "ioctl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -727,7 +787,7 @@ SENDFILE = CProg.new(<<-EOT, 'sendfile')
 #{CONNECT}
   int fd = open("./c_programs/sendfile.c", O_RDONLY);
   if (sendfile(sock, fd, NULL, 10) < 0) {
-    fprintf(stderr, "sendfile() failed: %s", strerror(errno));
+    fprintf(stderr, "sendfile() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -736,7 +796,7 @@ SENDFILE_DGRAM = CProg.new(<<-EOT, 'sendfile_dgram')
 #{CONNECT_DGRAM}
   int fd = open("./c_programs/sendfile_dgram.c", O_RDONLY);
   if (sendfile(sock, fd, NULL, 10) < 0) {
-    fprintf(stderr, "sendfile() failed: %s", strerror(errno));
+    fprintf(stderr, "sendfile() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -771,7 +831,7 @@ POLL = CProg.new(<<-EOT, 'poll')
 #{two_sockets('SOCK_STREAM', 'IPPROTO_TCP')}
 #{pollfds}
   if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) < 0) {
-    fprintf(stderr, "poll() failed: %s", strerror(errno));
+    fprintf(stderr, "poll() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -780,7 +840,7 @@ POLL_DGRAM = CProg.new(<<-EOT, 'poll_dgram')
 #{two_sockets('SOCK_DGRAM', 'IPPROTO_UDP')}
 #{pollfds}
   if (poll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), 1) < 0) {
-    fprintf(stderr, "poll() failed: %s", strerror(errno));
+    fprintf(stderr, "poll() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -798,7 +858,7 @@ PPOLL = CProg.new(<<-EOT, 'ppoll')
 #{pollfds}
 #{timespec}
   if (ppoll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), &timeout, NULL) < 0) {
-    fprintf(stderr, "ppoll() failed: %s", strerror(errno));
+    fprintf(stderr, "ppoll() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -808,7 +868,7 @@ PPOLL_DGRAM = CProg.new(<<-EOT, 'ppoll_dgram')
 #{pollfds}
 #{timespec}
   if (ppoll(pollfds, sizeof(pollfds)/sizeof(struct pollfd), &timeout, NULL) < 0) {
-    fprintf(stderr, "ppoll() failed: %s", strerror(errno));
+    fprintf(stderr, "ppoll() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -835,7 +895,7 @@ SELECT = CProg.new(<<-EOT, 'select')
 #{fdset}
 #{timeval}
   if (select(sock2+1, &fdset, NULL, NULL, &timeout) < 0) {
-    fprintf(stderr, "select() failed: %s", strerror(errno));
+    fprintf(stderr, "select() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -845,7 +905,7 @@ SELECT_DGRAM = CProg.new(<<-EOT, 'select_dgram')
 #{fdset}
 #{timeval}
   if (select(sock2+1, &fdset, NULL, NULL, &timeout) < 0) {
-    fprintf(stderr, "select() failed: %s", strerror(errno));
+    fprintf(stderr, "select() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -864,7 +924,7 @@ PSELECT = CProg.new(<<-EOT, 'pselect')
 #{fdset}
 #{timespec}
   if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) < 0) {
-    fprintf(stderr, "pselect() failed: %s", strerror(errno));
+    fprintf(stderr, "pselect() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -874,7 +934,7 @@ PSELECT_DGRAM = CProg.new(<<-EOT, 'pselect_dgram')
 #{fdset}
 #{timespec}
   if (pselect(sock2+1, &fdset, NULL, NULL, &timeout, NULL) < 0) {
-    fprintf(stderr, "pselect() failed: %s", strerror(errno));
+    fprintf(stderr, "pselect() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -891,7 +951,7 @@ EOT
 FCNTL = CProg.new(<<-EOT, 'fcntl')
 #{SOCKET}
   if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
-    fprintf(stderr, "fcntl() failed: %s", strerror(errno));
+    fprintf(stderr, "fcntl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -899,7 +959,7 @@ EOT
 FCNTL_DGRAM  = CProg.new(<<-EOT, 'fcntl_dgram')
 #{SOCKET_DGRAM}
   if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0) {
-    fprintf(stderr, "fcntl() failed: %s", strerror(errno));
+    fprintf(stderr, "fcntl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -917,7 +977,7 @@ EPOLL_CTL = CProg.new(<<-EOT, 'epoll_ctl')
   event.data.fd = sock;
   event.events = EPOLLIN|EPOLLOUT;
   if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
-    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_ctl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -929,7 +989,7 @@ EPOLL_CTL_DGRAM = CProg.new(<<-EOT, 'epoll_ctl_dgram')
   event.data.fd = sock;
   event.events = EPOLLIN|EPOLLOUT;
   if (epoll_ctl(efd, EPOLL_CTL_ADD, sock, &event) < 0) {
-    fprintf(stderr, "epoll_ctl() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_ctl() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -948,7 +1008,7 @@ EPOLL_WAIT = CProg.new(<<-EOT, 'epoll_wait')
 #{EPOLL_CTL}
   struct epoll_event events[2];
   if (epoll_wait(efd, events, 2, 0) < 0) {
-    fprintf(stderr, "epoll_wait() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_wait() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -957,7 +1017,7 @@ EPOLL_WAIT_DGRAM = CProg.new(<<-EOT, 'epoll_wait_dgram')
 #{EPOLL_CTL_DGRAM}
   struct epoll_event events[2];
   if (epoll_wait(efd, events, 2, 0) < 0) {
-    fprintf(stderr, "epoll_wait() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_wait() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -973,7 +1033,7 @@ EPOLL_PWAIT = CProg.new(<<-EOT, 'epoll_pwait')
 #{EPOLL_CTL}
   struct epoll_event events[2];
   if (epoll_pwait(efd, events, 2, 0, NULL) < 0) {
-    fprintf(stderr, "epoll_pwait() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_pwait() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -982,7 +1042,7 @@ EPOLL_PWAIT_DGRAM = CProg.new(<<-EOT, 'epoll_pwait_dgram')
 #{EPOLL_CTL_DGRAM}
   struct epoll_event events[2];
   if (epoll_pwait(efd, events, 2, 0, NULL) < 0) {
-    fprintf(stderr, "epoll_pwait() failed: %s", strerror(errno));
+    fprintf(stderr, "epoll_pwait() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -993,6 +1053,29 @@ EPOLL_PWAIT_FAIL = CProg.new(<<-EOT, 'epoll_pwait_fail')
   if (epoll_pwait(efd, events, -1, 0, NULL) != -1)
     return(EXIT_FAILURE);
 EOT
+
+FDOPEN = CProg.new(<<-EOT, 'fdopen')
+#{SOCKET}
+  if (fdopen(sock, "w") == NULL) {
+    fprintf(stderr, "fdopen() failed: %s\\n.", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+FDOPEN_DGRAM = CProg.new(<<-EOT, 'fdopen_dgram')
+#{SOCKET_DGRAM}
+  if (fdopen(sock, "w") == NULL) {
+    fprintf(stderr, "fdopen() failed: %s\\n.", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+EOT
+
+FDOPEN_FAIL = CProg.new(<<-EOT, 'fdopen_fail')
+#{SOCKET}
+  if (fdopen(sock, "Z") != NULL)
+    return(EXIT_FAILURE);
+EOT
+
 
 CONSECUTIVE_CONNECTIONS = CProg.new(<<-EOT, 'consecutive_connections')
   int sock1, sock2;

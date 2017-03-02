@@ -220,6 +220,14 @@ describe 'tcp_spy' do
     TCP_EV_GETSOCKNAME => {
       addr: addr
     },
+    TCP_EV_GETPEERNAME => {
+      addr: addr
+    },
+    TCP_EV_SOCKATMARK => {
+    },
+    TCP_EV_ISFDTYPE => {
+      fdtype: Integer
+    },
     TCP_EV_CLOSE => {
       detected: Boolean
     },
@@ -285,6 +293,9 @@ describe 'tcp_spy' do
     TCP_EV_EPOLL_PWAIT => {
       timeout: Integer,
       returned_events: epoll_events
+    },
+    TCP_EV_FDOPEN => {
+      mode: String,
     },
     TCP_EV_TCP_INFO => {
       state: Integer,

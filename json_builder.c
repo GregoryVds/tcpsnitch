@@ -385,6 +385,14 @@ static json_t *build_tcp_ev_accept(const TcpEvAccept *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_accept4(const TcpEvAccept4 *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "addr", build_addr(&ev->addr));
+        add(json_details, "flags", json_integer(ev->flags));
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_getsockopt(const TcpEvGetsockopt *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add_sockopt(json_details, &ev->sockopt);
@@ -495,6 +503,27 @@ static json_t *build_tcp_ev_getsockname(const TcpEvGetsockname *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
         if (ev->super.success) add(json_details, "addr", build_addr(&ev->addr));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_getpeername(const TcpEvGetpeername *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        if (ev->super.success) add(json_details, "addr", build_addr(&ev->addr));
+
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_sockatmark(const TcpEvSockatmark *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        return json_ev;
+}
+
+static json_t *build_tcp_ev_isfdtype(const TcpEvIsfdtype *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "fdtype", json_integer(ev->fdtype));
 
         return json_ev;
 }
@@ -712,6 +741,14 @@ static json_t *build_tcp_ev_epoll_pwait(const TcpEvEpollPwait *ev) {
         return json_ev;
 }
 
+static json_t *build_tcp_ev_fdopen(const TcpEvFdopen *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+
+        add(json_details, "mode", json_string(ev->mode));
+
+        return json_ev;
+}
+
 static json_t *build_tcp_ev_tcp_info(const TcpEvTcpInfo *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         struct tcp_info i = ev->info;
@@ -783,6 +820,9 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_ACCEPT:
                         r = build_tcp_ev_accept((const TcpEvAccept *)ev);
                         break;
+                case TCP_EV_ACCEPT4:
+                        r = build_tcp_ev_accept4((const TcpEvAccept4 *)ev);
+                        break;
                 case TCP_EV_GETSOCKOPT:
                         r = build_tcp_ev_getsockopt(
                             (const TcpEvGetsockopt *)ev);
@@ -820,6 +860,16 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_GETSOCKNAME:
                         r = build_tcp_ev_getsockname(
                             (const TcpEvGetsockname *)ev);
+                        break;
+                case TCP_EV_GETPEERNAME:
+                        r = build_tcp_ev_getpeername(
+                            (const TcpEvGetpeername *)ev);
+                        break;
+                case TCP_EV_SOCKATMARK:
+                        r = build_tcp_ev_sockatmark((const TcpEvSockatmark *)ev);
+                        break;
+                case TCP_EV_ISFDTYPE:
+                        r = build_tcp_ev_isfdtype((const TcpEvIsfdtype *)ev);
                         break;
                 case TCP_EV_WRITE:
                         r = build_tcp_ev_write((const TcpEvWrite *)ev);
@@ -875,6 +925,9 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                 case TCP_EV_EPOLL_PWAIT:
                         r = build_tcp_ev_epoll_pwait(
                             (const TcpEvEpollPwait *)ev);
+                        break;
+                case TCP_EV_FDOPEN:
+                        r = build_tcp_ev_fdopen((const TcpEvFdopen *)ev);
                         break;
                 case TCP_EV_TCP_INFO:
                         r = build_tcp_ev_tcp_info((const TcpEvTcpInfo *)ev);

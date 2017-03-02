@@ -20,12 +20,12 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
   if (dup(sock) < 0) {
-    fprintf(stderr, "dup() failed: %s", strerror(errno));
+    fprintf(stderr, "dup() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

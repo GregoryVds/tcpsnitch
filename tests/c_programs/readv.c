@@ -20,7 +20,7 @@
 int main(void) {
   int sock;
   if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    fprintf(stderr, "socket() failed: %s", strerror(errno));
+    fprintf(stderr, "socket() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -30,7 +30,7 @@ int main(void) {
   inet_aton("127.0.0.1", &addr.sin_addr);
 
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "connect() failed: %s", strerror(errno));
+    fprintf(stderr, "connect() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 
@@ -50,7 +50,7 @@ int main(void) {
   iovec[2].iov_len = sizeof(iovec_buf2);
 
   if (readv(sock, iovec, sizeof(iovec)/sizeof(struct iovec)) < 0) {
-    fprintf(stderr, "readv() failed: %s", strerror(errno));
+    fprintf(stderr, "readv() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
           

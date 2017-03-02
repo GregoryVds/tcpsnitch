@@ -17,6 +17,7 @@ typedef enum TcpEventType {
         TCP_EV_SHUTDOWN,
         TCP_EV_LISTEN,
         TCP_EV_ACCEPT,
+        TCP_EV_ACCEPT4,
         TCP_EV_GETSOCKOPT,
         TCP_EV_SETSOCKOPT,
         TCP_EV_SEND,
@@ -30,6 +31,9 @@ typedef enum TcpEventType {
         TCP_EV_RECVMMSG,
 #endif
         TCP_EV_GETSOCKNAME,
+        TCP_EV_GETPEERNAME,
+        TCP_EV_SOCKATMARK,
+        TCP_EV_ISFDTYPE,
         // unistd.h
         TCP_EV_WRITE,
         TCP_EV_READ,
@@ -56,6 +60,8 @@ typedef enum TcpEventType {
         TCP_EV_EPOLL_CTL,
         TCP_EV_EPOLL_WAIT,
         TCP_EV_EPOLL_PWAIT,
+        // stdio.h
+        TCP_EV_FDOPEN,
         // others
         TCP_EV_TCP_INFO
 } TcpEventType;
@@ -110,6 +116,12 @@ typedef struct {
         TcpEvent super;
         TcpAddr addr;
 } TcpEvAccept;
+
+typedef struct {
+        TcpEvent super;
+        TcpAddr addr;
+        int flags;
+} TcpEvAccept4;
 
 typedef struct {
         int level;
@@ -214,6 +226,20 @@ typedef struct {
         TcpEvent super;
         TcpAddr addr;
 } TcpEvGetsockname;
+
+typedef struct {
+        TcpEvent super;
+        TcpAddr addr;
+} TcpEvGetpeername;
+
+typedef struct {
+        TcpEvent super;
+} TcpEvSockatmark;
+
+typedef struct {
+        TcpEvent super;
+        int fdtype;
+} TcpEvIsfdtype;
 
 typedef struct {
         TcpEvent super;
@@ -339,6 +365,11 @@ typedef struct {
 
 typedef struct {
         TcpEvent super;
+        char *mode;
+} TcpEvFdopen;
+
+typedef struct {
+        TcpEvent super;
         struct tcp_info info;
 } TcpEvTcpInfo;
 
@@ -397,6 +428,9 @@ void tcp_ev_listen(int fd, int ret, int err, int backlog);
 void tcp_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
                    socklen_t *addr_len);
 
+void tcp_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
+                   socklen_t *addr_len, int flags);
+
 void tcp_ev_getsockopt(int fd, int ret, int err, int level, int optname,
                        const void *optval, socklen_t optlen);
 
@@ -436,6 +470,13 @@ void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 
 void tcp_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
                         socklen_t *addrlen);
+
+void tcp_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
+                        socklen_t *addrlen);
+
+void tcp_ev_sockatmark(int fd, int ret, int err);
+
+void tcp_ev_isfdtype(int fd, int ret, int err, int fdtype);
 
 void tcp_ev_write(int fd, int ret, int err, size_t bytes);
 
@@ -487,6 +528,8 @@ void tcp_ev_epoll_wait(int fd, int ret, int err, int timeout,
 
 void tcp_ev_epoll_pwait(int fd, int ret, int err, int timeout,
                         uint32_t returned_events);
+
+void tcp_ev_fdopen(int fd, FILE *ret, int err, const char *mode); 
 
 void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 
