@@ -282,13 +282,29 @@ static json_t *build_optval(const TcpSockopt *sockopt) {
 }
 
 static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
-        struct protoent *p = getprotobynumber(sockopt->level);
-        if (p)
-                add(details, "level", json_string(p->p_name));
-        else
-                add(details, "level", json_integer(sockopt->level));
+        char *level = alloc_sockopt_level(sockopt->level);
+        add(details, "level", json_string(level));
+        free(level);
 
-        char *optname = alloc_sol_socket_sockopt(sockopt->optname);
+        char *optname;
+        switch (sockopt->level) {
+                case SOL_SOCKET:
+                        optname = alloc_sol_socket_sockopt(sockopt->optname);
+                        break;
+                case IPPROTO_TCP:
+                        optname = alloc_ipproto_tcp_sockopt(sockopt->optname);
+                        break;
+                case IPPROTO_IP:
+                        optname = alloc_ipproto_ip_sockopt(sockopt->optname);
+                        break;
+                case IPPROTO_IPV6:
+                        optname = alloc_ipproto_ipv6_sockopt(sockopt->optname);
+                        break;
+                default:
+                        LOG(WARN, "Unknown sockopt level: %d.", sockopt->level);
+                        optname = alloc_sol_socket_sockopt(sockopt->optname);
+                        break;
+        }
         add(details, "optname", json_string(optname));
         free(optname);
 
@@ -866,7 +882,8 @@ static json_t *build_tcp_ev(const TcpEvent *ev) {
                             (const TcpEvGetpeername *)ev);
                         break;
                 case TCP_EV_SOCKATMARK:
-                        r = build_tcp_ev_sockatmark((const TcpEvSockatmark *)ev);
+                        r = build_tcp_ev_sockatmark(
+                            (const TcpEvSockatmark *)ev);
                         break;
                 case TCP_EV_ISFDTYPE:
                         r = build_tcp_ev_isfdtype((const TcpEvIsfdtype *)ev);
