@@ -134,24 +134,23 @@ done
 shift $((OPTIND - 1))
 
 # Get package name
-
 exec 3>&2
 package=$(./get_package $1 2>&3)
 echo "Setting up tcpsnitch for: '${package}'"
 
-# Compile
-make 
+# Stop app if running
+adb shell su -c am force-stop ${package}
 
 # Set system properties
 adb shell su -c setenforce 0
 adb shell su -c chmod 777 /data
 adb shell su -c rm -f /data/libtcpsnitch.so
-
 echo "Uploading library to ${LIBPATH}/${LIB}"
 adb push ${LIB} ${LIBPATH}
 
 # Prepare logs dir
 OPT_D="/data/data/${package}/tcpsnitch"
+adb shell su -c rm -rf ${OPT_D} 
 adb shell su -c mkdir -m 777 -p ${OPT_D}
 
 # Properties are limited to 32 chars includind the NULL byte.
