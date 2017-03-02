@@ -134,6 +134,7 @@ done
 shift $((OPTIND - 1))
 
 # Get package name
+
 exec 3>&2
 package=$(./get_package $1 2>&3)
 echo "Setting up tcpsnitch for: '${package}'"
