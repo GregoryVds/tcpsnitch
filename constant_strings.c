@@ -27,22 +27,26 @@ error:
         return NULL;
 }
 
-#define EXTRACT_FROM_MAP(MAP, KEY)                       \
+#define MAP_GET(MAP, KEY)                                \
         int map_size = sizeof(MAP) / sizeof(IntStrPair); \
         return alloc_string_from_cons(KEY, MAP, map_size);
 
-char *alloc_sock_domain_str(int domain) {
-        EXTRACT_FROM_MAP(SOCKET_DOMAINS, domain);
+char *alloc_sock_domain_str(int domain) { MAP_GET(SOCKET_DOMAINS, domain); }
+
+char *alloc_sock_type_str(int type) { MAP_GET(SOCKET_TYPES, type); }
+
+char *alloc_sockopt_level(int level) { MAP_GET(SOCKOPT_LEVELS, level); }
+
+char *alloc_sol_socket_sockopt(int opt) { MAP_GET(SOL_SOCKET_OPTIONS, opt); }
+
+char *alloc_ipproto_ip_sockopt(int opt) { MAP_GET(IPPROTO_IP_OPTIONS, opt); }
+
+char *alloc_ipproto_ipv6_sockopt(int opt) {
+        MAP_GET(IPPROTO_IPV6_OPTIONS, opt);
 }
 
-char *alloc_sock_type_str(int type) { EXTRACT_FROM_MAP(SOCKET_TYPES, type); }
+char *alloc_ipproto_tcp_sockopt(int opt) { MAP_GET(IPPROTO_TCP_OPTIONS, opt); }
 
-char *alloc_sock_optname_str(int optname) {
-        EXTRACT_FROM_MAP(SOCKET_OPTIONS, optname);
-}
+char *alloc_fcntl_cmd_str(int cmd) { MAP_GET(FCNTL_CMDS, cmd); }
 
-char *alloc_fcntl_cmd_str(int cmd) { EXTRACT_FROM_MAP(FCNTL_CMDS, cmd); }
-
-char *alloc_ioctl_request_str(int request) {
-        EXTRACT_FROM_MAP(IOCTL_REQUESTS, request);
-}
+char *alloc_ioctl_request_str(int request) { MAP_GET(IOCTL_REQUESTS, request); }

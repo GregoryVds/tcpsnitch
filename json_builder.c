@@ -288,7 +288,7 @@ static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
         else
                 add(details, "level", json_integer(sockopt->level));
 
-        char *optname = alloc_sock_optname_str(sockopt->optname);
+        char *optname = alloc_sol_socket_sockopt(sockopt->optname);
         add(details, "optname", json_string(optname));
         free(optname);
 
