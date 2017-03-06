@@ -863,18 +863,6 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 typedef int (*fcntl_type)(int fd, int cmd, ...);
 fcntl_type orig_fcntl;
 
-#define FORWARD_FCNTL(TYPE)                                                    \
-	{                                                                      \
-		va_list argp;                                                  \
-		va_start(argp, cmd);                                           \
-		TYPE value = va_arg(argp, TYPE);                               \
-		va_end(argp);                                                  \
-		int ret = orig_fcntl(fd, cmd, value);                          \
-		int err = errno;                                               \
-		if (is_tcp_socket(fd)) tcp_ev_fcntl(fd, ret, err, cmd, value); \
-		return ret;                                                    \
-	}
-
 int fcntl(int fd, int cmd, ...) {
 	if (!orig_fcntl) orig_fcntl = (fcntl_type)dlsym(RTLD_NEXT, "fcntl");
 

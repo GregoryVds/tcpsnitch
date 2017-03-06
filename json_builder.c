@@ -312,6 +312,18 @@ static void add_sockopt(json_t *details, const TcpSockopt *sockopt) {
         if (sockopt->optlen) add(details, "optval", build_optval(sockopt));
 }
 
+static void add_fd_flags(json_t *details, int flags) {
+        add(details, "O_CLOEXEC", json_boolean(flags & O_CLOEXEC));
+}
+
+static void add_fl_flags(json_t *details, int flags) {
+        add(details, "O_APPEND", json_boolean(flags & O_APPEND));
+        add(details, "O_ASYNC", json_boolean(flags & O_ASYNC));
+        add(details, "O_DIRECT", json_boolean(flags & O_DIRECT));
+        add(details, "O_NOATIME", json_boolean(flags & O_NOATIME));
+        add(details, "O_NONBLOCK", json_boolean(flags & O_NONBLOCK));
+}
+
 static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         const char *type_str = string_from_tcp_event_type(ev->type);
         add(json_ev, "type", json_string(type_str));
@@ -684,22 +696,21 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
 
         switch (ev->cmd) {
                 case F_GETFD:
+                        add_fd_flags(d, ev->super.return_value);
+                        break;
                 case F_GETFL:
+                        add_fl_flags(d, ev->super.return_value);
+                        break;
                 case F_GETOWN:
                 case F_GETSIG:
                 case F_GETLEASE:
                 case F_GETPIPE_SZ:
                         break;  // Arg: void
                 case F_SETFD:
-                        add(d, "O_CLOEXEC", json_boolean(ev->arg & O_CLOEXEC));
+                        add_fd_flags(d, ev->arg);
                         break;
                 case F_SETFL:
-                        add(d, "O_APPEND", json_boolean(ev->arg & O_APPEND));
-                        add(d, "O_ASYNC", json_boolean(ev->arg & O_ASYNC));
-                        add(d, "O_DIRECT", json_boolean(ev->arg & O_DIRECT));
-                        add(d, "O_NOATIME", json_boolean(ev->arg & O_NOATIME));
-                        add(d, "O_NONBLOCK",
-                            json_boolean(ev->arg & O_NONBLOCK));
+                        add_fl_flags(d, ev->arg);
                         break;
                 case F_DUPFD:
                 case F_DUPFD_CLOEXEC:
@@ -707,7 +718,7 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
                 case F_SETSIG:
                 case F_SETLEASE:
                 case F_NOTIFY:
-                case F_SETPIPE_SZ:
+                case F_SETPIPE_SZ: // Arg: int
                         add(d, "arg", json_integer(ev->arg));
                         break;
         }
