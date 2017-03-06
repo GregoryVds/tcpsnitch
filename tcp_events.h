@@ -73,6 +73,7 @@ typedef struct {
         bool success;
         char *error_str;
         long id;
+        pid_t thread_id;
 } TcpEvent;
 
 typedef struct {

@@ -392,6 +392,7 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
         add(json_ev, "return_value", json_integer(ev->return_value));
         add(json_ev, "success", json_boolean(ev->success));
         add(json_ev, "error_str", json_string(ev->error_str));
+        add(json_ev, "thread_id", json_integer(ev->thread_id));
 }
 
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."

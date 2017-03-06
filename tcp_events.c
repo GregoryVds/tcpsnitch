@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include "constant_strings.h"
 #include "constants.h"
@@ -126,6 +127,7 @@ static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
 	ev->success = success;
 	ev->error_str = success ? NULL : alloc_error_str(err);
 	ev->id = id;
+        ev->thread_id = syscall(SYS_gettid);
 	return ev;
 error:
 	LOG_FUNC_FAIL;
