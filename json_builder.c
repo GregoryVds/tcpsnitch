@@ -266,6 +266,20 @@ error:
         return NULL;
 }
 
+static json_t *build_linger(const struct linger *linger) {
+        json_t *json_linger = json_object();
+        if (!json_linger) goto error;
+
+        add(json_linger, "l_onoff", json_integer(linger->l_onoff));
+        add(json_linger, "l_linger", json_integer(linger->l_linger));
+
+        return json_linger;
+error:
+        LOG(ERROR, "json_object() failed.");
+        LOG_FUNC_FAIL;
+        return NULL;
+}
+
 static json_t *build_optval(const TcpSockopt *sockopt) {
         switch (sockopt->level) {
                 case SOL_SOCKET:
@@ -274,6 +288,43 @@ static json_t *build_optval(const TcpSockopt *sockopt) {
                                 case SO_SNDTIMEO:
                                         return build_timeval(
                                             (struct timeval *)sockopt->optval);
+                                        break;
+                                case SO_LINGER:
+                                        return build_linger(
+                                            (struct linger *)sockopt->optval);
+                                        break;
+                                case SO_RCVBUF:
+                                case SO_SNDBUF:
+                                case SO_ERROR:
+                                        return json_integer(
+                                            *((int *)sockopt->optval));
+                                        break;
+                                case SO_KEEPALIVE:
+                                case SO_DEBUG:
+                                case SO_REUSEADDR:
+                                        return json_boolean(
+                                            *((int *)sockopt->optval));
+                                        break;
+                        }
+                        break;
+                case IPPROTO_TCP:
+                        switch (sockopt->optname) {
+                                case TCP_KEEPINTVL:
+                                case TCP_KEEPIDLE:
+                                        return json_integer(
+                                            *((int *)sockopt->optval));
+                                        break;
+                                case TCP_NODELAY:
+                                        return json_boolean(
+                                            *((int *)sockopt->optval));
+                                        break;
+                        }
+                        break;
+                case IPPROTO_IPV6:
+                        switch (sockopt->optname) {
+                                case IPV6_V6ONLY:
+                                        return json_boolean(
+                                            *((int *)sockopt->optval));
                                         break;
                         }
                         break;
@@ -718,7 +769,7 @@ static json_t *build_tcp_ev_fcntl(const TcpEvFcntl *ev) {
                 case F_SETSIG:
                 case F_SETLEASE:
                 case F_NOTIFY:
-                case F_SETPIPE_SZ: // Arg: int
+                case F_SETPIPE_SZ:  // Arg: int
                         add(d, "arg", json_integer(ev->arg));
                         break;
         }
