@@ -231,10 +231,10 @@ error:
 
 static socklen_t fill_tcp_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
 	// Msg name
-	memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
+	if (m2->msg_name) memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
 
 	// Control data (ancillary data)
-	m1->control_data = my_malloc(sizeof(m2->msg_controllen));
+	m1->control_data = my_malloc(m2->msg_controllen);
 	if (m1->control_data) {
 		memcpy(m1->control_data, m2->msg_control, m2->msg_controllen);
 		m1->control_data_len = m2->msg_controllen;
