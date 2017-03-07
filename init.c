@@ -52,7 +52,6 @@ static char *create_logs_dir_at_path(const char *path) {
         char *dirname, *base_path, *full_path;
         int i = 0;
         DIR *dir;
-
         if (!(dirname = alloc_dirname_str())) goto error_out;
         if (!(base_path = alloc_concat_path(path, dirname))) goto error1;
         if (!(full_path = alloc_append_int_to_path(base_path, i))) goto error2;
@@ -62,7 +61,7 @@ static char *create_logs_dir_at_path(const char *path) {
                         free(full_path);
                         i++;
                         full_path = alloc_append_int_to_path(base_path, i);
-                } else if (!dir && errno == ENOENT)
+               } else if (!dir && errno == ENOENT)
                         break;  // Free.
                 else if (!dir)
                         goto error3;  // Failure for some other reason.

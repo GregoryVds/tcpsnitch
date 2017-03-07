@@ -6,6 +6,7 @@ trace=$(ls -t ./traces|head -1)
 path="./traces/${trace}/*/*.json"
 echo "Quicklook on: ${path}"
 tcpsnitch_analyzer ${path}
+tcpsnitch_analyzer -e socket -n details.type -a p ${path}
 tcpsnitch_analyzer -e getsockopt -n details.optname -a p ${path} 
 tcpsnitch_analyzer -e setsockopt -n details.optname -a p ${path}
 tcpsnitch_analyzer -e fcntl -n details.cmd -a p ${path} 

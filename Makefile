@@ -19,7 +19,7 @@ LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
 LIB_AMD64=$(REAL_NAME)-$(AMD64)
 LIB_I386=$(REAL_NAME)-$(I386)
 
-CC_ANDROID=~/android_toolchain_23/bin/arm-linux-androideabi-clang
+CC_ANDROID=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
 CC=gcc
 C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \

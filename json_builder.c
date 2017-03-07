@@ -208,7 +208,6 @@ error:
 }
 
 static json_t *build_tcp_msghdr(const TcpMsghdr *msg) {
-return NULL;
 	json_t *json_msghdr = json_object();
 	if (!json_msghdr) goto error;
 
@@ -218,12 +217,8 @@ return NULL;
 
 	// Ancillary data
 	add(json_msghdr, "control_data_len",
-	    json_integer(msg->msghdr.msg_controllen));
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-	add(json_msghdr, "control_data", build_control_data(&msg->msghdr));
-#pragma GCC diagnostic pop
+	    json_integer(msg->msghdr->msg_controllen));
+	add(json_msghdr, "control_data", build_control_data(msg->msghdr));
 	return json_msghdr;
 error:
 	LOG(ERROR, "json_object() failed.");

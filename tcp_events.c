@@ -238,14 +238,14 @@ static socklen_t fill_tcp_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         if (m2->msg_name) memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
 
         // Control data (ancillary data)
-        m1->msghdr.msg_controllen = m2->msg_controllen;
+        m1->msghdr = my_malloc(sizeof(struct msghdr));
+        m1->msghdr->msg_controllen = m2->msg_controllen;
         if (m2->msg_controllen)
-                m1->msghdr.msg_control = my_malloc(m2->msg_controllen);
-        if (m1->msghdr.msg_control)
-                memcpy(m1->msghdr.msg_control, m2->msg_control,
-                       m2->msg_controllen);
+                m1->msghdr->msg_control = my_malloc(m2->msg_controllen);
+        memcpy(m1->msghdr->msg_control, m2->msg_control, m2->msg_controllen);
+
         // Flags
-        m1->msghdr.msg_flags = m2->msg_flags;
+        m1->flags = m2->msg_flags;
 
         // Iovec
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
@@ -665,7 +665,7 @@ void tcp_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
         // Inst. local vars TcpConnection *con & TcpEvAccept *ev
         TCP_EV_PRELUDE(TCP_EV_ACCEPT, TcpEvAccept);
 
-        fill_addr(&(ev->addr), addr, *addr_len);
+        if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
         ACCEPT_NEW_CON;
 
         TCP_EV_POSTLUDE(TCP_EV_ACCEPT);
@@ -679,7 +679,7 @@ void tcp_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
         // Inst. local vars TcpConnection *con & TcpEvAccept4 *ev
         TCP_EV_PRELUDE(TCP_EV_ACCEPT4, TcpEvAccept4);
 
-        fill_addr(&(ev->addr), addr, *addr_len);
+        if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
         ev->flags = flags;
         ACCEPT_NEW_CON;
 
@@ -752,7 +752,7 @@ void tcp_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
 	ev->bytes = bytes;
 	ev->flags = flags;
 	con->bytes_received += bytes;
-        if (addr) fill_addr(&(ev->addr), addr, *len);
+        if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *len);
 
         TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
 }
