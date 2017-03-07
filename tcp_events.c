@@ -137,10 +137,6 @@ error:
 static void free_event(TcpEvent *ev) {
 	free(ev->error_str);
 	switch (ev->type) {
-		case TCP_EV_SOCKET:
-			free(((TcpEvSocket *)ev)->domain_str);
-			free(((TcpEvSocket *)ev)->type_str);
-			break;
 		case TCP_EV_GETSOCKOPT:
 			free(((TcpEvGetsockopt *)ev)->sockopt.optval);
 			break;
@@ -587,9 +583,7 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
 	TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
 
 	ev->domain = domain;
-	ev->domain_str = alloc_sock_domain_str(ev->domain);
 	ev->type = type & SOCK_TYPE_MASK;
-	ev->type_str = alloc_sock_type_str(ev->type);
 	ev->protocol = protocol;
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 	ev->sock_cloexec = type & SOCK_CLOEXEC;

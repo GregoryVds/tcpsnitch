@@ -415,8 +415,14 @@ static void build_shared_fields(json_t *json_ev, const TcpEvent *ev) {
 static json_t *build_tcp_ev_socket(const TcpEvSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
 
-        add(json_details, "domain", json_string(ev->domain_str));
-        add(json_details, "type", json_string(ev->type_str));
+	char *domain= alloc_sock_domain_str(ev->domain);
+        add(json_details, "domain", json_string(domain));
+        free(domain);
+
+        char *type = alloc_sock_type_str(ev->type);
+        add(json_details, "type", json_string(type));
+        free(type);
+
         add(json_details, "protocol", json_integer(ev->protocol));
         add(json_details, "SOCK_CLOEXEC", json_boolean(ev->sock_cloexec));
         add(json_details, "SOCK_NONBLOCK", json_boolean(ev->sock_nonblock));
