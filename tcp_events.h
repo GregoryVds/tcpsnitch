@@ -174,7 +174,7 @@ typedef struct {
         TcpIovec iovec;
         struct sockaddr_storage addr;
         int flags;
-        struct msghdr msghdr; 
+        struct msghdr *msghdr; 
 } TcpMsghdr;
 
 typedef struct {

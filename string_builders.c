@@ -187,10 +187,12 @@ error:
 // /data/data/[app_name], which the internal storage of the app.
 char *alloc_android_opt_d(void) {
         char *app_name = alloc_app_name();
-        int n = 11 + strlen(app_name) + 1;  // "/data/data/" + APP_NAME + '\0'
+        const char *prefix = "/data/data/";
+        const char *sufix = "/tcpsnitch";
+        int n = strlen(prefix) + strlen(app_name) + strlen(sufix) + 1;
         char *opt_d = (char *)my_malloc(sizeof(char) * n);
         if (!opt_d) goto error;
-        sprintf(opt_d, "/data/data/%s/tcpsnitch", app_name);
+        sprintf(opt_d, "%s%s%s", prefix, app_name, sufix);
         free(app_name);
         return opt_d;
 error:
