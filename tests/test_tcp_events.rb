@@ -172,11 +172,13 @@ describe 'tcp_spy' do
     },
     TCP_EV_SENDTO => {
       bytes: Integer,
-      flags: send_flags
+      flags: send_flags,
+      addr: addr
     },
     TCP_EV_RECVFROM => {
       bytes: Integer,
-      flags: recv_flags
+      flags: recv_flags,
+      addr: addr
     },
     TCP_EV_SENDMSG => {
       bytes: Integer,

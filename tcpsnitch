@@ -184,9 +184,10 @@ TCPSNITCH_OPT_P=$OPT_P \
 TCPSNITCH_OPT_T=$OPT_T \
 TCPSNITCH_OPT_U=$OPT_U \
 TCPSNITCH_OPT_V=$OPT_V \
-LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 4>&1 2>&1 3>&2 1>/dev/null | \
-grep -E -v "$UNWANTED_ERRORS" \
-) 3>&1 1>&2 2>&3
+LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 4>&2 3>&1)
+#LD_PRELOAD="${LIB_32} ${LIB_64}" $@ 4>&1 2>&1 3>&2 1>/dev/null | \
+#grep -E -v "$UNWANTED_ERRORS" \
+#) 3>&1 1>&2 2>&3
 
 # WHAT JUST HAPPENED?
 # First, we have to know that tcpsnitch opens 2 streams to file descriptors 3 

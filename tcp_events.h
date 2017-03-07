@@ -155,14 +155,14 @@ typedef struct {
         TcpEvent super;
         size_t bytes;
         int flags;
-        struct sockaddr_storage addr;
+      	TcpAddr addr;
 } TcpEvSendto;
 
 typedef struct {
         TcpEvent super;
         size_t bytes;
         int flags;
-        struct sockaddr_storage addr;
+      	TcpAddr addr;
 } TcpEvRecvfrom;
 
 typedef struct {

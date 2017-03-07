@@ -46,7 +46,7 @@ static int connections_count = 0;
 
 /* Private functions */
 
-static TcpConnection *alloc_connection(void) {
+static TcpConnection *alloc_connection(int fd) {
 	TcpConnection *con;
 	if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection))))
 		goto error;
@@ -57,6 +57,7 @@ static TcpConnection *alloc_connection(void) {
 	connections_count++;
 	mutex_unlock(&connections_count_mutex);
 
+        con->fd = fd;
 	// Has to be done AFTER getting the con->id
 	con->directory = create_numbered_dir_in_path(logs_dir_path, con->id);
 	return con;
@@ -490,7 +491,7 @@ error_out:
 			    "detected.",                                       \
 			    fd);                                               \
 		}                                                              \
-		con = alloc_connection();                                      \
+		con = alloc_connection(fd);                                    \
 		if (!con || !ra_put_elem(fd, con)) {                           \
 			LOG_FUNC_FAIL;                                         \
 			return;                                                \
@@ -641,7 +642,7 @@ void tcp_ev_listen(int fd, int ret, int err, int backlog) {
 }
 
 #define ACCEPT_NEW_CON                                              \
-	TcpConnection *new_con = alloc_connection();                \
+	TcpConnection *new_con = alloc_connection(fd);              \
 	if (!new_con) goto error;                                   \
 	if (!ra_put_elem(ret, new_con)) goto error;                 \
 	new_con = NULL;                                             \
@@ -734,7 +735,7 @@ void tcp_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
 	ev->bytes = bytes;
 	ev->flags = flags;
 	con->bytes_sent += bytes;
-	memcpy(&(ev->addr), addr, len);
+        if (addr) fill_addr(&(ev->addr), addr, len);
 
 	TCP_EV_POSTLUDE(TCP_EV_SENDTO);
 }
@@ -747,7 +748,7 @@ void tcp_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
 	ev->bytes = bytes;
 	ev->flags = flags;
 	con->bytes_received += bytes;
-	if (len) memcpy(&(ev->addr), addr, *len);
+        if (addr) fill_addr(&(ev->addr), addr, *len);
 
 	TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
 }

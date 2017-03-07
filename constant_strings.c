@@ -3,33 +3,36 @@
 #include "lib.h"
 #include "logger.h"
 
-char *alloc_string_from_cons(int cons, const IntStrPair *map, int map_size) {
+bool alloc_string_from_cons(int cons, const IntStrPair *map, int map_size,
+                            char **str_ptr) {
         static const int str_size = MEMBER_SIZE(IntStrPair, str);
-        char *str = (char *)my_malloc(str_size);
-        if (!str) goto error;
+        *str_ptr = (char *)my_malloc(str_size);
+        if (!*str_ptr) goto error;
 
         // Search for const in map.
         const IntStrPair *cur;
         for (int i = 0; i < map_size; i++) {
                 cur = (map + i);
                 if (cur->cons == cons) {
-                        strncpy(str, cur->str, str_size);
-                        return str;
+                        strncpy(*str_ptr, cur->str, str_size);
+                        return true;
                 }
         }
 
         // No match found, just write the constant digit.
         LOG(WARN, "alloc_string_from_cons: no match found for %d.", cons);
-        snprintf(str, str_size, "%d", cons);
-        return str;
+        snprintf(*str_ptr, str_size, "%d", cons);
+        return false;
 error:
         LOG_FUNC_FAIL;
-        return NULL;
+        return false;
 }
 
-#define MAP_GET(MAP, KEY)                                \
-        int map_size = sizeof(MAP) / sizeof(IntStrPair); \
-        return alloc_string_from_cons(KEY, MAP, map_size);
+#define MAP_GET(MAP, KEY)                                                     \
+        char *str;                                                            \
+        int map_size = sizeof(MAP) / sizeof(IntStrPair);                      \
+        if (!alloc_string_from_cons(KEY, MAP, map_size, &str)) LOG_FUNC_FAIL; \
+        return str;
 
 char *alloc_sock_domain_str(int domain) { MAP_GET(SOCKET_DOMAINS, domain); }
 
