@@ -1,8 +1,8 @@
 #ifndef TCP_SPY_JSON_H
 #define TCP_SPY_JSON_H
 
-#include "tcp_events.h"
+#include "sock_events.h"
 
-char *alloc_tcp_ev_json(const TcpEvent *ev);
+char *alloc_sock_ev_json(const SockEvent *ev);
 
 #endif

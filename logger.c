@@ -20,7 +20,7 @@
 #include "constants.h"
 #include "init.h"
 #include "lib.h"
-#include "tcp_events.h"
+#include "sock_events.h"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
 #define ANSI_COLOR_RED "\x1b[31m"

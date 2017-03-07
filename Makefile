@@ -29,9 +29,9 @@ L_FLAGS=-Wl,-soname,$(SONAME)
 
 DEPS=-ljansson -ldl -lpthread -lpcap 
 DEPS_ANDROID=-ldl -llog -ljansson -lpcap
-HEADERS=lib.h tcp_events.h string_builders.h json_builder.h packet_sniffer.h \
+HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
 	logger.h init.h resizable_array.h verbose_mode.h constant_strings.h
-SOURCES=libc_overrides.c lib.c tcp_events.c string_builders.c json_builder.c \
+SOURCES=libc_overrides.c lib.c sock_events.c string_builders.c json_builder.c \
 	packet_sniffer.c logger.c init.c resizable_array.c verbose_mode.c \
 	constant_strings.c
 

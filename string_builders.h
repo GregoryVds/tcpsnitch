@@ -2,7 +2,7 @@
 #define STRING_HELPERS_H
 
 #include <sys/socket.h>
-#include "tcp_events.h"
+#include "sock_events.h"
 
 char *alloc_ip_str(const struct sockaddr *addr);
 char *alloc_port_str(const struct sockaddr *addr);
@@ -15,8 +15,8 @@ char *alloc_append_int_to_path(const char *path1, int i);
 
 char *alloc_dirname_str(void);
 char *alloc_android_opt_d(void);
-char *alloc_pcap_path_str(TcpConnection *con);
-char *alloc_json_path_str(TcpConnection *con);
+char *alloc_pcap_path_str(SocketState *con);
+char *alloc_json_path_str(SocketState *con);
 
 char *alloc_cmdline_str(void);
 char *alloc_app_name(void);
