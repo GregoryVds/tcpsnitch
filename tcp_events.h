@@ -173,9 +173,8 @@ typedef struct {
 typedef struct {
         TcpIovec iovec;
         struct sockaddr_storage addr;
-        void *control_data;
-        size_t control_data_len;
         int flags;
+        struct msghdr msghdr; 
 } TcpMsghdr;
 
 typedef struct {
