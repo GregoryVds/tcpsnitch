@@ -1,8 +1,14 @@
 #define _GNU_SOURCE
 
 #include "logger.h"
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #include <assert.h>
 #include <errno.h>
+#ifndef __ANDROID__
+#include <execinfo.h>
+#endif
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,14 +17,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef __ANDROID__
-#include <android/log.h>
-#endif
-
 #include "constants.h"
 #include "init.h"
 #include "lib.h"
-#include "tcp_events.h"
+#include "sock_events.h"
 
 #define ANSI_COLOR_WHITE "\x1b[37m"
 #define ANSI_COLOR_RED "\x1b[31m"
@@ -161,3 +163,21 @@ void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
         if (log_file && log_lvl <= file_lvl)
                 log_to_stream(log_lvl, str, file, line, log_file);
 }
+
+#ifndef __ANDROID__
+void print_trace(void) {
+	void *array[10];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace(array, 10);
+	strings = backtrace_symbols(array, size);
+
+	printf("Obtained %zd stack frames.\n", size);
+
+	for (i = 0; i < size; i++) printf("%s\n", strings[i]);
+
+	free(strings);
+}
+#endif

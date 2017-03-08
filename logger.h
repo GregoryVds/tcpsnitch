@@ -9,6 +9,10 @@ void logger_init(const char *path, LogLevel stdout_lvl, LogLevel file_lvl);
 
 void logger(LogLevel lvl, const char *str, const char *file, int line);
 
+#ifndef __ANDROID__
+void print_trace(void);
+#endif
+
 #define LOG(lvl, format, args...)                             \
         {                                                     \
                 char _buf[1024];                              \

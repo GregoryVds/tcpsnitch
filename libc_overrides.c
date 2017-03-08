@@ -26,7 +26,7 @@
 #include "init.h"
 #include "logger.h"
 #include "string_builders.h"
-#include "tcp_events.h"
+#include "sock_events.h"
 
 /*
  Use "standard" font here to generate ASCII arts:
@@ -54,9 +54,8 @@ socket_type orig_socket;
 
 int socket(int domain, int type, int protocol) {
 	if (!orig_socket) orig_socket = (socket_type)dlsym(RTLD_NEXT, "socket");
-
 	int fd = orig_socket(domain, type, protocol);
-	if (is_tcp_socket(fd)) tcp_ev_socket(fd, domain, type, protocol);
+	if (is_inet_socket(fd)) sock_ev_socket(fd, domain, type, protocol);
 	return fd;
 }
 
@@ -68,7 +67,7 @@ int bind(int fd, const struct sockaddr *addr, socklen_t len) {
 
 	int ret = orig_bind(fd, addr, len);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_bind(fd, ret, err, addr, len);
+	if (is_inet_socket(fd)) sock_ev_bind(fd, ret, err, addr, len);
 
 	errno = err;
 	return ret;
@@ -81,10 +80,10 @@ int connect(int fd, const struct sockaddr *addr, socklen_t len) {
 	if (!orig_connect)
 		orig_connect = (connect_type)dlsym(RTLD_NEXT, "connect");
 
-	if (is_tcp_socket(fd) && conf_opt_c) tcp_start_capture(fd, addr);
+	if (is_inet_socket(fd) && conf_opt_c) tcp_start_capture(fd, addr);
 	int ret = orig_connect(fd, addr, len);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_connect(fd, ret, err, addr, len);
+	if (is_inet_socket(fd)) sock_ev_connect(fd, ret, err, addr, len);
 
 	errno = err;
 	return ret;
@@ -99,7 +98,7 @@ int shutdown(int fd, int how) {
 
 	int ret = orig_shutdown(fd, how);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_shutdown(fd, ret, err, how);
+	if (is_inet_socket(fd)) sock_ev_shutdown(fd, ret, err, how);
 
 	errno = err;
 	return ret;
@@ -113,7 +112,7 @@ int listen(int fd, int n) {
 
 	int ret = orig_listen(fd, n);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_listen(fd, ret, err, n);
+	if (is_inet_socket(fd)) sock_ev_listen(fd, ret, err, n);
 
 	errno = err;
 	return ret;
@@ -127,7 +126,7 @@ int accept(int fd, struct sockaddr *addr, socklen_t *addr_len) {
 
 	int ret = orig_accept(fd, addr, addr_len);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_accept(fd, ret, err, addr, addr_len);
+	if (is_inet_socket(fd)) sock_ev_accept(fd, ret, err, addr, addr_len);
 
 	errno = err;
 	return ret;
@@ -143,8 +142,8 @@ int accept4(int fd, struct sockaddr *addr, socklen_t *addr_len, int flags) {
 
 	int ret = orig_accept4(fd, addr, addr_len, flags);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_accept4(fd, ret, err, addr, addr_len, flags);
+	if (is_inet_socket(fd))
+		sock_ev_accept4(fd, ret, err, addr, addr_len, flags);
 
 	errno = err;
 	return ret;
@@ -162,8 +161,8 @@ int getsockopt(int fd, int level, int optname, void *optval,
 
 	int ret = orig_getsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_getsockopt(fd, ret, err, level, optname, optval,
+	if (is_inet_socket(fd))
+		sock_ev_getsockopt(fd, ret, err, level, optname, optval,
 				  *optlen);
 
 	errno = err;
@@ -182,8 +181,8 @@ int setsockopt(int fd, int level, int optname, const void *optval,
 
 	int ret = orig_setsockopt(fd, level, optname, optval, optlen);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_setsockopt(fd, ret, err, level, optname, optval, optlen);
+	if (is_inet_socket(fd))
+		sock_ev_setsockopt(fd, ret, err, level, optname, optval, optlen);
 
 	errno = err;
 	return ret;
@@ -207,7 +206,7 @@ ssize_t send(int fd, const void *buf, size_t n, int flags) {
 
 	ssize_t ret = orig_send(fd, buf, n, flags);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_send(fd, (int)ret, err, n, flags);
+	if (is_inet_socket(fd)) sock_ev_send(fd, (int)ret, err, n, flags);
 
 	errno = err;
 	return ret;
@@ -230,7 +229,7 @@ ssize_t recv(int fd, void *buf, size_t n, int flags) {
 
 	ssize_t ret = orig_recv(fd, buf, n, flags);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_recv(fd, ret, err, n, flags);
+	if (is_inet_socket(fd)) sock_ev_recv(fd, ret, err, n, flags);
 
 	errno = err;
 	return ret;
@@ -246,8 +245,8 @@ ssize_t sendto(int fd, const void *buf, size_t n, int flags,
 
 	ssize_t ret = orig_sendto(fd, buf, n, flags, addr, addr_len);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_sendto(fd, ret, err, n, flags, addr, addr_len);
+	if (is_inet_socket(fd))
+		sock_ev_sendto(fd, ret, err, n, flags, addr, addr_len);
 
 	errno = err;
 	return ret;
@@ -284,8 +283,8 @@ ssize_t recvfrom(int fd, void *buf, size_t n, int flags, struct sockaddr *addr,
 
 	ssize_t ret = orig_recvfrom(fd, buf, n, flags, addr, addr_len);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_recvfrom(fd, ret, err, n, flags, addr, addr_len);
+	if (is_inet_socket(fd))
+		sock_ev_recvfrom(fd, ret, err, n, flags, addr, addr_len);
 
 	errno = err;
 	return ret;
@@ -311,7 +310,7 @@ ssize_t sendmsg(int fd, const struct msghdr *message, int flags) {
 
 	ssize_t ret = orig_sendmsg(fd, message, flags);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_sendmsg(fd, ret, err, message, flags);
+	if (is_inet_socket(fd)) sock_ev_sendmsg(fd, ret, err, message, flags);
 
 	errno = err;
 	return ret;
@@ -336,7 +335,7 @@ ssize_t recvmsg(int fd, struct msghdr *message, int flags) {
 
 	ssize_t ret = orig_recvmsg(fd, message, flags);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_recvmsg(fd, ret, err, message, flags);
+	if (is_inet_socket(fd)) sock_ev_recvmsg(fd, ret, err, message, flags);
 
 	errno = err;
 	return ret;
@@ -365,8 +364,8 @@ int sendmmsg(int fd, const struct mmsghdr *vmessages, unsigned int vlen,
 
 	int ret = orig_sendmmsg(fd, vmessages, vlen, flags);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_sendmmsg(fd, ret, err, vmessages, vlen, flags);
+	if (is_inet_socket(fd))
+		sock_ev_sendmmsg(fd, ret, err, vmessages, vlen, flags);
 
 	errno = err;
 	return ret;
@@ -396,8 +395,8 @@ int recvmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
 
 	int ret = orig_recvmmsg(fd, vmessages, vlen, flags, tmo);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_recvmmsg(fd, ret, err, vmessages, vlen, flags, tmo);
+	if (is_inet_socket(fd))
+		sock_ev_recvmmsg(fd, ret, err, vmessages, vlen, flags, tmo);
 
 	errno = err;
 	return ret;
@@ -415,7 +414,7 @@ int getsockname(int fd, struct sockaddr *addr, socklen_t *len) {
 
 	int ret = orig_getsockname(fd, addr, len);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_getsockname(fd, ret, err, addr, len);
+	if (is_inet_socket(fd)) sock_ev_getsockname(fd, ret, err, addr, len);
 
 	errno = err;
 	return ret;
@@ -431,7 +430,7 @@ int getpeername(int fd, struct sockaddr *addr, socklen_t *len) {
 
 	int ret = orig_getpeername(fd, addr, len);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_getpeername(fd, ret, err, addr, len);
+	if (is_inet_socket(fd)) sock_ev_getpeername(fd, ret, err, addr, len);
 
 	errno = err;
 	return ret;
@@ -447,7 +446,7 @@ int sockatmark(int fd) {
 
 	int ret = orig_sockatmark(fd);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_sockatmark(fd, ret, err);
+	if (is_inet_socket(fd)) sock_ev_sockatmark(fd, ret, err);
 
 	errno = err;
 	return ret;
@@ -462,7 +461,7 @@ int isfdtype(int fd, int fdtype) {
 
 	int ret = orig_isfdtype(fd, fdtype);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_isfdtype(fd, ret, err, fdtype);
+	if (is_inet_socket(fd)) sock_ev_isfdtype(fd, ret, err, fdtype);
 
 	errno = err;
 	return ret;
@@ -489,7 +488,7 @@ ssize_t write(int fd, const void *buf, size_t n) {
 
 	int ret = orig_write(fd, buf, n);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_write(fd, ret, err, n);
+	if (is_inet_socket(fd)) sock_ev_write(fd, ret, err, n);
 
 	errno = err;
 	return ret;
@@ -503,7 +502,7 @@ ssize_t read(int fd, void *buf, size_t nbytes) {
 
 	int ret = orig_read(fd, buf, nbytes);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_read(fd, ret, err, nbytes);
+	if (is_inet_socket(fd)) sock_ev_read(fd, ret, err, nbytes);
 
 	errno = err;
 	return ret;
@@ -515,10 +514,10 @@ close_type orig_close;
 int close(int fd) {
 	if (!orig_close) orig_close = (close_type)dlsym(RTLD_NEXT, "close");
 
-	bool is_tcp = is_tcp_socket(fd);
+	bool is_inet = is_inet_socket(fd);
 	int ret = orig_close(fd);
 	int err = errno;
-	if (is_tcp) tcp_ev_close(fd, ret, err, true);
+	if (is_inet) sock_ev_close(fd, ret, err, true);
 
 	errno = err;
 	return ret;
@@ -547,7 +546,7 @@ int dup(int fd) {
 
 	int ret = orig_dup(fd);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_dup(fd, ret, err);
+	if (is_inet_socket(fd)) sock_ev_dup(fd, ret, err);
 
 	errno = err;
 	return ret;
@@ -561,7 +560,7 @@ int dup2(int fd, int newfd) {
 
 	int ret = orig_dup2(fd, newfd);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_dup2(fd, ret, err, newfd);
+	if (is_inet_socket(fd)) sock_ev_dup2(fd, ret, err, newfd);
 
 	errno = err;
 	return ret;
@@ -575,7 +574,7 @@ int dup3(int fd, int newfd, int flags) {
 
 	int ret = orig_dup3(fd, newfd, flags);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_dup3(fd, ret, err, newfd, flags);
+	if (is_inet_socket(fd)) sock_ev_dup3(fd, ret, err, newfd, flags);
 
 	errno = err;
 	return ret;
@@ -602,7 +601,7 @@ ssize_t writev(int fd, const struct iovec *iovec, int count) {
 
 	int ret = orig_writev(fd, iovec, count);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_writev(fd, ret, err, iovec, count);
+	if (is_inet_socket(fd)) sock_ev_writev(fd, ret, err, iovec, count);
 
 	errno = err;
 	return ret;
@@ -616,7 +615,7 @@ ssize_t readv(int fd, const struct iovec *iovec, int count) {
 
 	int ret = orig_readv(fd, iovec, count);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_readv(fd, ret, err, iovec, count);
+	if (is_inet_socket(fd)) sock_ev_readv(fd, ret, err, iovec, count);
 
 	errno = err;
 	return ret;
@@ -656,7 +655,7 @@ int ioctl(int fd, unsigned long int request, ...) {
 
 	int ret = orig_ioctl(fd, request, value);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_ioctl(fd, ret, err, request);
+	if (is_inet_socket(fd)) sock_ev_ioctl(fd, ret, err, request);
 
 	errno = err;
 	return ret;
@@ -684,7 +683,7 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count) {
 
 	int ret = orig_sendfile(out_fd, in_fd, offset, count);
 	int err = errno;
-	if (is_tcp_socket(out_fd)) tcp_ev_sendfile(out_fd, ret, err, count);
+	if (is_inet_socket(out_fd)) sock_ev_sendfile(out_fd, ret, err, count);
 
 	errno = err;
 	return ret;
@@ -713,8 +712,8 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 	unsigned long i;
 	for (i = 0; i < nfds; i++) {
 		struct pollfd pollfd = fds[i];
-		if (is_tcp_socket(pollfd.fd))
-			tcp_ev_poll(pollfd.fd, ret, err, pollfd.events,
+		if (is_inet_socket(pollfd.fd))
+			sock_ev_poll(pollfd.fd, ret, err, pollfd.events,
 				    pollfd.revents, timeout);
 	}
 
@@ -736,8 +735,8 @@ int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
 	unsigned long i;
 	for (i = 0; i < nfds; i++) {
 		struct pollfd pollfd = fds[i];
-		if (is_tcp_socket(pollfd.fd))
-			tcp_ev_ppoll(pollfd.fd, ret, err, pollfd.events,
+		if (is_inet_socket(pollfd.fd))
+			sock_ev_ppoll(pollfd.fd, ret, err, pollfd.events,
 				     pollfd.revents, tmo_p);
 	}
 
@@ -774,7 +773,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 
 	int fd;
 	for (fd = 0; fd < nfds; fd++) {
-		if (is_tcp_socket(fd)) {
+		if (is_inet_socket(fd)) {
 			if (readfds && FD_ISSET(fd, readfds))
 				(req_ev[fd] = req_ev[fd] | READ_FLAG);
 			if (writefds && FD_ISSET(fd, writefds))
@@ -788,9 +787,9 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	int err = errno;
 
 	for (fd = 0; fd < nfds; fd++) {
-		if (is_tcp_socket(fd) &&
+		if (is_inet_socket(fd) &&
 		    req_ev[fd]) {  // Socket was in initial call
-			tcp_ev_select(fd, ret, err, (req_ev[fd] & READ_FLAG),
+			sock_ev_select(fd, ret, err, (req_ev[fd] & READ_FLAG),
 				      (req_ev[fd] & WRITE_FLAG),
 				      (req_ev[fd] & EXCEPT_FLAG),
 				      readfds && FD_ISSET(fd, readfds),
@@ -818,7 +817,7 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 
 	int fd;
 	for (fd = 0; fd < nfds; fd++) {
-		if (is_tcp_socket(fd)) {
+		if (is_inet_socket(fd)) {
 			if (readfds && FD_ISSET(fd, readfds))
 				(req_ev[fd] = req_ev[fd] | READ_FLAG);
 			if (writefds && FD_ISSET(fd, writefds))
@@ -833,8 +832,8 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	int err = errno;
 
 	for (fd = 0; fd < nfds; fd++) {
-		if (is_tcp_socket(fd) && req_ev[fd]) {
-			tcp_ev_pselect(fd, ret, err, (req_ev[fd] & READ_FLAG),
+		if (is_inet_socket(fd) && req_ev[fd]) {
+			sock_ev_pselect(fd, ret, err, (req_ev[fd] & READ_FLAG),
 				       (req_ev[fd] & WRITE_FLAG),
 				       (req_ev[fd] & EXCEPT_FLAG),
 				       readfds && FD_ISSET(fd, readfds),
@@ -874,7 +873,7 @@ int fcntl(int fd, int cmd, ...) {
 
 	int ret = orig_fcntl(fd, cmd, arg);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_fcntl(fd, ret, err, cmd, arg);
+	if (is_inet_socket(fd)) sock_ev_fcntl(fd, ret, err, cmd, arg);
 
 	errno = err;
 	return ret;
@@ -903,8 +902,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
 
 	int ret = orig_epoll_ctl(epfd, op, fd, event);
 	int err = errno;
-	if (is_tcp_socket(fd))
-		tcp_ev_epoll_ctl(fd, ret, err, op, event->events);
+	if (is_inet_socket(fd))
+		sock_ev_epoll_ctl(fd, ret, err, op, event->events);
 
 	errno = err;
 	return ret;
@@ -925,9 +924,9 @@ int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
 	int err = errno;
 	for (int i = 0; i < ret; i++) {
 		int fd = events[i].data.fd;
-		if (is_tcp_socket(fd)) {
+		if (is_inet_socket(fd)) {
 			uint32_t returned_events = events[i].events;
-			tcp_ev_epoll_wait(fd, ret, err, timeout,
+			sock_ev_epoll_wait(fd, ret, err, timeout,
 					  returned_events);
 		}
 	}
@@ -952,9 +951,9 @@ int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
 	int err = errno;
 	for (int i = 0; i < ret; i++) {
 		int fd = events[i].data.fd;
-		if (is_tcp_socket(fd)) {
+		if (is_inet_socket(fd)) {
 			uint32_t returned_events = events[i].events;
-			tcp_ev_epoll_pwait(fd, ret, err, timeout,
+			sock_ev_epoll_pwait(fd, ret, err, timeout,
 					   returned_events);
 		}
 	}
@@ -984,7 +983,7 @@ FILE *fdopen(int fd, const char *mode) {
 
 	FILE *ret = orig_fdopen(fd, mode);
 	int err = errno;
-	if (is_tcp_socket(fd)) tcp_ev_fdopen(fd, ret, err, mode);
+	if (is_inet_socket(fd)) sock_ev_fdopen(fd, ret, err, mode);
 
 	errno = err;
 	return ret;

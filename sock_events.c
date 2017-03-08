@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 
-#include "tcp_events.h"
+#include "sock_events.h"
 #include <assert.h>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -46,20 +46,21 @@ static int connections_count = 0;
 
 /* Private functions */
 
-static TcpConnection *alloc_connection(void) {
-        TcpConnection *con;
-        if (!(con = (TcpConnection *)my_calloc(sizeof(TcpConnection))))
-                goto error;
+static SocketState *alloc_connection(int fd) {
+	SocketState *con;
+	if (!(con = (SocketState *)my_calloc(sizeof(SocketState))))
+		goto error;
 
-        // Get & increment connections_count
-        mutex_lock(&connections_count_mutex);
-        con->id = connections_count;
-        connections_count++;
-        mutex_unlock(&connections_count_mutex);
+	// Get & increment connections_count
+	mutex_lock(&connections_count_mutex);
+	con->id = connections_count;
+	connections_count++;
+	mutex_unlock(&connections_count_mutex);
 
-        // Has to be done AFTER getting the con->id
-        con->directory = create_numbered_dir_in_path(logs_dir_path, con->id);
-        return con;
+        con->fd = fd;
+	// Has to be done AFTER getting the con->id
+	con->directory = create_numbered_dir_in_path(logs_dir_path, con->id);
+	return con;
 error:
         LOG_FUNC_FAIL;
         return NULL;
@@ -67,58 +68,58 @@ error:
 
 #define CASE_EV(ev_type_cons, ev_type, err_val)              \
         case ev_type_cons:                                   \
-                ev = (TcpEvent *)my_calloc(sizeof(ev_type)); \
+                ev = (SockEvent *)my_calloc(sizeof(ev_type)); \
                 success = (return_value != err_val);         \
                 break;
 
-static TcpEvent *alloc_event(TcpEventType type, int return_value, int err,
+static SockEvent *alloc_event(SockEventType type, int return_value, int err,
                              int id) {
         bool success;
-        TcpEvent *ev;
+        SockEvent *ev;
         switch (type) {
-                CASE_EV(TCP_EV_SOCKET, TcpEvSocket, 0);
-                CASE_EV(TCP_EV_BIND, TcpEvBind, -1);
-                CASE_EV(TCP_EV_CONNECT, TcpEvConnect, -1);
-                CASE_EV(TCP_EV_SHUTDOWN, TcpEvShutdown, -1);
-                CASE_EV(TCP_EV_LISTEN, TcpEvListen, -1);
-                CASE_EV(TCP_EV_ACCEPT, TcpEvAccept, -1);
-                CASE_EV(TCP_EV_ACCEPT4, TcpEvAccept4, -1);
-                CASE_EV(TCP_EV_GETSOCKOPT, TcpEvGetsockopt, -1);
-                CASE_EV(TCP_EV_SETSOCKOPT, TcpEvSetsockopt, -1);
-                CASE_EV(TCP_EV_SEND, TcpEvSend, -1);
-                CASE_EV(TCP_EV_RECV, TcpEvRecv, -1);
-                CASE_EV(TCP_EV_SENDTO, TcpEvSendto, -1);
-                CASE_EV(TCP_EV_RECVFROM, TcpEvRecvfrom, -1);
-                CASE_EV(TCP_EV_SENDMSG, TcpEvSendmsg, -1);
-                CASE_EV(TCP_EV_RECVMSG, TcpEvRecvmsg, -1);
+                CASE_EV(SOCK_EV_SOCKET, SockEvSocket, 0);
+                CASE_EV(SOCK_EV_BIND, SockEvBind, -1);
+                CASE_EV(SOCK_EV_CONNECT, SockEvConnect, -1);
+                CASE_EV(SOCK_EV_SHUTDOWN, SockEvShutdown, -1);
+                CASE_EV(SOCK_EV_LISTEN, SockEvListen, -1);
+                CASE_EV(SOCK_EV_ACCEPT, SockEvAccept, -1);
+                CASE_EV(SOCK_EV_ACCEPT4, SockEvAccept4, -1);
+                CASE_EV(SOCK_EV_GETSOCKOPT, SockEvGetsockopt, -1);
+                CASE_EV(SOCK_EV_SETSOCKOPT, SockEvSetsockopt, -1);
+                CASE_EV(SOCK_EV_SEND, SockEvSend, -1);
+                CASE_EV(SOCK_EV_RECV, SockEvRecv, -1);
+                CASE_EV(SOCK_EV_SENDTO, SockEvSendto, -1);
+                CASE_EV(SOCK_EV_RECVFROM, SockEvRecvfrom, -1);
+                CASE_EV(SOCK_EV_SENDMSG, SockEvSendmsg, -1);
+                CASE_EV(SOCK_EV_RECVMSG, SockEvRecvmsg, -1);
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
-                CASE_EV(TCP_EV_SENDMMSG, TcpEvSendmmsg, -1);
-                CASE_EV(TCP_EV_RECVMMSG, TcpEvRecvmmsg, -1);
+                CASE_EV(SOCK_EV_SENDMMSG, SockEvSendmmsg, -1);
+                CASE_EV(SOCK_EV_RECVMMSG, SockEvRecvmmsg, -1);
 #endif
-                CASE_EV(TCP_EV_GETSOCKNAME, TcpEvGetsockname, -1);
-                CASE_EV(TCP_EV_GETPEERNAME, TcpEvGetpeername, -1);
-                CASE_EV(TCP_EV_SOCKATMARK, TcpEvSockatmark, -1);
-                CASE_EV(TCP_EV_ISFDTYPE, TcpEvIsfdtype, -1);
-                CASE_EV(TCP_EV_WRITE, TcpEvWrite, -1);
-                CASE_EV(TCP_EV_READ, TcpEvRead, -1);
-                CASE_EV(TCP_EV_CLOSE, TcpEvClose, -1);
-                CASE_EV(TCP_EV_DUP, TcpEvDup, -1);
-                CASE_EV(TCP_EV_DUP2, TcpEvDup2, -1);
-                CASE_EV(TCP_EV_DUP3, TcpEvDup3, -1);
-                CASE_EV(TCP_EV_WRITEV, TcpEvWritev, -1);
-                CASE_EV(TCP_EV_READV, TcpEvReadv, -1);
-                CASE_EV(TCP_EV_IOCTL, TcpEvIoctl, -1);
-                CASE_EV(TCP_EV_SENDFILE, TcpEvSendfile, -1);
-                CASE_EV(TCP_EV_POLL, TcpEvPoll, -1);
-                CASE_EV(TCP_EV_PPOLL, TcpEvPpoll, -1);
-                CASE_EV(TCP_EV_SELECT, TcpEvSelect, -1);
-                CASE_EV(TCP_EV_PSELECT, TcpEvPselect, -1);
-                CASE_EV(TCP_EV_FCNTL, TcpEvFcntl, -1);
-                CASE_EV(TCP_EV_EPOLL_CTL, TcpEvEpollCtl, -1);
-                CASE_EV(TCP_EV_EPOLL_WAIT, TcpEvEpollWait, -1);
-                CASE_EV(TCP_EV_EPOLL_PWAIT, TcpEvEpollPwait, -1);
-                CASE_EV(TCP_EV_FDOPEN, TcpEvFdopen, 0);
-                CASE_EV(TCP_EV_TCP_INFO, TcpEvTcpInfo, -1);
+                CASE_EV(SOCK_EV_GETSOCKNAME, SockEvGetsockname, -1);
+                CASE_EV(SOCK_EV_GETPEERNAME, SockEvGetpeername, -1);
+                CASE_EV(SOCK_EV_SOCKATMARK, SockEvSockatmark, -1);
+                CASE_EV(SOCK_EV_ISFDTYPE, SockEvIsfdtype, -1);
+                CASE_EV(SOCK_EV_WRITE, SockEvWrite, -1);
+                CASE_EV(SOCK_EV_READ, SockEvRead, -1);
+                CASE_EV(SOCK_EV_CLOSE, SockEvClose, -1);
+                CASE_EV(SOCK_EV_DUP, SockEvDup, -1);
+                CASE_EV(SOCK_EV_DUP2, SockEvDup2, -1);
+                CASE_EV(SOCK_EV_DUP3, SockEvDup3, -1);
+                CASE_EV(SOCK_EV_WRITEV, SockEvWritev, -1);
+                CASE_EV(SOCK_EV_READV, SockEvReadv, -1);
+                CASE_EV(SOCK_EV_IOCTL, SockEvIoctl, -1);
+                CASE_EV(SOCK_EV_SENDFILE, SockEvSendfile, -1);
+                CASE_EV(SOCK_EV_POLL, SockEvPoll, -1);
+                CASE_EV(SOCK_EV_PPOLL, SockEvPpoll, -1);
+                CASE_EV(SOCK_EV_SELECT, SockEvSelect, -1);
+                CASE_EV(SOCK_EV_PSELECT, SockEvPselect, -1);
+                CASE_EV(SOCK_EV_FCNTL, SockEvFcntl, -1);
+                CASE_EV(SOCK_EV_EPOLL_CTL, SockEvEpollCtl, -1);
+                CASE_EV(SOCK_EV_EPOLL_WAIT, SockEvEpollWait, -1);
+                CASE_EV(SOCK_EV_EPOLL_PWAIT, SockEvEpollPwait, -1);
+                CASE_EV(SOCK_EV_FDOPEN, SockEvFdopen, 0);
+                CASE_EV(SOCK_EV_TCP_INFO, SockEvTcpInfo, -1);
         }
         if (!ev) goto error;
         fill_timeval(&(ev->timestamp));
@@ -134,31 +135,31 @@ error:
         return NULL;
 }
 
-static void free_event(TcpEvent *ev) {
+static void free_event(SockEvent *ev) {
         free(ev->error_str);
         switch (ev->type) {
-                case TCP_EV_GETSOCKOPT:
-                        free(((TcpEvGetsockopt *)ev)->sockopt.optval);
+                case SOCK_EV_GETSOCKOPT:
+                        free(((SockEvGetsockopt *)ev)->sockopt.optval);
                         break;
-                case TCP_EV_SETSOCKOPT:
-                        free(((TcpEvSetsockopt *)ev)->sockopt.optval);
+                case SOCK_EV_SETSOCKOPT:
+                        free(((SockEvSetsockopt *)ev)->sockopt.optval);
                         break;
-                case TCP_EV_READV:
-                        free(((TcpEvReadv *)ev)->iovec.iovec_sizes);
+                case SOCK_EV_READV:
+                        free(((SockEvReadv *)ev)->iovec.iovec_sizes);
                         break;
-                case TCP_EV_WRITEV:
-                        free(((TcpEvWritev *)ev)->iovec.iovec_sizes);
+                case SOCK_EV_WRITEV:
+                        free(((SockEvWritev *)ev)->iovec.iovec_sizes);
                         break;
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
-                case TCP_EV_SENDMMSG:
-                        free(((TcpEvSendmmsg *)ev)->mmsghdr_vec);
+                case SOCK_EV_SENDMMSG:
+                        free(((SockEvSendmmsg *)ev)->mmsghdr_vec);
                         break;
-                case TCP_EV_RECVMSG:
-                        free(((TcpEvRecvmmsg *)ev)->mmsghdr_vec);
+                case SOCK_EV_RECVMSG:
+                        free(((SockEvRecvmmsg *)ev)->mmsghdr_vec);
                         break;
 #endif
-                case TCP_EV_FDOPEN:
-                        free(((TcpEvFdopen *)ev)->mode);
+                case SOCK_EV_FDOPEN:
+                        free(((SockEvFdopen *)ev)->mode);
                         break;
                 default:
                         break;
@@ -166,8 +167,8 @@ static void free_event(TcpEvent *ev) {
         free(ev);
 }
 
-static void free_events_list(TcpEventNode *head) {
-        TcpEventNode *tmp;
+static void free_events_list(SockEventNode *head) {
+        SockEventNode *tmp;
         while (head != NULL) {
                 free_event(head->data);
                 tmp = head;
@@ -176,8 +177,8 @@ static void free_events_list(TcpEventNode *head) {
         }
 }
 
-static void push_event(TcpConnection *con, TcpEvent *ev) {
-        TcpEventNode *node = (TcpEventNode *)my_malloc(sizeof(TcpEventNode));
+static void push_event(SocketState *con, SockEvent *ev) {
+        SockEventNode *node = (SockEventNode *)my_malloc(sizeof(SockEventNode));
         if (!node) goto error;
 
         node->data = ev;
@@ -194,12 +195,12 @@ error:
         return;
 }
 
-static void fill_addr(TcpAddr *a, const struct sockaddr *addr, socklen_t len) {
+static void fill_addr(Addr *a, const struct sockaddr *addr, socklen_t len) {
         memcpy(&a->sockaddr_sto, addr, len);
         a->len = len;
 }
 
-static void fill_poll_events(TcpPollEvents *pe, int events) {
+static void fill_poll_events(PollEvents *pe, int events) {
         pe->pollin = (events & POLLIN);
         pe->pollpri = (events & POLLPRI);
         pe->pollout = (events & POLLOUT);
@@ -209,7 +210,7 @@ static void fill_poll_events(TcpPollEvents *pe, int events) {
         pe->pollnval = (events & POLLNVAL);
 }
 
-static socklen_t fill_iovec(TcpIovec *iov1, const struct iovec *iov2,
+static socklen_t fill_iovec(Iovec *iov1, const struct iovec *iov2,
                             int iovec_count) {
         iov1->iovec_count = iovec_count;
         if (iovec_count <= 0) return 0;
@@ -228,7 +229,7 @@ error:
         return -1;
 }
 
-static socklen_t fill_tcp_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
+static socklen_t fill_tcp_msghdr(Msghdr *m1, const struct msghdr *m2) {
         // We copy the msg_control fields of the "struct msghdr" to another
         // such struct, since we must have such a struct available later to
         // use the CMSG macros for extracting the ancillary data.
@@ -250,13 +251,13 @@ static socklen_t fill_tcp_msghdr(TcpMsghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
-static unsigned int fill_tcp_mmsghdr_vec(TcpMmsghdr *tcp_mmsghdr_vec,
+static unsigned int fill_tcp_mmsghdr_vec(Mmsghdr *tcp_mmsghdr_vec,
                                          const struct mmsghdr *mmsghdr_vec,
                                          unsigned int vlen) {
         unsigned int bytes = 0;
         for (unsigned int i = 0; i < vlen; i++) {
                 const struct mmsghdr *mmsghdr = (mmsghdr_vec + i);
-                TcpMmsghdr *tcp_mmsghdr = (tcp_mmsghdr_vec + i);
+                Mmsghdr *tcp_mmsghdr = (tcp_mmsghdr_vec + i);
                 tcp_mmsghdr->bytes_transmitted = mmsghdr->msg_len;
                 bytes += fill_tcp_msghdr(&tcp_mmsghdr->tcp_msghdr,
                                          &mmsghdr->msg_hdr);
@@ -264,7 +265,7 @@ static unsigned int fill_tcp_mmsghdr_vec(TcpMmsghdr *tcp_mmsghdr_vec,
         return bytes;
 }
 
-static void fill_sockopt(TcpSockopt *sockopt, int level, int optname,
+static void fill_sockopt(Sockopt *sockopt, int level, int optname,
                          const void *optval, socklen_t optlen) {
         sockopt->level = level;
         sockopt->optname = optname;
@@ -283,7 +284,7 @@ orig_bind_type orig_bind;
 
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
 #define MAX_PORT 60999
-static int force_bind(int fd, TcpConnection *con, bool IPV6) {
+static int force_bind(int fd, SocketState *con, bool IPV6) {
         LOG(INFO, "Forcing bind on connection %d.", con->id);
         LOG_FUNC_D;
         if (!orig_bind) orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
@@ -318,7 +319,7 @@ error_out:
         return -1;
 }
 
-static void tcp_dump_json(TcpConnection *con) {
+static void tcp_dump_json(SocketState *con) {
         if (con->directory == NULL) goto error1;
         LOG_FUNC_D;
         char *json_str, *json_file_str;
@@ -328,10 +329,10 @@ static void tcp_dump_json(TcpConnection *con) {
         free(json_file_str);
         if (!fp) goto error_out;
 
-        TcpEventNode *tmp, *cur = con->head;
+        SockEventNode *tmp, *cur = con->head;
         while (cur != NULL) {
-                TcpEvent *ev = cur->data;
-                if (!(json_str = alloc_tcp_ev_json(ev))) goto error_out;
+                SockEvent *ev = cur->data;
+                if (!(json_str = alloc_sock_ev_json(ev))) goto error_out;
 
                 my_fputs(json_str, fp);
                 my_fputs("\n", fp);
@@ -368,7 +369,7 @@ static void *json_dumper_thread(void *params) {
         time.tv_nsec = (conf_opt_t % 1000) * 1000 * 1000;  // opt_t is in ms
 
         while (*args->switch_flag) {
-                TcpConnection *con = ra_get_and_lock_elem(args->con_fd);
+                SocketState *con = ra_get_and_lock_elem(args->con_fd);
                 if (!con) goto out;
                 tcp_dump_json(con);
                 ra_unlock_elem(args->con_fd);
@@ -382,7 +383,7 @@ out:
         return NULL;
 }
 
-static bool should_dump_json(const TcpConnection *con) {
+static bool should_dump_json(const SocketState *con) {
         long cur_time = get_time_micros();
         long time_elasped = cur_time - con->last_json_dump_micros;
         return (time_elasped > conf_opt_t * 1000 ||
@@ -394,10 +395,10 @@ static void tcp_dump_tcp_info(int fd) {
             (struct tcp_info *)malloc(sizeof(struct tcp_info));
         int ret = fill_tcp_info(fd, info);
         int err = errno;
-        tcp_ev_tcp_info(fd, ret, err, info);
+        sock_ev_tcp_info(fd, ret, err, info);
 }
 
-static bool should_dump_tcp_info(const TcpConnection *con) {
+static bool should_dump_tcp_info(const SocketState *con) {
         if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
@@ -415,7 +416,7 @@ static bool should_dump_tcp_info(const TcpConnection *con) {
 
 /* Public functions */
 
-void free_connection(TcpConnection *con) {
+void free_connection(SocketState *con) {
         if (!con) return;  // NULL
         free_events_list(con->head);
         free(con->directory);
@@ -425,7 +426,7 @@ void free_connection(TcpConnection *con) {
 void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         LOG(INFO, "Starting packet capture.");
         LOG_FUNC_D;
-        TcpConnection *con = ra_get_and_lock_elem(fd);
+        SocketState *con = ra_get_and_lock_elem(fd);
         if (!con) goto error_out;
 
         // We force a bind if the socket is not bound. This allows us to know
@@ -455,7 +456,7 @@ error_out:
         return;
 }
 
-void start_json_dumper_thread(TcpConnection *con, int fd) {
+void start_json_dumper_thread(SocketState *con, int fd) {
         bool *json_dump_switch = (bool *)my_malloc(sizeof(bool));
         if (!json_dump_switch) goto error_out;
         *json_dump_switch = true;
@@ -481,52 +482,52 @@ error_out:
         LOG_FUNC_FAIL;
 }
 
-#define TCP_EV_PRELUDE(ev_type_cons, ev_type)                                  \
-        init_tcpsnitch();                                                      \
-        TcpConnection *con = NULL;                                             \
-        if (ev_type_cons != TCP_EV_SOCKET && ev_type_cons != TCP_EV_ACCEPT)    \
-                con = ra_get_and_lock_elem(fd);                                \
-        if (!con) {                                                            \
-                if (ev_type_cons != TCP_EV_SOCKET &&                           \
-                    ev_type_cons != TCP_EV_ACCEPT) {                           \
-                        LOG(WARN,                                              \
-                            "Opening of TCP connection on fd %d was not "      \
-                            "detected.",                                       \
-                            fd);                                               \
-                }                                                              \
-                con = alloc_connection();                                      \
-                if (!con || !ra_put_elem(fd, con)) {                           \
-                        LOG_FUNC_FAIL;                                         \
-                        return;                                                \
-                }                                                              \
-                con = NULL;                                                    \
-                con = ra_get_and_lock_elem(fd);                                \
-                if (!con) {                                                    \
-                        LOG_FUNC_FAIL;                                         \
-                        return;                                                \
-                }                                                              \
-                if (conf_opt_t) start_json_dumper_thread(con, fd);             \
-        }                                                                      \
-        const char *ev_name = string_from_tcp_event_type(ev_type_cons);        \
-        LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);       \
-        ev_type *ev =                                                          \
-            (ev_type *)alloc_event(ev_type_cons, ret, err, con->events_count); \
-        if (!ev) {                                                             \
-                LOG_FUNC_FAIL;                                                 \
-                ra_unlock_elem(fd);                                            \
-                return;                                                        \
-        }
+#define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                                  \
+	init_tcpsnitch();                                                      \
+	SocketState *con = NULL;                                             \
+	if (ev_type_cons != SOCK_EV_SOCKET && ev_type_cons != SOCK_EV_ACCEPT)    \
+		con = ra_get_and_lock_elem(fd);                                \
+	if (!con) {                                                            \
+		if (ev_type_cons != SOCK_EV_SOCKET &&                           \
+		    ev_type_cons != SOCK_EV_ACCEPT) {                           \
+			LOG(WARN,                                              \
+			    "Opening of TCP connection on fd %d was not "      \
+			    "detected.",                                       \
+			    fd);                                               \
+		}                                                              \
+		con = alloc_connection(fd);                                    \
+		if (!con || !ra_put_elem(fd, con)) {                           \
+			LOG_FUNC_FAIL;                                         \
+			return;                                                \
+		}                                                              \
+		con = NULL;                                                    \
+		con = ra_get_and_lock_elem(fd);                                \
+		if (!con) {                                                    \
+			LOG_FUNC_FAIL;                                         \
+			return;                                                \
+		}                                                              \
+		if (conf_opt_t) start_json_dumper_thread(con, fd);             \
+	}                                                                      \
+	const char *ev_name = string_from_sock_event_type(ev_type_cons);        \
+	LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);       \
+	ev_type *ev =                                                          \
+	    (ev_type *)alloc_event(ev_type_cons, ret, err, con->events_count); \
+	if (!ev) {                                                             \
+		LOG_FUNC_FAIL;                                                 \
+		ra_unlock_elem(fd);                                            \
+		return;                                                        \
+	}
 
-#define TCP_EV_POSTLUDE(ev_type_cons)                                     \
-        push_event(con, (TcpEvent *)ev);                                  \
-        output_event((TcpEvent *)ev);                                     \
+#define SOCK_EV_POSTLUDE(ev_type_cons)                                     \
+        push_event(con, (SockEvent *)ev);                                  \
+        output_event((SockEvent *)ev);                                     \
         bool dump_tcp_info =                                              \
-            should_dump_tcp_info(con) && ev_type_cons != TCP_EV_TCP_INFO; \
+            should_dump_tcp_info(con) && ev_type_cons != SOCK_EV_TCP_INFO; \
         if (should_dump_json(con)) tcp_dump_json(con);                    \
         ra_unlock_elem(fd);                                               \
         if (dump_tcp_info) tcp_dump_tcp_info(fd);
 
-const char *string_from_tcp_event_type(TcpEventType type) {
+const char *string_from_sock_event_type(SockEventType type) {
         static const char *strings[] = {
                 "socket",
                 "bind",
@@ -572,19 +573,19 @@ const char *string_from_tcp_event_type(TcpEventType type) {
                 "fdopen",
                 "tcp_info"
         };
-        assert(sizeof(strings) / sizeof(char *) == TCP_EV_TCP_INFO + 1);
+        assert(sizeof(strings) / sizeof(char *) == SOCK_EV_TCP_INFO + 1);
         return strings[type];
 }
 
 #define SOCK_TYPE_MASK 0b1111
-void tcp_ev_socket(int fd, int domain, int type, int protocol) {
+void sock_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection already exits and was not properly closed. */
-        if (ra_is_present(fd)) tcp_ev_close(fd, 0, 0, false);
+        if (ra_is_present(fd)) sock_ev_close(fd, 0, 0, false);
         int err = 0;
         int ret = fd;
 
-        // Inst. local vars TcpConnection *con & TcpEvSocket *ev
-        TCP_EV_PRELUDE(TCP_EV_SOCKET, TcpEvSocket);
+        // Inst. local vars SocketState *con & SockEvSocket *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SOCKET, SockEvSocket);
 
         ev->domain = domain;
         ev->type = type & SOCK_TYPE_MASK;
@@ -597,13 +598,13 @@ void tcp_ev_socket(int fd, int domain, int type, int protocol) {
         ev->sock_nonblock = false;
 #endif
 
-        TCP_EV_POSTLUDE(TCP_EV_SOCKET);
+        SOCK_EV_POSTLUDE(SOCK_EV_SOCKET);
 }
 
-void tcp_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
+void sock_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
                  socklen_t len) {
-        // Inst. local vars TcpConnection *con & TcpEvBind *ev
-        TCP_EV_PRELUDE(TCP_EV_BIND, TcpEvBind);
+        // Inst. local vars SocketState *con & SockEvBind *ev
+        SOCK_EV_PRELUDE(SOCK_EV_BIND, SockEvBind);
 
         fill_addr(&(ev->addr), addr, len);
         if (!ret) {
@@ -612,281 +613,283 @@ void tcp_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
                 memcpy(&con->bound_addr, &ev->addr.sockaddr_sto, ev->addr.len);
         }
 
-        TCP_EV_POSTLUDE(TCP_EV_BIND);
+        SOCK_EV_POSTLUDE(SOCK_EV_BIND);
 }
 
-void tcp_ev_connect(int fd, int ret, int err, const struct sockaddr *addr,
+void sock_ev_connect(int fd, int ret, int err, const struct sockaddr *addr,
                     socklen_t len) {
-        // Inst. local vars TcpConnection *con & TcpEvConnect *ev
-        TCP_EV_PRELUDE(TCP_EV_CONNECT, TcpEvConnect);
+        // Inst. local vars SocketState *con & SockEvConnect *ev
+        SOCK_EV_PRELUDE(SOCK_EV_CONNECT, SockEvConnect);
 
         fill_addr(&(ev->addr), addr, len);
 
-        TCP_EV_POSTLUDE(TCP_EV_CONNECT);
+        SOCK_EV_POSTLUDE(SOCK_EV_CONNECT);
 }
 
-void tcp_ev_shutdown(int fd, int ret, int err, int how) {
-        // Inst. local vars TcpConnection *con & TcpEvShutdown *ev
-        TCP_EV_PRELUDE(TCP_EV_SHUTDOWN, TcpEvShutdown);
+void sock_ev_shutdown(int fd, int ret, int err, int how) {
+        // Inst. local vars SocketState *con & SockEvShutdown *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SHUTDOWN, SockEvShutdown);
 
         ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
         ev->shut_wr = (how == SHUT_WR) || (how == SHUT_RDWR);
 
-        TCP_EV_POSTLUDE(TCP_EV_SHUTDOWN);
+        SOCK_EV_POSTLUDE(SOCK_EV_SHUTDOWN);
 }
 
-void tcp_ev_listen(int fd, int ret, int err, int backlog) {
-        // Inst. local vars TcpConnection *con & TcpEvListen *ev
-        TCP_EV_PRELUDE(TCP_EV_LISTEN, TcpEvListen);
+void sock_ev_listen(int fd, int ret, int err, int backlog) {
+        // Inst. local vars SocketState *con & SockEvListen *ev
+        SOCK_EV_PRELUDE(SOCK_EV_LISTEN, SockEvListen);
 
         ev->backlog = backlog;
 
-        TCP_EV_POSTLUDE(TCP_EV_LISTEN);
+        SOCK_EV_POSTLUDE(SOCK_EV_LISTEN);
 }
 
 #define ACCEPT_NEW_CON                                              \
-        TcpConnection *new_con = alloc_connection();                \
-        if (!new_con) goto error;                                   \
-        if (!ra_put_elem(ret, new_con)) goto error;                 \
-        new_con = NULL;                                             \
-        new_con = ra_get_and_lock_elem(fd);                         \
-        if (!new_con) goto error;                                   \
-        if (conf_opt_t) start_json_dumper_thread(new_con, fd);      \
-        TcpEvAccept *new_ev =                                       \
-            (TcpEvAccept *)alloc_event(TCP_EV_ACCEPT, ret, err, 0); \
-        memcpy(&new_ev, &ev, sizeof(TcpEvAccept));                  \
-        push_event(new_con, (TcpEvent *)new_ev);                    \
-        output_event((TcpEvent *)new_ev);                           \
-        if (!ra_put_elem(ret, new_con)) goto error;
+	SocketState *new_con = alloc_connection(fd);              \
+	if (!new_con) goto error;                                   \
+	if (!ra_put_elem(ret, new_con)) goto error;                 \
+	new_con = NULL;                                             \
+	new_con = ra_get_and_lock_elem(fd);                         \
+	if (!new_con) goto error;                                   \
+	if (conf_opt_t) start_json_dumper_thread(new_con, fd);      \
+	SockEvAccept *new_ev =                                       \
+	    (SockEvAccept *)alloc_event(SOCK_EV_ACCEPT, ret, err, 0); \
+	memcpy(&new_ev, &ev, sizeof(SockEvAccept));                  \
+	push_event(new_con, (SockEvent *)new_ev);                    \
+	output_event((SockEvent *)new_ev);                           \
+	if (!ra_put_elem(ret, new_con)) goto error;
 
-void tcp_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
+void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
                    socklen_t *addr_len) {
-        // Inst. local vars TcpConnection *con & TcpEvAccept *ev
-        TCP_EV_PRELUDE(TCP_EV_ACCEPT, TcpEvAccept);
+        // Inst. local vars SocketState *con & SockEvAccept *ev
+        SOCK_EV_PRELUDE(SOCK_EV_ACCEPT, SockEvAccept);
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
         ACCEPT_NEW_CON;
 
-        TCP_EV_POSTLUDE(TCP_EV_ACCEPT);
+        SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT);
 error:
         LOG_FUNC_FAIL;
         ra_unlock_elem(fd);
 }
 
-void tcp_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
+void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
                     socklen_t *addr_len, int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvAccept4 *ev
-        TCP_EV_PRELUDE(TCP_EV_ACCEPT4, TcpEvAccept4);
+        // Inst. local vars SocketState *con & SockEvAccept4 *ev
+        SOCK_EV_PRELUDE(SOCK_EV_ACCEPT4, SockEvAccept4);
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
         ev->flags = flags;
         ACCEPT_NEW_CON;
 
-        TCP_EV_POSTLUDE(TCP_EV_ACCEPT4);
+        SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT4);
 error:
         LOG_FUNC_FAIL;
         ra_unlock_elem(fd);
 }
 
-void tcp_ev_getsockopt(int fd, int ret, int err, int level, int optname,
+void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
                        const void *optval, socklen_t optlen) {
-        // Inst. local vars TcpConnection *con & TcpEvGetsockopt *ev
-        TCP_EV_PRELUDE(TCP_EV_GETSOCKOPT, TcpEvGetsockopt);
+        // Inst. local vars SocketState *con & SockEvGetsockopt *ev
+        SOCK_EV_PRELUDE(SOCK_EV_GETSOCKOPT, SockEvGetsockopt);
 
         fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
 
-        TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT);
+        SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
 
-void tcp_ev_setsockopt(int fd, int ret, int err, int level, int optname,
+void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
                        const void *optval, socklen_t optlen) {
-        // Inst. local vars TcpConnection *con & TcpEvSetsockopt *ev
-        TCP_EV_PRELUDE(TCP_EV_SETSOCKOPT, TcpEvSetsockopt);
+        // Inst. local vars SocketState *con & SockEvSetsockopt *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SETSOCKOPT, SockEvSetsockopt);
 
         fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
 
-        TCP_EV_POSTLUDE(TCP_EV_SETSOCKOPT);
+        SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
 
-void tcp_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvSend *ev
-        TCP_EV_PRELUDE(TCP_EV_SEND, TcpEvSend);
+void sock_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
+        // Inst. local vars SocketState *con & SockEvSend *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SEND, SockEvSend);
 
         ev->bytes = bytes;
         ev->flags = flags;
         con->bytes_sent += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_SEND);
+        SOCK_EV_POSTLUDE(SOCK_EV_SEND);
 }
 
-void tcp_ev_recv(int fd, int ret, int err, size_t bytes, int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvRecv *ev
-        TCP_EV_PRELUDE(TCP_EV_RECV, TcpEvRecv);
+void sock_ev_recv(int fd, int ret, int err, size_t bytes, int flags) {
+        // Inst. local vars SocketState *con & SockEvRecv *ev
+        SOCK_EV_PRELUDE(SOCK_EV_RECV, SockEvRecv);
 
         ev->bytes = bytes;
         ev->flags = flags;
         con->bytes_received += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_RECV);
+        SOCK_EV_POSTLUDE(SOCK_EV_RECV);
 }
 
-void tcp_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
+void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
                    const struct sockaddr *addr, socklen_t len) {
-        // Inst. local vars TcpConnection *con & TcpEvSendto *ev
-        TCP_EV_PRELUDE(TCP_EV_SENDTO, TcpEvSendto);
+        // Inst. local vars SocketState *con & SockEvSendto *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SENDTO, SockEvSendto);
 
-        ev->bytes = bytes;
-        ev->flags = flags;
-        con->bytes_sent += bytes;
+	ev->bytes = bytes;
+	ev->flags = flags;
+	con->bytes_sent += bytes;
         if (addr) fill_addr(&(ev->addr), addr, len);
 
-        TCP_EV_POSTLUDE(TCP_EV_SENDTO);
+        SOCK_EV_POSTLUDE(SOCK_EV_SENDTO);
 }
 
-void tcp_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
+void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
                      const struct sockaddr *addr, socklen_t *len) {
-        // Inst. local vars TcpConnection *con & TcpEvRecvfrom *ev
-        TCP_EV_PRELUDE(TCP_EV_RECVFROM, TcpEvRecvfrom);
+        // Inst. local vars SocketState *con & SockEvRecvfrom *ev
+        SOCK_EV_PRELUDE(SOCK_EV_RECVFROM, SockEvRecvfrom);
 
 	ev->bytes = bytes;
 	ev->flags = flags;
 	con->bytes_received += bytes;
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *len);
 
-        TCP_EV_POSTLUDE(TCP_EV_RECVFROM);
+        SOCK_EV_POSTLUDE(SOCK_EV_RECVFROM);
 }
 
-void tcp_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
+void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvSendmsg *ev
-        TCP_EV_PRELUDE(TCP_EV_SENDMSG, TcpEvSendmsg);
+        return;
+        // Inst. local vars SocketState *con & SockEvSendmsg *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SENDMSG, SockEvSendmsg);
 
         ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
         ev->flags = flags;
         con->bytes_sent += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_SENDMSG);
+        SOCK_EV_POSTLUDE(SOCK_EV_SENDMSG);
 }
 
-void tcp_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
+void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvRecvmsg *ev
-        TCP_EV_PRELUDE(TCP_EV_RECVMSG, TcpEvRecvmsg);
+        return;
+        // Inst. local vars SocketState *con & SockEvRecvmsg *ev
+        SOCK_EV_PRELUDE(SOCK_EV_RECVMSG, SockEvRecvmsg);
 
         ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
         ev->flags = flags;
         con->bytes_received += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_RECVMSG);
+        SOCK_EV_POSTLUDE(SOCK_EV_RECVMSG);
 }
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
 #if !defined(__ANDROID__)
-void tcp_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
+void sock_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
                      unsigned int vlen, int flags) {
 #elif __ANDROID_API__ >= 21
-void tcp_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
+void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                      unsigned int vlen, int flags) {
 #endif
-        // Inst. local vars TcpConnection *con & TcpEvSendmmsg *ev
-        TCP_EV_PRELUDE(TCP_EV_SENDMMSG, TcpEvSendmmsg);
+        // Inst. local vars SocketState *con & SockEvSendmmsg *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SENDMMSG, SockEvSendmmsg);
 
         ev->flags = flags;
 
         ev->mmsghdr_count = vlen;
-        ev->mmsghdr_vec = (TcpMmsghdr *)my_malloc(vlen * sizeof(TcpMmsghdr));
+        ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
         ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
         con->bytes_sent += ev->bytes;
-        TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
+        SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
 }
 
 #if !defined(__ANDROID__)
-void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
+void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
                      unsigned int vlen, int flags, struct timespec *tmo) {
 #elif __ANDROID_API__ >= 21
-void tcp_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
+void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
                      unsigned int vlen, int flags, const struct timespec *tmo) {
 #endif
-        // Inst. local vars TcpConnection *con & TcpEvRecvmmsg *ev
-        TCP_EV_PRELUDE(TCP_EV_RECVMMSG, TcpEvRecvmmsg);
+        // Inst. local vars SocketState *con & SockEvRecvmmsg *ev
+        SOCK_EV_PRELUDE(SOCK_EV_RECVMMSG, SockEvRecvmmsg);
 
         ev->flags = flags;
         ev->timeout.seconds = tmo ? tmo->tv_sec : 0;
         ev->timeout.nanoseconds = tmo ? tmo->tv_nsec : 0;
 
         ev->mmsghdr_count = vlen;
-        ev->mmsghdr_vec = (TcpMmsghdr *)my_malloc(vlen * sizeof(TcpMmsghdr));
+        ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
         ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
         con->bytes_received += ev->bytes;
-        TCP_EV_POSTLUDE(TCP_EV_SENDMMSG);
+        SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
 }
 
 #endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
-void tcp_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
+void sock_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
                         socklen_t *addrlen) {
-        // Inst. local vars TcpConnection *con & TcpEvGetsockname *ev
-        TCP_EV_PRELUDE(TCP_EV_GETSOCKNAME, TcpEvGetsockname);
+        // Inst. local vars SocketState *con & SockEvGetsockname *ev
+        SOCK_EV_PRELUDE(SOCK_EV_GETSOCKNAME, SockEvGetsockname);
 
         if (ret != -1) fill_addr(&(ev->addr), addr, *addrlen);
 
-        TCP_EV_POSTLUDE(TCP_EV_GETSOCKNAME);
+        SOCK_EV_POSTLUDE(SOCK_EV_GETSOCKNAME);
 }
 
-void tcp_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
+void sock_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
                         socklen_t *addrlen) {
-        // Inst. local vars TcpConnection *con & TcpEvGetpeername *ev
-        TCP_EV_PRELUDE(TCP_EV_GETPEERNAME, TcpEvGetpeername);
+        // Inst. local vars SocketState *con & SockEvGetpeername *ev
+        SOCK_EV_PRELUDE(SOCK_EV_GETPEERNAME, SockEvGetpeername);
 
         if (ret != -1) fill_addr(&(ev->addr), addr, *addrlen);
 
-        TCP_EV_POSTLUDE(TCP_EV_GETPEERNAME);
+        SOCK_EV_POSTLUDE(SOCK_EV_GETPEERNAME);
 }
 
-void tcp_ev_sockatmark(int fd, int ret, int err) {
-        // Inst. local vars TcpConnection *con & TcpEvSockatmark *ev
-        TCP_EV_PRELUDE(TCP_EV_SOCKATMARK, TcpEvSockatmark);
-        TCP_EV_POSTLUDE(TCP_EV_SOCKATMARK);
+void sock_ev_sockatmark(int fd, int ret, int err) {
+        // Inst. local vars SocketState *con & SockEvSockatmark *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SOCKATMARK, SockEvSockatmark);
+        SOCK_EV_POSTLUDE(SOCK_EV_SOCKATMARK);
 }
 
-void tcp_ev_isfdtype(int fd, int ret, int err, int fdtype) {
-        // Inst. local vars TcpConnection *con & TcpEvIsfdtype *ev
-        TCP_EV_PRELUDE(TCP_EV_ISFDTYPE, TcpEvIsfdtype);
+void sock_ev_isfdtype(int fd, int ret, int err, int fdtype) {
+        // Inst. local vars SocketState *con & SockEvIsfdtype *ev
+        SOCK_EV_PRELUDE(SOCK_EV_ISFDTYPE, SockEvIsfdtype);
 
         ev->fdtype = fdtype;
 
-        TCP_EV_POSTLUDE(TCP_EV_ISFDTYPE);
+        SOCK_EV_POSTLUDE(SOCK_EV_ISFDTYPE);
 }
 
-void tcp_ev_write(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars TcpConnection *con & TcpEvWrite *ev
-        TCP_EV_PRELUDE(TCP_EV_WRITE, TcpEvWrite);
+void sock_ev_write(int fd, int ret, int err, size_t bytes) {
+        // Inst. local vars SocketState *con & SockEvWrite *ev
+        SOCK_EV_PRELUDE(SOCK_EV_WRITE, SockEvWrite);
 
         ev->bytes = bytes;
         con->bytes_sent += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_WRITE);
+        SOCK_EV_POSTLUDE(SOCK_EV_WRITE);
 }
 
-void tcp_ev_read(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars TcpConnection *con & TcpEvRead *ev
-        TCP_EV_PRELUDE(TCP_EV_READ, TcpEvRead);
+void sock_ev_read(int fd, int ret, int err, size_t bytes) {
+        // Inst. local vars SocketState *con & SockEvRead *ev
+        SOCK_EV_PRELUDE(SOCK_EV_READ, SockEvRead);
 
         ev->bytes = bytes;
         con->bytes_received += bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_READ);
+        SOCK_EV_POSTLUDE(SOCK_EV_READ);
 }
 
-void tcp_ev_close(int fd, int ret, int err, bool detected) {
-        TcpConnection *con = ra_remove_elem(fd);
+void sock_ev_close(int fd, int ret, int err, bool detected) {
+        SocketState *con = ra_remove_elem(fd);
         if (!con) goto error;
 
         LOG(INFO, "close on connection %d.", con->id);
-        TcpEvClose *ev = (TcpEvClose *)alloc_event(TCP_EV_CLOSE, ret, err,
+        SockEvClose *ev = (SockEvClose *)alloc_event(SOCK_EV_CLOSE, ret, err,
                                                    con->events_count);
         if (!ev) goto error;
 
@@ -894,8 +897,8 @@ void tcp_ev_close(int fd, int ret, int err, bool detected) {
         if (con->capture_switch != NULL)
                 stop_capture(con->capture_switch, con->rtt * 2);
 
-        push_event(con, (TcpEvent *)ev);
-        output_event((TcpEvent *)ev);
+        push_event(con, (SockEvent *)ev);
+        output_event((SockEvent *)ev);
 
         *con->json_dump_switch = false;
         tcp_dump_json(con);
@@ -906,107 +909,107 @@ error:
         return;
 }
 
-void tcp_ev_dup(int fd, int ret, int err) {
-        // Inst. local vars TcpConnection *con & TcpEvDup *ev
-        TCP_EV_PRELUDE(TCP_EV_DUP, TcpEvDup);
-        TCP_EV_POSTLUDE(TCP_EV_DUP);
+void sock_ev_dup(int fd, int ret, int err) {
+        // Inst. local vars SocketState *con & SockEvDup *ev
+        SOCK_EV_PRELUDE(SOCK_EV_DUP, SockEvDup);
+        SOCK_EV_POSTLUDE(SOCK_EV_DUP);
 }
 
-void tcp_ev_dup2(int fd, int ret, int err, int newfd) {
-        // Inst. local vars TcpConnection *con & TcpEvDup2 *ev
-        TCP_EV_PRELUDE(TCP_EV_DUP2, TcpEvDup2);
+void sock_ev_dup2(int fd, int ret, int err, int newfd) {
+        // Inst. local vars SocketState *con & SockEvDup2 *ev
+        SOCK_EV_PRELUDE(SOCK_EV_DUP2, SockEvDup2);
 
         ev->newfd = newfd;
 
-        TCP_EV_POSTLUDE(TCP_EV_DUP2);
+        SOCK_EV_POSTLUDE(SOCK_EV_DUP2);
 }
 
-void tcp_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
-        // Inst. local vars TcpConnection *con & TcpEvDup3 *ev
-        TCP_EV_PRELUDE(TCP_EV_DUP3, TcpEvDup3);
+void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
+        // Inst. local vars SocketState *con & SockEvDup3 *ev
+        SOCK_EV_PRELUDE(SOCK_EV_DUP3, SockEvDup3);
 
         ev->newfd = newfd;
         ev->o_cloexec = (flags == O_CLOEXEC);
 
-        TCP_EV_POSTLUDE(TCP_EV_DUP3);
+        SOCK_EV_POSTLUDE(SOCK_EV_DUP3);
 }
 
-void tcp_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
+void sock_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
                    int iovec_count) {
-        // Inst. local vars TcpConnection *con & TcpEvWritev *ev
-        TCP_EV_PRELUDE(TCP_EV_WRITEV, TcpEvWritev);
+        // Inst. local vars SocketState *con & SockEvWritev *ev
+        SOCK_EV_PRELUDE(SOCK_EV_WRITEV, SockEvWritev);
 
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_sent += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_WRITEV);
+        SOCK_EV_POSTLUDE(SOCK_EV_WRITEV);
 }
 
-void tcp_ev_readv(int fd, int ret, int err, const struct iovec *iovec,
+void sock_ev_readv(int fd, int ret, int err, const struct iovec *iovec,
                   int iovec_count) {
-        // Inst. local vars TcpConnection *con & TcpEvReadv *ev
-        TCP_EV_PRELUDE(TCP_EV_READV, TcpEvReadv);
+        // Inst. local vars SocketState *con & SockEvReadv *ev
+        SOCK_EV_PRELUDE(SOCK_EV_READV, SockEvReadv);
 
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
         con->bytes_received += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_READV);
+        SOCK_EV_POSTLUDE(SOCK_EV_READV);
 }
 
 #ifdef __ANDROID__
-void tcp_ev_ioctl(int fd, int ret, int err, int request) {
+void sock_ev_ioctl(int fd, int ret, int err, int request) {
 #else
-void tcp_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
+void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
 #endif
-        // Inst. local vars TcpConnection *con & TcpEvIoctl *ev
-        TCP_EV_PRELUDE(TCP_EV_IOCTL, TcpEvIoctl);
+        // Inst. local vars SocketState *con & SockEvIoctl *ev
+        SOCK_EV_PRELUDE(SOCK_EV_IOCTL, SockEvIoctl);
 
         ev->request = request;
 
-        TCP_EV_POSTLUDE(TCP_EV_IOCTL);
+        SOCK_EV_POSTLUDE(SOCK_EV_IOCTL);
 }
 
-void tcp_ev_sendfile(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars TcpConnection *con & TcpEvSendfile *ev
-        TCP_EV_PRELUDE(TCP_EV_SENDFILE, TcpEvSendfile);
+void sock_ev_sendfile(int fd, int ret, int err, size_t bytes) {
+        // Inst. local vars SocketState *con & SockEvSendfile *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SENDFILE, SockEvSendfile);
 
         ev->bytes = bytes;
         con->bytes_received += ev->bytes;
 
-        TCP_EV_POSTLUDE(TCP_EV_SENDFILE);
+        SOCK_EV_POSTLUDE(SOCK_EV_SENDFILE);
 }
 
-void tcp_ev_poll(int fd, int ret, int err, short requested_events,
+void sock_ev_poll(int fd, int ret, int err, short requested_events,
                  short returned_events, int timeout) {
-        // Inst. local vars TcpConnection *con & TcpEvPoll *ev
-        TCP_EV_PRELUDE(TCP_EV_POLL, TcpEvPoll);
+        // Inst. local vars SocketState *con & SockEvPoll *ev
+        SOCK_EV_PRELUDE(SOCK_EV_POLL, SockEvPoll);
 
         ev->timeout.seconds = (timeout / 1000);
         ev->timeout.nanoseconds = (timeout % 1000) * 1000;
         fill_poll_events(&ev->requested_events, requested_events);
         fill_poll_events(&ev->returned_events, returned_events);
 
-        TCP_EV_POSTLUDE(TCP_EV_POLL);
+        SOCK_EV_POSTLUDE(SOCK_EV_POLL);
 }
 
-void tcp_ev_ppoll(int fd, int ret, int err, short requested_events,
+void sock_ev_ppoll(int fd, int ret, int err, short requested_events,
                   short returned_events, const struct timespec *timeout) {
-        // Inst. local vars TcpConnection *con & TcpEvPpoll *ev
-        TCP_EV_PRELUDE(TCP_EV_PPOLL, TcpEvPpoll);
+        // Inst. local vars SocketState *con & SockEvPpoll *ev
+        SOCK_EV_PRELUDE(SOCK_EV_PPOLL, SockEvPpoll);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
         ev->timeout.nanoseconds = timeout ? timeout->tv_nsec : 0;
         fill_poll_events(&ev->requested_events, requested_events);
         fill_poll_events(&ev->returned_events, returned_events);
 
-        TCP_EV_POSTLUDE(TCP_EV_PPOLL);
+        SOCK_EV_POSTLUDE(SOCK_EV_PPOLL);
 }
 
-void tcp_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
+void sock_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
                    bool req_except, bool ret_read, bool ret_write,
                    bool ret_except, struct timeval *timeout) {
-        // Inst. local vars TcpConnection *con & TcpEvSelect *ev
-        TCP_EV_PRELUDE(TCP_EV_SELECT, TcpEvSelect);
+        // Inst. local vars SocketState *con & SockEvSelect *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SELECT, SockEvSelect);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
         ev->timeout.nanoseconds = timeout ? timeout->tv_usec * 1000 : 0;
@@ -1017,14 +1020,14 @@ void tcp_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
         ev->returned_events.write = ret_write;
         ev->returned_events.except = ret_except;
 
-        TCP_EV_POSTLUDE(TCP_EV_SELECT);
+        SOCK_EV_POSTLUDE(SOCK_EV_SELECT);
 }
 
-void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
+void sock_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
                     bool req_except, bool ret_read, bool ret_write,
                     bool ret_except, const struct timespec *timeout) {
-        // Inst. local vars TcpConnection *con & TcpEvPselect *ev
-        TCP_EV_PRELUDE(TCP_EV_PSELECT, TcpEvPselect);
+        // Inst. local vars SocketState *con & SockEvPselect *ev
+        SOCK_EV_PRELUDE(SOCK_EV_PSELECT, SockEvPselect);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
         ev->timeout.nanoseconds = timeout ? timeout->tv_nsec : 0;
@@ -1035,12 +1038,12 @@ void tcp_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
         ev->returned_events.write = ret_write;
         ev->returned_events.except = ret_except;
 
-        TCP_EV_POSTLUDE(TCP_EV_PSELECT);
+        SOCK_EV_POSTLUDE(SOCK_EV_PSELECT);
 }
 
-void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
-        // Inst. local vars TcpConnection *con & TcpEvFcntl *ev
-        TCP_EV_PRELUDE(TCP_EV_FCNTL, TcpEvFcntl);
+void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
+        // Inst. local vars SocketState *con & SockEvFcntl *ev
+        SOCK_EV_PRELUDE(SOCK_EV_FCNTL, SockEvFcntl);
 
         ev->cmd = cmd;
 
@@ -1092,57 +1095,57 @@ void tcp_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
                         LOG(WARN, "cmd unknown: %d - fcntl dropped", cmd);
         }
 
-        TCP_EV_POSTLUDE(TCP_EV_FCNTL);
+        SOCK_EV_POSTLUDE(SOCK_EV_FCNTL);
 }
 
-void tcp_ev_epoll_ctl(int fd, int ret, int err, int op,
+void sock_ev_epoll_ctl(int fd, int ret, int err, int op,
                       uint32_t requested_events) {
-        // Inst. local vars TcpConnection *con & TcpEvEpollCtl *ev
-        TCP_EV_PRELUDE(TCP_EV_EPOLL_CTL, TcpEvEpollCtl);
+        // Inst. local vars SocketState *con & SockEvEpollCtl *ev
+        SOCK_EV_PRELUDE(SOCK_EV_EPOLL_CTL, SockEvEpollCtl);
 
         ev->op = op;
         ev->requested_events = requested_events;
 
-        TCP_EV_POSTLUDE(TCP_EV_EPOLL_CTL);
+        SOCK_EV_POSTLUDE(SOCK_EV_EPOLL_CTL);
 }
 
-void tcp_ev_epoll_wait(int fd, int ret, int err, int timeout,
+void sock_ev_epoll_wait(int fd, int ret, int err, int timeout,
                        uint32_t returned_events) {
-        // Inst. local vars TcpConnection *con & TcpEvEpollWait *ev
-        TCP_EV_PRELUDE(TCP_EV_EPOLL_WAIT, TcpEvEpollWait);
+        // Inst. local vars SocketState *con & SockEvEpollWait *ev
+        SOCK_EV_PRELUDE(SOCK_EV_EPOLL_WAIT, SockEvEpollWait);
 
         ev->returned_events = returned_events;
         ev->timeout = timeout;
 
-        TCP_EV_POSTLUDE(TCP_EV_EPOLL_WAIT);
+        SOCK_EV_POSTLUDE(SOCK_EV_EPOLL_WAIT);
 }
 
-void tcp_ev_epoll_pwait(int fd, int ret, int err, int timeout,
+void sock_ev_epoll_pwait(int fd, int ret, int err, int timeout,
                         uint32_t returned_events) {
-        // Inst. local vars TcpConnection *con & TcpEvEpollPwait *ev
-        TCP_EV_PRELUDE(TCP_EV_EPOLL_PWAIT, TcpEvEpollPwait);
+        // Inst. local vars SocketState *con & SockEvEpollPwait *ev
+        SOCK_EV_PRELUDE(SOCK_EV_EPOLL_PWAIT, SockEvEpollPwait);
 
         ev->returned_events = returned_events;
         ev->timeout = timeout;
 
-        TCP_EV_POSTLUDE(TCP_EV_EPOLL_PWAIT);
+        SOCK_EV_POSTLUDE(SOCK_EV_EPOLL_PWAIT);
 }
 
-void tcp_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
+void sock_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
         int ret = (_ret != NULL);
-        // Inst. local vars TcpConnection *con & TcpEvFdopen *ev
-        TCP_EV_PRELUDE(TCP_EV_FDOPEN, TcpEvFdopen);
+        // Inst. local vars SocketState *con & SockEvFdopen *ev
+        SOCK_EV_PRELUDE(SOCK_EV_FDOPEN, SockEvFdopen);
 
         int n = strlen(mode) + 1;
         ev->mode = (char *)my_malloc(sizeof(char) * n);
         if (ev->mode) strncpy(ev->mode, mode, n);
 
-        TCP_EV_POSTLUDE(TCP_EV_FDOPEN);
+        SOCK_EV_POSTLUDE(SOCK_EV_FDOPEN);
 }
 
-void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
-        // Inst. local vars TcpConnection *con & TcpEvTcpInfo *ev
-        TCP_EV_PRELUDE(TCP_EV_TCP_INFO, TcpEvTcpInfo);
+void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
+        // Inst. local vars SocketState *con & SockEvTcpInfo *ev
+        SOCK_EV_PRELUDE(SOCK_EV_TCP_INFO, SockEvTcpInfo);
         LOG_FUNC_D;
 
         memcpy(&(ev->info), info, sizeof(struct tcp_info));
@@ -1151,12 +1154,12 @@ void tcp_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
         con->rtt = info->tcpi_rtt;
         free(info);
 
-        TCP_EV_POSTLUDE(TCP_EV_TCP_INFO);
+        SOCK_EV_POSTLUDE(SOCK_EV_TCP_INFO);
 }
 
 void tcp_close_unclosed_connections(void) {
         for (long i = 0; i < ra_get_size(); i++)
-                if (ra_is_present(i)) tcp_ev_close(i, 0, 0, false);
+                if (ra_is_present(i)) sock_ev_close(i, 0, 0, false);
 }
 
 void tcp_free(void) {

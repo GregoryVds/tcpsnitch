@@ -1,8 +1,8 @@
 #ifndef VERBOSE_MODE_H
 #define VERBOSE_MODE_H
 
-#include "tcp_events.h"
+#include "sock_events.h"
 
-void output_event(const TcpEvent *ev);
+void output_event(const SockEvent *ev);
 
 #endif

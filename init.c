@@ -15,7 +15,7 @@
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
-#include "tcp_events.h"
+#include "sock_events.h"
 
 long conf_opt_b;
 long conf_opt_c;

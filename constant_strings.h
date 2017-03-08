@@ -25,8 +25,6 @@ typedef struct {
         const char str[40];
 } IntStrPair;
 
-char *alloc_string_from_cons(int cons, const IntStrPair *map, int map_size);
-
 char *alloc_sock_domain_str(int domain);
 char *alloc_sock_type_str(int type);
 
