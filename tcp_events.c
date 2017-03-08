@@ -738,7 +738,7 @@ void tcp_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
         ev->bytes = bytes;
         ev->flags = flags;
         con->bytes_sent += bytes;
-        memcpy(&(ev->addr), addr, len);
+        if (addr) fill_addr(&(ev->addr), addr, len);
 
         TCP_EV_POSTLUDE(TCP_EV_SENDTO);
 }
