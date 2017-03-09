@@ -390,13 +390,10 @@ typedef struct {
         unsigned long bytes_received;  // Total bytes received.
         long last_info_dump_micros;  // Time of last info dump in microseconds.
         long last_info_dump_bytes;   // Total bytes (sent+recv) at last dump.
-        long last_json_dump_micros;
-        long last_json_dump_evcount;
         bool bound;
         struct sockaddr_storage bound_addr;
         int rtt;
         bool *capture_switch;
-        bool *json_dump_switch;
 } SocketState;
 
 const char *string_from_sock_event_type(SockEventType type);

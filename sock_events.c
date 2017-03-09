@@ -36,11 +36,6 @@
 #define MUTEX_ERRORCHECK PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 #endif
 
-typedef struct {
-        bool *switch_flag;
-        int con_fd;
-} JSONDumperThreadArgs;
-
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 static int connections_count = 0;
 
@@ -286,7 +281,7 @@ orig_bind_type orig_bind;
 #define MAX_PORT 60999
 static int force_bind(int fd, SocketState *con, bool IPV6) {
         LOG(INFO, "Forcing bind on connection %d.", con->id);
-        LOG_FUNC_D;
+        LOG_FUNC_INFO;
         if (!orig_bind) orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
         for (int port = MIN_PORT; port <= MAX_PORT; port++) {
@@ -321,7 +316,7 @@ error_out:
 
 static void tcp_dump_json(SocketState *con) {
         if (con->directory == NULL) goto error1;
-        LOG_FUNC_D;
+        LOG_FUNC_INFO;
         char *json_str, *json_file_str;
 
         if (!(json_file_str = alloc_json_path_str(con))) goto error_out;
@@ -345,8 +340,6 @@ static void tcp_dump_json(SocketState *con) {
         }
         con->head = NULL;
         con->tail = NULL;
-        con->last_json_dump_evcount = con->events_count;
-        con->last_json_dump_micros = get_time_micros();
 
         if (fclose(fp) == EOF) goto error2;
         return;
@@ -358,36 +351,6 @@ error1:
 error_out:
         LOG_FUNC_ERROR;
         return;
-}
-
-static void *json_dumper_thread(void *params) {
-        LOG_FUNC_D;
-        JSONDumperThreadArgs *args = (JSONDumperThreadArgs *)params;
-
-        struct timespec time;
-        time.tv_sec = conf_opt_t / 1000;
-        time.tv_nsec = (conf_opt_t % 1000) * 1000 * 1000;  // opt_t is in ms
-
-        while (*args->switch_flag) {
-                SocketState *con = ra_get_and_lock_elem(args->con_fd);
-                if (!con) goto out;
-                tcp_dump_json(con);
-                ra_unlock_elem(args->con_fd);
-                nanosleep(&time, NULL);
-        }
-        goto out;
-out:
-        LOG(INFO, "json_dumper_thread for fd %d terminated.", args->con_fd);
-        free(args->switch_flag);
-        free(args);
-        return NULL;
-}
-
-static bool should_dump_json(const SocketState *con) {
-        long cur_time = get_time_micros();
-        long time_elasped = cur_time - con->last_json_dump_micros;
-        return (time_elasped > conf_opt_t * 1000 ||
-                con->events_count - con->last_json_dump_evcount >= conf_opt_e);
 }
 
 static void tcp_dump_tcp_info(int fd) {
@@ -427,7 +390,7 @@ void free_socket_state(SocketState *con) {
 
 void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         LOG(INFO, "Starting packet capture.");
-        LOG_FUNC_D;
+        LOG_FUNC_INFO;
         SocketState *con = ra_get_and_lock_elem(fd);
         if (!con) goto error_out;
 
@@ -458,32 +421,6 @@ error_out:
         return;
 }
 
-void start_json_dumper_thread(SocketState *con, int fd) {
-        bool *json_dump_switch = (bool *)my_malloc(sizeof(bool));
-        if (!json_dump_switch) goto error_out;
-        *json_dump_switch = true;
-
-        JSONDumperThreadArgs *args =
-            (JSONDumperThreadArgs *)my_malloc(sizeof(JSONDumperThreadArgs));
-        if (!args) goto error1;
-
-        args->con_fd = fd;
-        args->switch_flag = json_dump_switch;
-        con->json_dump_switch = json_dump_switch;
-
-        pthread_t thread;
-        int rc = pthread_create(&thread, NULL, json_dumper_thread, args);
-        if (rc) goto error2;
-        return;
-error2:
-        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
-        free(args);
-error1:
-        free(json_dump_switch);
-error_out:
-        LOG_FUNC_ERROR;
-}
-
 #define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                                  \
 	init_tcpsnitch();                                                      \
 	SocketState *con = NULL;                                             \
@@ -508,7 +445,6 @@ error_out:
 			LOG_FUNC_ERROR;                                         \
 			return;                                                \
 		}                                                              \
-		if (conf_opt_t) start_json_dumper_thread(con, fd);             \
 	}                                                                      \
 	const char *ev_name = string_from_sock_event_type(ev_type_cons);        \
 	LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);       \
@@ -525,7 +461,6 @@ error_out:
         output_event((SockEvent *)ev);                                     \
         bool dump_tcp_info =                                              \
             should_dump_tcp_info(con) && ev_type_cons != SOCK_EV_TCP_INFO; \
-        if (should_dump_json(con)) tcp_dump_json(con);                    \
         ra_unlock_elem(fd);                                               \
         if (dump_tcp_info) tcp_dump_tcp_info(fd);
 
@@ -654,7 +589,6 @@ void sock_ev_listen(int fd, int ret, int err, int backlog) {
 	new_con = NULL;                                             \
 	new_con = ra_get_and_lock_elem(fd);                         \
 	if (!new_con) goto error;                                   \
-	if (conf_opt_t) start_json_dumper_thread(new_con, fd);      \
 	SockEvAccept *new_ev =                                       \
 	    (SockEvAccept *)alloc_event(SOCK_EV_ACCEPT, ret, err, 0); \
 	memcpy(&new_ev, &ev, sizeof(SockEvAccept));                  \
@@ -900,7 +834,6 @@ void sock_ev_close(int fd, int ret, int err, bool detected) {
         push_event(con, (SockEvent *)ev);
         output_event((SockEvent *)ev);
 
-        *con->json_dump_switch = false;
         tcp_dump_json(con);
         free_socket_state(con);
         return;
@@ -1146,7 +1079,7 @@ void sock_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
 void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
         // Inst. local vars SocketState *con & SockEvTcpInfo *ev
         SOCK_EV_PRELUDE(SOCK_EV_TCP_INFO, SockEvTcpInfo);
-        LOG_FUNC_D;
+        LOG_FUNC_INFO;
 
         memcpy(&(ev->info), info, sizeof(struct tcp_info));
         con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
@@ -1158,6 +1091,7 @@ void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
 }
 
 void dump_all_sock_events(void) {
+        LOG_FUNC_INFO;
         for (long i = 0; i < ra_get_size(); i++) {
                 if (ra_is_present(i)) { 
                         SocketState *socket = ra_get_and_lock_elem(i);

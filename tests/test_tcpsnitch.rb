@@ -25,7 +25,7 @@ describe "tcpsnitch" do
     end
   end
   
-  ["-b", "-e", "-f", "-l", "-t", "-u"].each do |opt|
+  ["-b", "-f", "-l", "-t", "-u"].each do |opt|
     describe "when #{opt} is set" do
       it "should report 'invalid #{opt} argument'" do
         assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
@@ -69,27 +69,6 @@ describe "tcpsnitch" do
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR}", cmd)
       assert !dir_empty?(TEST_DIR)
-    end
-  end
-
-  describe "option -e" do
-    cmd = "./c_programs/shutdown.out" # script has 4 syscalls (force_bind)
-    
-    it "should dump json 4 times with -e 1" do
-      out = tcpsnitch_output("-e 1 -l 5", cmd)
-      assert_equal(4, out.scan(/tcp_dump_json/).count) 
-    end
-  
-    it "should dump json 2 times with -e 2" do
-      skip
-      out = tcpsnitch_output("-e 2 -t 1000000 -l 5", cmd)
-      assert_equal(2, out.scan(/tcp_dump_json/).count) 
-    end
-
-    it "should dump json 1 time without -e" do # defaults to 1000
-      skip
-      out = tcpsnitch_output("-l 5", cmd)
-      assert_equal(1, out.scan(/tcp_dump_json/).count) 
     end
   end
 

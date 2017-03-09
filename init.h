@@ -7,7 +7,6 @@
 extern long conf_opt_b;
 extern long conf_opt_c;
 extern char *conf_opt_d;
-extern long conf_opt_e;
 extern long conf_opt_f;
 extern char *conf_opt_i;
 extern long conf_opt_l;

@@ -14,12 +14,11 @@ LIBPATH="/data"
 OPT_B=0
 OPT_C=0
 OPT_D=""
-OPT_E=1024
 OPT_F=2
 OPT_L=5
 OPT_P=0
 OPT_U=0
-OPT_T=5000
+OPT_T=1000
 OPT_V=0
 
 usage() {
@@ -62,7 +61,7 @@ error() {
 }
 
 # Parse options
-while getopts ":chpvb:d:e:f:i:l:u:t:-:" opt; do
+while getopts ":chpvb:d:f:i:l:u:t:-:" opt; do
         case $opt in
                 -) # Trick to parse long options with getopts.
                         case "$OPTARG" in
@@ -89,10 +88,6 @@ while getopts ":chpvb:d:e:f:i:l:u:t:-:" opt; do
                                 exit 1
                         fi
                         OPT_D=$OPTARG
-                        ;;
-                e)
-                        assert_int "$OPTARG" "invalid -e argument: '$OPTARG'" 
-                        OPT_E=$OPTARG
                         ;;
                 f)
                         assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
@@ -160,7 +155,6 @@ adb shell setprop wrap.${package:0:26} LD_PRELOAD=/data/libtcpsnitch.so
 adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
 adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"
 adb shell setprop "$BASE_PROP.opt_d" "$OPT_D"
-adb shell setprop "$BASE_PROP.opt_e" "$OPT_E"
 adb shell setprop "$BASE_PROP.opt_f" "$OPT_F"
 adb shell setprop "$BASE_PROP.opt_l" "$OPT_L"
 adb shell setprop "$BASE_PROP.opt_p" "$OPT_P"

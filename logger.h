@@ -29,10 +29,9 @@ void print_trace(void);
 }
 #endif
 
-#define LOG_FUNC_WARN LOG(WARN, "%s failed.", __func__)
+#define LOG_FUNC_WARN LOG(WARN, "%s", __func__)
+#define LOG_FUNC_INFO LOG(INFO, "%s", __func__)
 
 #define D(format, args...) LOG(DEBUG, format, ##args)
-
-#define LOG_FUNC_D D("%s", __func__)
 
 #endif

@@ -20,7 +20,6 @@
 long conf_opt_b;
 long conf_opt_c;
 char *conf_opt_d;
-long conf_opt_e;
 long conf_opt_f;
 char *conf_opt_i;
 long conf_opt_l;
@@ -126,7 +125,6 @@ static void get_options(void) {
 #else
         conf_opt_d = alloc_str_opt(OPT_D);
 #endif
-        conf_opt_e = get_long_opt_or_defaultval(OPT_E, 1000);
         conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
 #ifdef __ANDROID__
         conf_opt_i = NULL;
@@ -144,7 +142,6 @@ static void log_options(void) {
         LOG(INFO, "Option b: %lu.", conf_opt_b);
         LOG(INFO, "Option c: %lu.", conf_opt_c);
         LOG(INFO, "Option d: %s", conf_opt_d);
-        LOG(INFO, "Option e: %lu.", conf_opt_e);
         LOG(INFO, "Option f: %lu.", conf_opt_f);
         LOG(INFO, "Option i: %s.", conf_opt_i);
         LOG(INFO, "Option l: %lu.", conf_opt_l);
@@ -164,6 +161,32 @@ static void init_logs(void) {
 error:
         LOG_FUNC_ERROR;
         LOG(ERROR, "No logs to file.");
+}
+
+static void *json_dumper_thread(void *arg) {
+        UNUSED(arg);
+        LOG_FUNC_INFO;
+
+        struct timespec time;
+        time.tv_sec = conf_opt_t / 1000;
+        time.tv_nsec = (conf_opt_t % 1000) * 1000 * 1000;  // opt_t is in ms
+
+        while (true) {
+                dump_all_sock_events();
+                nanosleep(&time, NULL);
+        }
+        // Unreachable
+        return NULL;
+}
+
+void start_json_dumper_thread(void) {
+        pthread_t thread;
+        int rc = pthread_create(&thread, NULL, json_dumper_thread, NULL);
+        if (rc) goto error;
+        return;
+error:
+        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
+        LOG_FUNC_ERROR;
 }
 
 /* Public functions */
@@ -214,6 +237,7 @@ void init_tcpsnitch(void) {
         if (!(logs_dir_path = create_logs_dir_at_path(conf_opt_d))) goto exit1;
         init_logs();
         log_options();
+        if (conf_opt_t) start_json_dumper_thread();
         goto exit;
 exit1:
         LOG(ERROR, "Nothing will be written to file (log, pcap, json).");

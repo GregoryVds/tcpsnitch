@@ -15,7 +15,6 @@ UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
 OPT_B=0
 OPT_C=0
 OPT_D=""
-OPT_E=1024
 OPT_F=2
 OPT_L=2
 OPT_P=0
@@ -91,10 +90,6 @@ while getopts ":chpvb:d:e:f:i:l:u:t:-:" opt; do
                                 exit 1
                         fi
                         OPT_D=$OPTARG
-                        ;;
-                e)
-                        assert_int "$OPTARG" "invalid -e argument: '$OPTARG'" 
-                        OPT_E=$OPTARG
                         ;;
                 f)
                         assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
@@ -177,7 +172,6 @@ fi
 TCPSNITCH_OPT_B=$OPT_B \
 TCPSNITCH_OPT_C=$OPT_C \
 TCPSNITCH_OPT_D=$OPT_D \
-TCPSNITCH_OPT_E=$OPT_E \
 TCPSNITCH_OPT_F=$OPT_F \
 TCPSNITCH_OPT_L=$OPT_L \
 TCPSNITCH_OPT_P=$OPT_P \
