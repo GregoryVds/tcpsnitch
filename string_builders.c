@@ -189,11 +189,11 @@ char *alloc_android_opt_d(void) {
         return opt_d;
 }
 
-char *alloc_pcap_path_str(SocketState *con) {
+char *alloc_pcap_path_str(Socket *con) {
         return alloc_concat_path(con->directory, PCAP_FILE);
 }
 
-char *alloc_json_path_str(SocketState *con) {
+char *alloc_json_path_str(Socket *con) {
         return alloc_concat_path(con->directory, JSON_FILE);
 }
 

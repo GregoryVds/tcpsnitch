@@ -40,21 +40,21 @@ static int connections_count = 0;
 
 /* Private functions */
 
-static SocketState *alloc_connection(int fd) {
-	SocketState *con;
-	if (!(con = (SocketState *)my_calloc(sizeof(SocketState))))
+static Socket *alloc_socket(int fd) {
+	Socket *sock;
+	if (!(sock = (Socket *)my_calloc(sizeof(Socket))))
 		goto error;
 
 	// Get & increment connections_count
 	mutex_lock(&connections_count_mutex);
-	con->id = connections_count;
+	sock->id = connections_count;
 	connections_count++;
 	mutex_unlock(&connections_count_mutex);
 
-        con->fd = fd;
-	// Has to be done AFTER getting the con->id
-	con->directory = create_numbered_dir_in_path(logs_dir_path, con->id);
-	return con;
+        sock->fd = fd;
+	// Has to be done AFTER getting the sock->id
+	sock->directory = create_numbered_dir_in_path(logs_dir_path, sock->id);
+	return sock;
 error:
         LOG_FUNC_ERROR;
         return NULL;
@@ -171,17 +171,17 @@ static void free_events_list(SockEventNode *head) {
         }
 }
 
-static void push_event(SocketState *con, SockEvent *ev) {
+static void push_event(Socket *sock, SockEvent *ev) {
         SockEventNode *node = (SockEventNode *)my_malloc(sizeof(SockEventNode));
         node->data = ev;
         node->next = NULL;
 
-        if (!con->head)
-                con->head = node;
+        if (!sock->head)
+                sock->head = node;
         else
-                con->tail->next = node;
-        con->tail = node;
-        con->events_count++;
+                sock->tail->next = node;
+        sock->tail = node;
+        sock->events_count++;
         return;
 }
 
@@ -266,8 +266,8 @@ orig_bind_type orig_bind;
 
 #define MIN_PORT 32768  // cat /proc/sys/net/ipv4/ip_local_port_range
 #define MAX_PORT 60999
-static int force_bind(int fd, SocketState *con, bool IPV6) {
-        LOG(INFO, "Forcing bind on connection %d.", con->id);
+static int force_bind(int fd, Socket *sock, bool IPV6) {
+        LOG(INFO, "Forcing bind on connection %d.", sock->id);
         LOG_FUNC_INFO;
         if (!orig_bind) orig_bind = (orig_bind_type)dlsym(RTLD_NEXT, "bind");
 
@@ -301,17 +301,17 @@ error_out:
         return -1;
 }
 
-static void tcp_dump_json(SocketState *con) {
-        if (con->directory == NULL) goto error1;
+static void tcp_dump_json(Socket *sock) {
+        if (sock->directory == NULL) goto error1;
         LOG_FUNC_INFO;
         char *json_str, *json_file_str;
 
-        if (!(json_file_str = alloc_json_path_str(con))) goto error_out;
+        if (!(json_file_str = alloc_json_path_str(sock))) goto error_out;
         FILE *fp = fopen(json_file_str, "a");
         free(json_file_str);
         if (!fp) goto error_out;
 
-        SockEventNode *tmp, *cur = con->head;
+        SockEventNode *tmp, *cur = sock->head;
         while (cur != NULL) {
                 SockEvent *ev = cur->data;
                 if (!(json_str = alloc_sock_ev_json(ev))) goto error_out;
@@ -325,8 +325,8 @@ static void tcp_dump_json(SocketState *con) {
                 cur = cur->next;
                 free(tmp);
         }
-        con->head = NULL;
-        con->tail = NULL;
+        sock->head = NULL;
+        sock->tail = NULL;
 
         if (fclose(fp) == EOF) goto error2;
         return;
@@ -334,7 +334,7 @@ error2:
         LOG(ERROR, "fclose() failed. %s.", strerror(errno));
         goto error_out;
 error1:
-        LOG(ERROR, "con->directory is NULL.");
+        LOG(ERROR, "sock->directory is NULL.");
 error_out:
         LOG_FUNC_ERROR;
         return;
@@ -348,18 +348,18 @@ static void tcp_dump_tcp_info(int fd) {
         sock_ev_tcp_info(fd, ret, err, info);
 }
 
-static bool should_dump_tcp_info(const SocketState *con) {
-        if (!is_tcp_socket(con->fd)) return false;
+static bool should_dump_tcp_info(const Socket *sock) {
+        if (!is_tcp_socket(sock->fd)) return false;
 
         if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
-                long time_elasped = cur_time - con->last_info_dump_micros;
+                long time_elasped = cur_time - sock->last_info_dump_micros;
                 if (time_elasped > conf_opt_u) return true;
         }
 
         if (conf_opt_b > 0) {
-                long cur_bytes = con->bytes_sent + con->bytes_received;
-                long bytes_elapsed = cur_bytes - con->last_info_dump_bytes;
+                long cur_bytes = sock->bytes_sent + sock->bytes_received;
+                long bytes_elapsed = cur_bytes - sock->last_info_dump_bytes;
                 if (bytes_elapsed > conf_opt_b) return true;
         }
 
@@ -368,34 +368,34 @@ static bool should_dump_tcp_info(const SocketState *con) {
 
 /* Public functions */
 
-void free_socket_state(SocketState *con) {
-        if (!con) return;  // NULL
-        free_events_list(con->head);
-        free(con->directory);
-        free(con);
+void free_socket_state(Socket *sock) {
+        if (!sock) return;  // NULL
+        free_events_list(sock->head);
+        free(sock->directory);
+        free(sock);
 }
 
 void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
         LOG(INFO, "Starting packet capture.");
         LOG_FUNC_INFO;
-        SocketState *con = ra_get_and_lock_elem(fd);
-        if (!con) goto error_out;
+        Socket *sock = ra_get_and_lock_elem(fd);
+        if (!sock) goto error_out;
 
         // We force a bind if the socket is not bound. This allows us to know
         // the source port and use a more specific filter for the capture.
-        if (!con->bound) force_bind(fd, con, addr_to->sa_family == AF_INET6);
+        if (!sock->bound) force_bind(fd, sock, addr_to->sa_family == AF_INET6);
 
         // Build pcap file path
-        char *pcap_file_path = alloc_pcap_path_str(con);
+        char *pcap_file_path = alloc_pcap_path_str(sock);
         if (!pcap_file_path) goto error_out;
 
         // Build capture filter
         const struct sockaddr *addr_from =
-            (con->bound) ? (const struct sockaddr *)&con->bound_addr : NULL;
+            (sock->bound) ? (const struct sockaddr *)&sock->bound_addr : NULL;
 
         const char *capture_filter = alloc_capture_filter(addr_from, addr_to);
         if (!capture_filter) goto error1;
-        con->capture_switch = start_capture(capture_filter, pcap_file_path);
+        sock->capture_switch = start_capture(capture_filter, pcap_file_path);
 
         free(pcap_file_path);
         ra_unlock_elem(fd);
@@ -410,10 +410,10 @@ error_out:
 
 #define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                                  \
 	init_tcpsnitch();                                                      \
-	SocketState *con = NULL;                                             \
+	Socket *sock = NULL;                                             \
 	if (ev_type_cons != SOCK_EV_SOCKET && ev_type_cons != SOCK_EV_ACCEPT)    \
-		con = ra_get_and_lock_elem(fd);                                \
-	if (!con) {                                                            \
+		sock = ra_get_and_lock_elem(fd);                                \
+	if (!sock) {                                                            \
 		if (ev_type_cons != SOCK_EV_SOCKET &&                           \
 		    ev_type_cons != SOCK_EV_ACCEPT) {                           \
 			LOG(WARN,                                              \
@@ -421,22 +421,22 @@ error_out:
 			    "detected.",                                       \
 			    fd);                                               \
 		}                                                              \
-		con = alloc_connection(fd);                                    \
-		if (!con || !ra_put_elem(fd, con)) {                           \
+		sock = alloc_socket(fd);                                    \
+		if (!sock|| !ra_put_elem(fd, sock)) {                           \
 			LOG_FUNC_ERROR;                                         \
 			return;                                                \
 		}                                                              \
-		con = NULL;                                                    \
-		con = ra_get_and_lock_elem(fd);                                \
-		if (!con) {                                                    \
+		sock = NULL;                                                    \
+		sock = ra_get_and_lock_elem(fd);                                \
+		if (!sock) {                                                    \
 			LOG_FUNC_ERROR;                                         \
 			return;                                                \
 		}                                                              \
 	}                                                                      \
 	const char *ev_name = string_from_sock_event_type(ev_type_cons);        \
-	LOG(INFO, "%s on connection %d (fd %d).", ev_name, con->id, fd);       \
+	LOG(INFO, "%s on connection %d (fd %d).", ev_name, sock->id, fd);       \
 	ev_type *ev =                                                          \
-	    (ev_type *)alloc_event(ev_type_cons, ret, err, con->events_count); \
+	    (ev_type *)alloc_event(ev_type_cons, ret, err, sock->events_count); \
 	if (!ev) {                                                             \
 		LOG_FUNC_ERROR;                                                 \
 		ra_unlock_elem(fd);                                            \
@@ -444,10 +444,10 @@ error_out:
 	}
 
 #define SOCK_EV_POSTLUDE(ev_type_cons)                                     \
-        push_event(con, (SockEvent *)ev);                                  \
+        push_event(sock, (SockEvent *)ev);                                  \
         output_event((SockEvent *)ev);                                     \
         bool dump_tcp_info =                                              \
-            should_dump_tcp_info(con) && ev_type_cons != SOCK_EV_TCP_INFO; \
+            should_dump_tcp_info(sock) && ev_type_cons != SOCK_EV_TCP_INFO; \
         ra_unlock_elem(fd);                                               \
         if (dump_tcp_info) tcp_dump_tcp_info(fd);
 
@@ -508,7 +508,7 @@ void sock_ev_socket(int fd, int domain, int type, int protocol) {
         int err = 0;
         int ret = fd;
 
-        // Inst. local vars SocketState *con & SockEvSocket *ev
+        // Inst. local vars Socket *sock& SockEvSocket *ev
         SOCK_EV_PRELUDE(SOCK_EV_SOCKET, SockEvSocket);
 
         ev->domain = domain;
@@ -527,14 +527,14 @@ void sock_ev_socket(int fd, int domain, int type, int protocol) {
 
 void sock_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
                  socklen_t len) {
-        // Inst. local vars SocketState *con & SockEvBind *ev
+        // Inst. local vars Socket *sock& SockEvBind *ev
         SOCK_EV_PRELUDE(SOCK_EV_BIND, SockEvBind);
 
         fill_addr(&(ev->addr), addr, len);
         if (!ret) {
                 // Save bound addr as we will later use it for capture filter.
-                con->bound = true;
-                memcpy(&con->bound_addr, &ev->addr.sockaddr_sto, ev->addr.len);
+                sock->bound = true;
+                memcpy(&sock->bound_addr, &ev->addr.sockaddr_sto, ev->addr.len);
         }
 
         SOCK_EV_POSTLUDE(SOCK_EV_BIND);
@@ -542,7 +542,7 @@ void sock_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
 
 void sock_ev_connect(int fd, int ret, int err, const struct sockaddr *addr,
                     socklen_t len) {
-        // Inst. local vars SocketState *con & SockEvConnect *ev
+        // Inst. local vars Socket *sock& SockEvConnect *ev
         SOCK_EV_PRELUDE(SOCK_EV_CONNECT, SockEvConnect);
 
         fill_addr(&(ev->addr), addr, len);
@@ -551,7 +551,7 @@ void sock_ev_connect(int fd, int ret, int err, const struct sockaddr *addr,
 }
 
 void sock_ev_shutdown(int fd, int ret, int err, int how) {
-        // Inst. local vars SocketState *con & SockEvShutdown *ev
+        // Inst. local vars Socket *sock& SockEvShutdown *ev
         SOCK_EV_PRELUDE(SOCK_EV_SHUTDOWN, SockEvShutdown);
 
         ev->shut_rd = (how == SHUT_RD) || (how == SHUT_RDWR);
@@ -561,7 +561,7 @@ void sock_ev_shutdown(int fd, int ret, int err, int how) {
 }
 
 void sock_ev_listen(int fd, int ret, int err, int backlog) {
-        // Inst. local vars SocketState *con & SockEvListen *ev
+        // Inst. local vars Socket *sock& SockEvListen *ev
         SOCK_EV_PRELUDE(SOCK_EV_LISTEN, SockEvListen);
 
         ev->backlog = backlog;
@@ -570,22 +570,22 @@ void sock_ev_listen(int fd, int ret, int err, int backlog) {
 }
 
 #define ACCEPT_NEW_CON                                              \
-	SocketState *new_con = alloc_connection(fd);              \
-	if (!new_con) goto error;                                   \
-	if (!ra_put_elem(ret, new_con)) goto error;                 \
-	new_con = NULL;                                             \
-	new_con = ra_get_and_lock_elem(fd);                         \
-	if (!new_con) goto error;                                   \
+	Socket *new_sock = alloc_socket(fd);              \
+	if (!new_sock) goto error;                                   \
+	if (!ra_put_elem(ret, new_sock)) goto error;                 \
+	new_sock = NULL;                                             \
+	new_sock = ra_get_and_lock_elem(fd);                         \
+	if (!new_sock) goto error;                                   \
 	SockEvAccept *new_ev =                                       \
 	    (SockEvAccept *)alloc_event(SOCK_EV_ACCEPT, ret, err, 0); \
 	memcpy(&new_ev, &ev, sizeof(SockEvAccept));                  \
-	push_event(new_con, (SockEvent *)new_ev);                    \
+	push_event(new_sock, (SockEvent *)new_ev);                    \
 	output_event((SockEvent *)new_ev);                           \
-	if (!ra_put_elem(ret, new_con)) goto error;
+	if (!ra_put_elem(ret, new_sock)) goto error;
 
 void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
                    socklen_t *addr_len) {
-        // Inst. local vars SocketState *con & SockEvAccept *ev
+        // Inst. local vars Socket *sock& SockEvAccept *ev
         SOCK_EV_PRELUDE(SOCK_EV_ACCEPT, SockEvAccept);
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
@@ -599,7 +599,7 @@ error:
 
 void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
                     socklen_t *addr_len, int flags) {
-        // Inst. local vars SocketState *con & SockEvAccept4 *ev
+        // Inst. local vars Socket *sock& SockEvAccept4 *ev
         SOCK_EV_PRELUDE(SOCK_EV_ACCEPT4, SockEvAccept4);
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
@@ -614,7 +614,7 @@ error:
 
 void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
                        const void *optval, socklen_t optlen) {
-        // Inst. local vars SocketState *con & SockEvGetsockopt *ev
+        // Inst. local vars Socket *sock& SockEvGetsockopt *ev
         SOCK_EV_PRELUDE(SOCK_EV_GETSOCKOPT, SockEvGetsockopt);
 
         fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
@@ -624,7 +624,7 @@ void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
 
 void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
                        const void *optval, socklen_t optlen) {
-        // Inst. local vars SocketState *con & SockEvSetsockopt *ev
+        // Inst. local vars Socket *sock& SockEvSetsockopt *ev
         SOCK_EV_PRELUDE(SOCK_EV_SETSOCKOPT, SockEvSetsockopt);
 
         fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
@@ -633,35 +633,35 @@ void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
 }
 
 void sock_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
-        // Inst. local vars SocketState *con & SockEvSend *ev
+        // Inst. local vars Socket *sock& SockEvSend *ev
         SOCK_EV_PRELUDE(SOCK_EV_SEND, SockEvSend);
 
         ev->bytes = bytes;
         ev->flags = flags;
-        con->bytes_sent += bytes;
+        sock->bytes_sent += bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_SEND);
 }
 
 void sock_ev_recv(int fd, int ret, int err, size_t bytes, int flags) {
-        // Inst. local vars SocketState *con & SockEvRecv *ev
+        // Inst. local vars Socket *sock& SockEvRecv *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECV, SockEvRecv);
 
         ev->bytes = bytes;
         ev->flags = flags;
-        con->bytes_received += bytes;
+        sock->bytes_received += bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_RECV);
 }
 
 void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
                    const struct sockaddr *addr, socklen_t len) {
-        // Inst. local vars SocketState *con & SockEvSendto *ev
+        // Inst. local vars Socket *sock& SockEvSendto *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDTO, SockEvSendto);
 
 	ev->bytes = bytes;
 	ev->flags = flags;
-	con->bytes_sent += bytes;
+	sock->bytes_sent += bytes;
         if (addr) fill_addr(&(ev->addr), addr, len);
 
         SOCK_EV_POSTLUDE(SOCK_EV_SENDTO);
@@ -669,12 +669,12 @@ void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
 
 void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
                      const struct sockaddr *addr, socklen_t *len) {
-        // Inst. local vars SocketState *con & SockEvRecvfrom *ev
+        // Inst. local vars Socket *sock& SockEvRecvfrom *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVFROM, SockEvRecvfrom);
 
 	ev->bytes = bytes;
 	ev->flags = flags;
-	con->bytes_received += bytes;
+	sock->bytes_received += bytes;
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *len);
 
         SOCK_EV_POSTLUDE(SOCK_EV_RECVFROM);
@@ -682,24 +682,24 @@ void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
 
 void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        // Inst. local vars SocketState *con & SockEvSendmsg *ev
+        // Inst. local vars Socket *sock& SockEvSendmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDMSG, SockEvSendmsg);
 
         ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
         ev->flags = flags;
-        con->bytes_sent += ev->bytes;
+        sock->bytes_sent += ev->bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMSG);
 }
 
 void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        // Inst. local vars SocketState *con & SockEvRecvmsg *ev
+        // Inst. local vars Socket *sock& SockEvRecvmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVMSG, SockEvRecvmsg);
 
         ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
         ev->flags = flags;
-        con->bytes_received += ev->bytes;
+        sock->bytes_received += ev->bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_RECVMSG);
 }
@@ -713,7 +713,7 @@ void sock_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                      unsigned int vlen, int flags) {
 #endif
-        // Inst. local vars SocketState *con & SockEvSendmmsg *ev
+        // Inst. local vars Socket *sock& SockEvSendmmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDMMSG, SockEvSendmmsg);
 
         ev->flags = flags;
@@ -722,7 +722,7 @@ void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
         ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
         ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
-        con->bytes_sent += ev->bytes;
+        sock->bytes_sent += ev->bytes;
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
 }
 
@@ -733,7 +733,7 @@ void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
                      unsigned int vlen, int flags, const struct timespec *tmo) {
 #endif
-        // Inst. local vars SocketState *con & SockEvRecvmmsg *ev
+        // Inst. local vars Socket *sock& SockEvRecvmmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVMMSG, SockEvRecvmmsg);
 
         ev->flags = flags;
@@ -744,7 +744,7 @@ void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
         ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
         ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
-        con->bytes_received += ev->bytes;
+        sock->bytes_received += ev->bytes;
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
 }
 
@@ -752,7 +752,7 @@ void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
 
 void sock_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
                         socklen_t *addrlen) {
-        // Inst. local vars SocketState *con & SockEvGetsockname *ev
+        // Inst. local vars Socket *sock& SockEvGetsockname *ev
         SOCK_EV_PRELUDE(SOCK_EV_GETSOCKNAME, SockEvGetsockname);
 
         if (ret != -1) fill_addr(&(ev->addr), addr, *addrlen);
@@ -762,7 +762,7 @@ void sock_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
 
 void sock_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
                         socklen_t *addrlen) {
-        // Inst. local vars SocketState *con & SockEvGetpeername *ev
+        // Inst. local vars Socket *sock& SockEvGetpeername *ev
         SOCK_EV_PRELUDE(SOCK_EV_GETPEERNAME, SockEvGetpeername);
 
         if (ret != -1) fill_addr(&(ev->addr), addr, *addrlen);
@@ -771,13 +771,13 @@ void sock_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
 }
 
 void sock_ev_sockatmark(int fd, int ret, int err) {
-        // Inst. local vars SocketState *con & SockEvSockatmark *ev
+        // Inst. local vars Socket *sock& SockEvSockatmark *ev
         SOCK_EV_PRELUDE(SOCK_EV_SOCKATMARK, SockEvSockatmark);
         SOCK_EV_POSTLUDE(SOCK_EV_SOCKATMARK);
 }
 
 void sock_ev_isfdtype(int fd, int ret, int err, int fdtype) {
-        // Inst. local vars SocketState *con & SockEvIsfdtype *ev
+        // Inst. local vars Socket *sock& SockEvIsfdtype *ev
         SOCK_EV_PRELUDE(SOCK_EV_ISFDTYPE, SockEvIsfdtype);
 
         ev->fdtype = fdtype;
@@ -786,43 +786,43 @@ void sock_ev_isfdtype(int fd, int ret, int err, int fdtype) {
 }
 
 void sock_ev_write(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars SocketState *con & SockEvWrite *ev
+        // Inst. local vars Socket *sock& SockEvWrite *ev
         SOCK_EV_PRELUDE(SOCK_EV_WRITE, SockEvWrite);
 
         ev->bytes = bytes;
-        con->bytes_sent += bytes;
+        sock->bytes_sent += bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_WRITE);
 }
 
 void sock_ev_read(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars SocketState *con & SockEvRead *ev
+        // Inst. local vars Socket *sock& SockEvRead *ev
         SOCK_EV_PRELUDE(SOCK_EV_READ, SockEvRead);
 
         ev->bytes = bytes;
-        con->bytes_received += bytes;
+        sock->bytes_received += bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_READ);
 }
 
 void sock_ev_close(int fd, int ret, int err, bool detected) {
-        SocketState *con = ra_remove_elem(fd);
-        if (!con) goto error;
+        Socket *sock = ra_remove_elem(fd);
+        if (!sock) goto error;
 
-        LOG(INFO, "close on connection %d.", con->id);
+        LOG(INFO, "close on connection %d.", sock->id);
         SockEvClose *ev = (SockEvClose *)alloc_event(SOCK_EV_CLOSE, ret, err,
-                                                   con->events_count);
+                                                   sock->events_count);
         if (!ev) goto error;
 
         ev->detected = detected;
-        if (con->capture_switch != NULL)
-                stop_capture(con->capture_switch, con->rtt * 2);
+        if (sock->capture_switch != NULL)
+                stop_capture(sock->capture_switch, sock->rtt * 2);
 
-        push_event(con, (SockEvent *)ev);
+        push_event(sock, (SockEvent *)ev);
         output_event((SockEvent *)ev);
 
-        tcp_dump_json(con);
-        free_socket_state(con);
+        tcp_dump_json(sock);
+        free_socket_state(sock);
         return;
 error:
         LOG_FUNC_ERROR;
@@ -830,13 +830,13 @@ error:
 }
 
 void sock_ev_dup(int fd, int ret, int err) {
-        // Inst. local vars SocketState *con & SockEvDup *ev
+        // Inst. local vars Socket *sock& SockEvDup *ev
         SOCK_EV_PRELUDE(SOCK_EV_DUP, SockEvDup);
         SOCK_EV_POSTLUDE(SOCK_EV_DUP);
 }
 
 void sock_ev_dup2(int fd, int ret, int err, int newfd) {
-        // Inst. local vars SocketState *con & SockEvDup2 *ev
+        // Inst. local vars Socket *sock& SockEvDup2 *ev
         SOCK_EV_PRELUDE(SOCK_EV_DUP2, SockEvDup2);
 
         ev->newfd = newfd;
@@ -845,7 +845,7 @@ void sock_ev_dup2(int fd, int ret, int err, int newfd) {
 }
 
 void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
-        // Inst. local vars SocketState *con & SockEvDup3 *ev
+        // Inst. local vars Socket *sock& SockEvDup3 *ev
         SOCK_EV_PRELUDE(SOCK_EV_DUP3, SockEvDup3);
 
         ev->newfd = newfd;
@@ -856,22 +856,22 @@ void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
 
 void sock_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
                    int iovec_count) {
-        // Inst. local vars SocketState *con & SockEvWritev *ev
+        // Inst. local vars Socket *sock& SockEvWritev *ev
         SOCK_EV_PRELUDE(SOCK_EV_WRITEV, SockEvWritev);
 
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
-        con->bytes_sent += ev->bytes;
+        sock->bytes_sent += ev->bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_WRITEV);
 }
 
 void sock_ev_readv(int fd, int ret, int err, const struct iovec *iovec,
                   int iovec_count) {
-        // Inst. local vars SocketState *con & SockEvReadv *ev
+        // Inst. local vars Socket *sock& SockEvReadv *ev
         SOCK_EV_PRELUDE(SOCK_EV_READV, SockEvReadv);
 
         ev->bytes = fill_iovec(&ev->iovec, iovec, iovec_count);
-        con->bytes_received += ev->bytes;
+        sock->bytes_received += ev->bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_READV);
 }
@@ -881,7 +881,7 @@ void sock_ev_ioctl(int fd, int ret, int err, int request) {
 #else
 void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
 #endif
-        // Inst. local vars SocketState *con & SockEvIoctl *ev
+        // Inst. local vars Socket *sock& SockEvIoctl *ev
         SOCK_EV_PRELUDE(SOCK_EV_IOCTL, SockEvIoctl);
 
         ev->request = request;
@@ -890,18 +890,18 @@ void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
 }
 
 void sock_ev_sendfile(int fd, int ret, int err, size_t bytes) {
-        // Inst. local vars SocketState *con & SockEvSendfile *ev
+        // Inst. local vars Socket *sock& SockEvSendfile *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDFILE, SockEvSendfile);
 
         ev->bytes = bytes;
-        con->bytes_received += ev->bytes;
+        sock->bytes_received += ev->bytes;
 
         SOCK_EV_POSTLUDE(SOCK_EV_SENDFILE);
 }
 
 void sock_ev_poll(int fd, int ret, int err, short requested_events,
                  short returned_events, int timeout) {
-        // Inst. local vars SocketState *con & SockEvPoll *ev
+        // Inst. local vars Socket *sock& SockEvPoll *ev
         SOCK_EV_PRELUDE(SOCK_EV_POLL, SockEvPoll);
 
         ev->timeout.seconds = (timeout / 1000);
@@ -914,7 +914,7 @@ void sock_ev_poll(int fd, int ret, int err, short requested_events,
 
 void sock_ev_ppoll(int fd, int ret, int err, short requested_events,
                   short returned_events, const struct timespec *timeout) {
-        // Inst. local vars SocketState *con & SockEvPpoll *ev
+        // Inst. local vars Socket *sock& SockEvPpoll *ev
         SOCK_EV_PRELUDE(SOCK_EV_PPOLL, SockEvPpoll);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
@@ -928,7 +928,7 @@ void sock_ev_ppoll(int fd, int ret, int err, short requested_events,
 void sock_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
                    bool req_except, bool ret_read, bool ret_write,
                    bool ret_except, struct timeval *timeout) {
-        // Inst. local vars SocketState *con & SockEvSelect *ev
+        // Inst. local vars Socket *sock& SockEvSelect *ev
         SOCK_EV_PRELUDE(SOCK_EV_SELECT, SockEvSelect);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
@@ -946,7 +946,7 @@ void sock_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
 void sock_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
                     bool req_except, bool ret_read, bool ret_write,
                     bool ret_except, const struct timespec *timeout) {
-        // Inst. local vars SocketState *con & SockEvPselect *ev
+        // Inst. local vars Socket *sock& SockEvPselect *ev
         SOCK_EV_PRELUDE(SOCK_EV_PSELECT, SockEvPselect);
 
         ev->timeout.seconds = timeout ? timeout->tv_sec : 0;
@@ -962,7 +962,7 @@ void sock_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
 }
 
 void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
-        // Inst. local vars SocketState *con & SockEvFcntl *ev
+        // Inst. local vars Socket *sock& SockEvFcntl *ev
         SOCK_EV_PRELUDE(SOCK_EV_FCNTL, SockEvFcntl);
 
         ev->cmd = cmd;
@@ -1020,7 +1020,7 @@ void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
 
 void sock_ev_epoll_ctl(int fd, int ret, int err, int op,
                       uint32_t requested_events) {
-        // Inst. local vars SocketState *con & SockEvEpollCtl *ev
+        // Inst. local vars Socket *sock& SockEvEpollCtl *ev
         SOCK_EV_PRELUDE(SOCK_EV_EPOLL_CTL, SockEvEpollCtl);
 
         ev->op = op;
@@ -1031,7 +1031,7 @@ void sock_ev_epoll_ctl(int fd, int ret, int err, int op,
 
 void sock_ev_epoll_wait(int fd, int ret, int err, int timeout,
                        uint32_t returned_events) {
-        // Inst. local vars SocketState *con & SockEvEpollWait *ev
+        // Inst. local vars Socket *sock& SockEvEpollWait *ev
         SOCK_EV_PRELUDE(SOCK_EV_EPOLL_WAIT, SockEvEpollWait);
 
         ev->returned_events = returned_events;
@@ -1042,7 +1042,7 @@ void sock_ev_epoll_wait(int fd, int ret, int err, int timeout,
 
 void sock_ev_epoll_pwait(int fd, int ret, int err, int timeout,
                         uint32_t returned_events) {
-        // Inst. local vars SocketState *con & SockEvEpollPwait *ev
+        // Inst. local vars Socket *sock& SockEvEpollPwait *ev
         SOCK_EV_PRELUDE(SOCK_EV_EPOLL_PWAIT, SockEvEpollPwait);
 
         ev->returned_events = returned_events;
@@ -1053,7 +1053,7 @@ void sock_ev_epoll_pwait(int fd, int ret, int err, int timeout,
 
 void sock_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
         int ret = (_ret != NULL);
-        // Inst. local vars SocketState *con & SockEvFdopen *ev
+        // Inst. local vars Socket *sock& SockEvFdopen *ev
         SOCK_EV_PRELUDE(SOCK_EV_FDOPEN, SockEvFdopen);
 
         int n = strlen(mode) + 1;
@@ -1064,14 +1064,14 @@ void sock_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
 }
 
 void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
-        // Inst. local vars SocketState *con & SockEvTcpInfo *ev
+        // Inst. local vars Socket *sock& SockEvTcpInfo *ev
         SOCK_EV_PRELUDE(SOCK_EV_TCP_INFO, SockEvTcpInfo);
         LOG_FUNC_INFO;
 
         memcpy(&(ev->info), info, sizeof(struct tcp_info));
-        con->last_info_dump_bytes = con->bytes_sent + con->bytes_received;
-        con->last_info_dump_micros = get_time_micros();
-        con->rtt = info->tcpi_rtt;
+        sock->last_info_dump_bytes = sock->bytes_sent + sock->bytes_received;
+        sock->last_info_dump_micros = get_time_micros();
+        sock->rtt = info->tcpi_rtt;
         free(info);
 
         SOCK_EV_POSTLUDE(SOCK_EV_TCP_INFO);
@@ -1081,7 +1081,7 @@ void dump_all_sock_events(void) {
         LOG_FUNC_INFO;
         for (long i = 0; i < ra_get_size(); i++) {
                 if (ra_is_present(i)) { 
-                        SocketState *socket = ra_get_and_lock_elem(i);
+                        Socket *socket = ra_get_and_lock_elem(i);
                         if (socket) tcp_dump_json(socket);
                         ra_unlock_elem(i);
                 }

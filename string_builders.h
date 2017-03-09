@@ -43,8 +43,8 @@ char *alloc_append_int_to_path(const char *path1, int i);
 
 char *alloc_dirname_str(void);
 char *alloc_android_opt_d(void);
-char *alloc_pcap_path_str(SocketState *con);
-char *alloc_json_path_str(SocketState *con);
+char *alloc_pcap_path_str(Socket *con);
+char *alloc_json_path_str(Socket *con);
 
 char *alloc_cmdline_str(void);
 char *alloc_app_name(void);

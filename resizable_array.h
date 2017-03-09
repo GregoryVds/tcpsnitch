@@ -3,7 +3,7 @@
 
 #include "sock_events.h"
 
-#define ELEM_TYPE SocketState*  // Elements stored in the array.
+#define ELEM_TYPE Socket*  // Elements stored in the array.
 #define FREE_ELEM(elem) \
         free_socket_state(elem)  // Routine for freeing an element.
 #define MIN_INIT_SIZE 16         // Starting size of array.

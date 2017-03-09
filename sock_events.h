@@ -394,17 +394,17 @@ typedef struct {
         struct sockaddr_storage bound_addr;
         int rtt;
         bool *capture_switch;
-} SocketState;
+} Socket;
 
 const char *string_from_sock_event_type(SockEventType type);
 
-void free_socket_state(SocketState *con);
+void free_socket_state(Socket *con);
 
 // Packet capture
 
 void tcp_start_capture(int fd, const struct sockaddr *connect_addr);
 
-void tcp_stop_capture(SocketState *con);
+void tcp_stop_capture(Socket *con);
 
 // Events hooks
 
