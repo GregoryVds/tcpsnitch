@@ -186,18 +186,29 @@ error:
 }
 
 static json_t *build_control_data(struct msghdr *msgh) {
-	json_t *json_cd_list = json_array();
+        json_t *json_cd_list = json_array();
 	if (!json_cd_list) goto error;
-
+       
+        // Can't find where the problem is... Can't properly extract the 
+        // ancillary data.
 	struct cmsghdr *cmsg;
-	for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL;
-	     cmsg = CMSG_NXTHDR(msgh, cmsg)) {
-		json_t *json_cd = json_object();
-		if (!json_cd) goto error;
-		add(json_cd, "cmsg_level", json_integer(cmsg->cmsg_level));
+        cmsg = CMSG_FIRSTHDR(msgh);
+        if (cmsg) {
+                json_t *json_cd = json_object();
+                if (!json_cd) goto error;
+        	add(json_cd, "cmsg_level", json_integer(cmsg->cmsg_level));
 		add(json_cd, "cmsg_type", json_integer(cmsg->cmsg_type));
 		json_array_append_new(json_cd_list, json_cd);
-	}
+        }
+//        cmsg = CMSG_NXTHDR(msgh, cmsg);
+//        for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL;
+//	     cmsg = CMSG_NXTHDR(msgh, cmsg)) {
+//		json_t *json_cd = json_object();
+//		if (!json_cd) goto error;
+//		add(json_cd, "cmsg_level", json_integer(cmsg->cmsg_level));
+//		add(json_cd, "cmsg_type", json_integer(cmsg->cmsg_type));
+//		json_array_append_new(json_cd_list, json_cd);
+//	}
 
 	return json_cd_list;
 error:

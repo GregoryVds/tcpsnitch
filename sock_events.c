@@ -238,12 +238,12 @@ static socklen_t fill_tcp_msghdr(Msghdr *m1, const struct msghdr *m2) {
         if (m2->msg_name) memcpy(&m1->addr, m2->msg_name, m2->msg_namelen);
 
         // Control data (ancillary data)
-        m1->msghdr = my_malloc(sizeof(struct msghdr));
+        m1->msghdr = my_calloc(sizeof(struct msghdr));
         m1->msghdr->msg_controllen = m2->msg_controllen;
         if (m2->msg_controllen)
                 m1->msghdr->msg_control = my_malloc(m2->msg_controllen);
         memcpy(m1->msghdr->msg_control, m2->msg_control, m2->msg_controllen);
-
+        
         // Flags
         m1->flags = m2->msg_flags;
 
@@ -759,7 +759,6 @@ void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
 
 void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        return;
         // Inst. local vars SocketState *con & SockEvSendmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDMSG, SockEvSendmsg);
 
@@ -772,7 +771,6 @@ void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
 
 void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
                     int flags) {
-        return;
         // Inst. local vars SocketState *con & SockEvRecvmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVMSG, SockEvRecvmsg);
 
