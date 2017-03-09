@@ -401,7 +401,7 @@ typedef struct {
 
 const char *string_from_sock_event_type(SockEventType type);
 
-void free_connection(SocketState *con);
+void free_socket_state(SocketState *con);
 
 // Packet capture
 
@@ -531,7 +531,7 @@ void sock_ev_fdopen(int fd, FILE *ret, int err, const char *mode);
 
 void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 
-void tcp_close_unclosed_connections(void);
+void dump_all_sock_events(void);
 
 void tcp_free(void);  // Free state.
 // Free state and restore to default state (called after fork()).

@@ -225,7 +225,7 @@ exit:
 
 __attribute__((destructor)) static void cleanup(void) {
         LOG(INFO, "Performing library cleanup before end of process.");
-        tcp_close_unclosed_connections();
+        dump_all_sock_events();
         // tcp_free();
         // tcpsnitch_free();
 }

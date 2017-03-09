@@ -391,7 +391,6 @@ static bool should_dump_json(const SocketState *con) {
 }
 
 static void tcp_dump_tcp_info(int fd) {
-        if (!is_tcp_socket(fd)) return;
         struct tcp_info *info =
             (struct tcp_info *)malloc(sizeof(struct tcp_info));
         int ret = fill_tcp_info(fd, info);
@@ -400,6 +399,7 @@ static void tcp_dump_tcp_info(int fd) {
 }
 
 static bool should_dump_tcp_info(const SocketState *con) {
+        if (!is_tcp_socket(con->fd)) return false;
 
         if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
@@ -418,7 +418,7 @@ static bool should_dump_tcp_info(const SocketState *con) {
 
 /* Public functions */
 
-void free_connection(SocketState *con) {
+void free_socket_state(SocketState *con) {
         if (!con) return;  // NULL
         free_events_list(con->head);
         free(con->directory);
@@ -902,7 +902,7 @@ void sock_ev_close(int fd, int ret, int err, bool detected) {
 
         *con->json_dump_switch = false;
         tcp_dump_json(con);
-        free_connection(con);
+        free_socket_state(con);
         return;
 error:
         LOG_FUNC_ERROR;
@@ -1157,9 +1157,14 @@ void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
         SOCK_EV_POSTLUDE(SOCK_EV_TCP_INFO);
 }
 
-void tcp_close_unclosed_connections(void) {
-        for (long i = 0; i < ra_get_size(); i++)
-                if (ra_is_present(i)) sock_ev_close(i, 0, 0, false);
+void dump_all_sock_events(void) {
+        for (long i = 0; i < ra_get_size(); i++) {
+                if (ra_is_present(i)) { 
+                        SocketState *socket = ra_get_and_lock_elem(i);
+                        if (socket) tcp_dump_json(socket);
+                        ra_unlock_elem(i);
+                }
+        }
 }
 
 void tcp_free(void) {
