@@ -11,6 +11,27 @@
 #include "string_builders.h"
 #include "sys/epoll.h"
 
+static json_t *my_json_object(void) {
+        json_t *obj = json_object();
+        if (!obj) {
+        	LOG(ERROR, "json_object() failed.");
+	        LOG_FUNC_ERROR;
+                abort();
+        }
+        return obj;
+}
+
+static json_t *my_json_array(void) {
+        json_t *array = json_array();
+        if (!array) {
+        	LOG(ERROR, "json_array() failed.");
+	        LOG_FUNC_ERROR;
+                abort();
+        }
+        return array;
+}
+
+
 /* Save reference to pointer with shorter name */
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
 static add_type add = &json_object_set_new;
@@ -18,12 +39,10 @@ static add_type add = &json_object_set_new;
 static json_t *build_addr(const Addr *addr) {
 	if (!addr->len) return NULL;
 
-        json_t *json_addr = json_object();
-        if (!json_addr) goto error;
+        json_t *json_addr = my_json_object();
 
         const struct sockaddr *sockaddr =
             (const struct sockaddr *)&addr->sockaddr_sto;
-
         if (sockaddr->sa_family == AF_INET)
                 add(json_addr, "sa_family", json_string("AF_INET"));
         else if (sockaddr->sa_family == AF_INET6)
@@ -44,16 +63,10 @@ static json_t *build_addr(const Addr *addr) {
         //free(service);
 
         return json_addr;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_send_flags(int flags) {
-	json_t *json_flags = json_object();
-	if (!json_flags) goto error;
-
+	json_t *json_flags = my_json_object();
 	add(json_flags, "MSG_CONFIRM", json_boolean(flags & MSG_CONFIRM));
 	add(json_flags, "MSG_DONTROUTE", json_boolean(flags & MSG_DONTROUTE));
 	add(json_flags, "MSG_DONTWAIT", json_boolean(flags & MSG_DONTWAIT));
@@ -61,17 +74,11 @@ static json_t *build_send_flags(int flags) {
 	add(json_flags, "MSG_MORE", json_boolean(flags & MSG_MORE));
 	add(json_flags, "MSG_NOSIGNAL", json_boolean(flags & MSG_NOSIGNAL));
 	add(json_flags, "MSG_OOB", json_boolean(flags & MSG_OOB));
-
 	return json_flags;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_recv_flags(int flags) {
-	json_t *json_flags = json_object();
-	if (!json_flags) goto error;
+	json_t *json_flags = my_json_object();
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 	add(json_flags, "MSG_CMSG_CLOEXEC",
@@ -87,30 +94,17 @@ static json_t *build_recv_flags(int flags) {
 	add(json_flags, "MSG_WAITALL", json_boolean(flags & MSG_WAITALL));
 
 	return json_flags;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_timeout(const Timeout *timeout) {
-	json_t *json_timeout = json_object();
-	if (!json_timeout) goto error;
-
+	json_t *json_timeout = my_json_object();
 	add(json_timeout, "seconds", json_integer(timeout->seconds));
 	add(json_timeout, "nanoseconds", json_integer(timeout->nanoseconds));
-
 	return json_timeout;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_poll_events(const PollEvents *events) {
-	json_t *json_events = json_object();
-	if (!json_events) goto error;
-
+	json_t *json_events = my_json_object();
 	add(json_events, "POLLIN", json_boolean(events->pollin));
 	add(json_events, "POLLPRI", json_boolean(events->pollpri));
 	add(json_events, "POLLOUT", json_boolean(events->pollout));
@@ -118,33 +112,19 @@ static json_t *build_poll_events(const PollEvents *events) {
 	add(json_events, "POLLERR", json_boolean(events->pollerr));
 	add(json_events, "POLLHUP", json_boolean(events->pollhup));
 	add(json_events, "POLLNVAL", json_boolean(events->pollnval));
-
 	return json_events;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_select_events(const SelectEvents *events) {
-	json_t *json_events = json_object();
-	if (!json_events) goto error;
-
+	json_t *json_events = my_json_object();
 	add(json_events, "READ", json_boolean(events->read));
 	add(json_events, "WRITE", json_boolean(events->write));
 	add(json_events, "EXCEPT", json_boolean(events->except));
-
 	return json_events;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_epoll_events(uint32_t events) {
-	json_t *json_events = json_object();
-	if (!json_events) goto error;
-
+	json_t *json_events = my_json_object();
 	add(json_events, "EPOLLIN", json_boolean(events & EPOLLIN));
 	add(json_events, "EPOLLOUT", json_boolean(events & EPOLLOUT));
 	add(json_events, "EPOLLRDHUP", json_boolean(events & EPOLLRDHUP));
@@ -154,48 +134,27 @@ static json_t *build_epoll_events(uint32_t events) {
 	add(json_events, "EPOLLET", json_boolean(events & EPOLLET));
 	add(json_events, "EPOLLONESHOT", json_boolean(events & EPOLLONESHOT));
 	add(json_events, "EPOLLWAKEUP", json_boolean(events & EPOLLWAKEUP));
-
 	return json_events;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_iovec(const Iovec *iovec) {
-	json_t *json_iovec = json_object();
-	if (!json_iovec) goto error;
-
+	json_t *json_iovec = my_json_object();
 	add(json_iovec, "iovec_count", json_integer(iovec->iovec_count));
-
-	json_t *iovec_sizes = json_array();
-	if (!iovec_sizes) goto error;
-	if (iovec_sizes) {
-		for (int i = 0; i < iovec->iovec_count; i++) {
-			json_array_append_new(
-			    iovec_sizes, json_integer(iovec->iovec_sizes[i]));
-		}
-	}
+	json_t *iovec_sizes = my_json_array();
+	for (int i = 0; i < iovec->iovec_count; i++)
+		json_array_append_new(iovec_sizes, json_integer(iovec->iovec_sizes[i]));
 	add(json_iovec, "iovec_sizes", iovec_sizes);
-
 	return json_iovec;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_control_data(struct msghdr *msgh) {
-        json_t *json_cd_list = json_array();
-	if (!json_cd_list) goto error;
-       
-        // Can't find where the problem is... Can't properly extract the 
+        json_t *json_cd_list = my_json_array();
+        // TODO: Can't find where the problem is... Can't properly extract the 
         // ancillary data.
 	struct cmsghdr *cmsg;
         cmsg = CMSG_FIRSTHDR(msgh);
         if (cmsg) {
-                json_t *json_cd = json_object();
-                if (!json_cd) goto error;
+                json_t *json_cd = my_json_object();
         	add(json_cd, "cmsg_level", json_integer(cmsg->cmsg_level));
 		add(json_cd, "cmsg_type", json_integer(cmsg->cmsg_type));
 		json_array_append_new(json_cd_list, json_cd);
@@ -203,91 +162,53 @@ static json_t *build_control_data(struct msghdr *msgh) {
 //        cmsg = CMSG_NXTHDR(msgh, cmsg);
 //        for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL;
 //	     cmsg = CMSG_NXTHDR(msgh, cmsg)) {
-//		json_t *json_cd = json_object();
-//		if (!json_cd) goto error;
+//		json_t *json_cd = my_json_object();
 //		add(json_cd, "cmsg_level", json_integer(cmsg->cmsg_level));
 //		add(json_cd, "cmsg_type", json_integer(cmsg->cmsg_type));
 //		json_array_append_new(json_cd_list, json_cd);
 //	}
 
 	return json_cd_list;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_tcp_msghdr(const Msghdr *msg) {
-	json_t *json_msghdr = json_object();
-	if (!json_msghdr) goto error;
-
-	// Only on message received (not sent via sendmsg)
+	json_t *json_msghdr = my_json_object();
+	// Flags are only for recvmsg()
 	if (msg->flags) add(json_msghdr, "flags", build_recv_flags(msg->flags));
 	add(json_msghdr, "iovec", build_iovec(&msg->iovec));
-
-	// Ancillary data
 	add(json_msghdr, "control_data_len",
 	    json_integer(msg->msghdr->msg_controllen));
 	add(json_msghdr, "control_data", build_control_data(msg->msghdr));
 	return json_msghdr;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_tcp_mmsghdr_vec(const Mmsghdr *tcp_mmsghdr_vec,
 				     int mmsghdr_count) {
-	json_t *json_mmsghdr_vec = json_array();
-	if (!json_mmsghdr_vec) goto error;
-
+	json_t *json_mmsghdr_vec = my_json_array();
 	for (int i = 0; i < mmsghdr_count; i++) {
-		json_t *json_mmsghdr = json_object();
-		if (!json_mmsghdr) goto error;
-
+		json_t *json_mmsghdr = my_json_object();
 		const Mmsghdr *tcp_mmsghder = (tcp_mmsghdr_vec + i);
 		add(json_mmsghdr, "transmitted_bytes",
 		    json_integer(tcp_mmsghder->bytes_transmitted));
-
-
 		add(json_mmsghdr, "msghdr",
 		    build_tcp_msghdr(&tcp_mmsghder->tcp_msghdr));
 		json_array_append_new(json_mmsghdr_vec, json_mmsghdr);
 	}
-
 	return json_mmsghdr_vec;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_timeval(const struct timeval *tv) {
-	json_t *json_timeval = json_object();
-	if (!json_timeval) goto error;
-
+	json_t *json_timeval = my_json_object();
 	add(json_timeval, "tv_sec", json_integer(tv->tv_sec));
 	add(json_timeval, "tv_usec", json_integer(tv->tv_usec));
-
 	return json_timeval;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_linger(const struct linger *linger) {
-	json_t *json_linger = json_object();
-	if (!json_linger) goto error;
-
+	json_t *json_linger = my_json_object();
 	add(json_linger, "l_onoff", json_integer(linger->l_onoff));
 	add(json_linger, "l_linger", json_integer(linger->l_linger));
-
 	return json_linger;
-error:
-	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_ERROR;
-	return NULL;
 }
 
 static json_t *build_optval(const Sockopt *sockopt) {
@@ -371,16 +292,11 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
 	const char *type_str = string_from_sock_event_type(ev->type);
 	add(json_ev, "type", json_string(type_str));
 
-	/* Time stamp */
-	json_t *timestamp_json = json_object();
-	if (timestamp_json) {
-		add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
-		add(timestamp_json, "usec",
-		    json_integer(ev->timestamp.tv_usec));
-	}
+	json_t *timestamp_json = my_json_object();
+	add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
+	add(timestamp_json, "usec", json_integer(ev->timestamp.tv_usec));
 	add(json_ev, "timestamp", timestamp_json);
 
-	/* Return value & err string */
 	add(json_ev, "return_value", json_integer(ev->return_value));
 	add(json_ev, "success", json_boolean(ev->success));
 	add(json_ev, "error_str", json_string(ev->error_str));
@@ -390,18 +306,9 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
 
 #define BUILD_EV_PRELUDE()                                  \
-	json_t *json_ev = json_object();                    \
-	if (!json_ev) {                                     \
-		LOG(ERROR, "json_object() failed.");        \
-		LOG_FUNC_ERROR;                              \
-		return NULL;                                \
-	}                                                   \
+	json_t *json_ev = my_json_object();                    \
 	build_shared_fields(json_ev, (const SockEvent *)ev); \
-	json_t *json_details = json_object();               \
-	if (json_details == NULL) {                         \
-		LOG(ERROR, DETAILS_FAILURE);                \
-		return json_ev;                             \
-	}                                                   \
+	json_t *json_details = my_json_object();               \
 	add(json_ev, "details", json_details);
 
 static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
@@ -424,48 +331,37 @@ static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
 
 static json_t *build_sock_ev_bind(const SockEvBind *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "addr", build_addr(&ev->addr));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_connect(const SockEvConnect *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "addr", build_addr(&ev->addr));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_shutdown(const SockEvShutdown *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "SHUT_RD", json_boolean(ev->shut_rd));
 	add(json_details, "SHUT_WR", json_boolean(ev->shut_wr));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_listen(const SockEvListen *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "backlog", json_integer(ev->backlog));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_accept(const SockEvAccept *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "addr", build_addr(&ev->addr));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_accept4(const SockEvAccept4 *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "addr", build_addr(&ev->addr));
 	add(json_details, "flags", json_integer(ev->flags));
 	return json_ev;
@@ -485,66 +381,53 @@ static json_t *build_sock_ev_setsockopt(const SockEvSetsockopt *ev) {
 
 static json_t *build_sock_ev_send(const SockEvSend *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_send_flags(ev->flags));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_recv(const SockEvRecv *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_recv_flags(ev->flags));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_sendto(const SockEvSendto *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
        	add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "addr", build_addr(&ev->addr));
-
         return json_ev;
 }
 
 static json_t *build_sock_ev_recvfrom(const SockEvRecvfrom *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "addr", build_addr(&ev->addr));
-
         return json_ev;
 }
 
 static json_t *build_sock_ev_sendmsg(const SockEvSendmsg *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_send_flags(ev->flags));
 	add(json_details, "msghdr", build_tcp_msghdr(&(ev->tcp_msghdr)));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_recvmsg(const SockEvRecvmsg *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_recv_flags(ev->flags));
 	add(json_details, "msghdr", build_tcp_msghdr(&(ev->tcp_msghdr)));
-
 	return json_ev;
 }
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 static json_t *build_sock_ev_sendmmsg(const SockEvSendmmsg *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_send_flags(ev->flags));
 	add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
@@ -555,32 +438,25 @@ static json_t *build_sock_ev_sendmmsg(const SockEvSendmmsg *ev) {
 
 static json_t *build_sock_ev_recvmmsg(const SockEvRecvmmsg *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "flags", build_recv_flags(ev->flags));
 	add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
 	add(json_details, "mmsghdr_vec",
 	    build_tcp_mmsghdr_vec(ev->mmsghdr_vec, ev->mmsghdr_count));
-
 	add(json_details, "timeout", build_timeout(&ev->timeout));
-
 	return json_ev;
 }
 #endif
 
 static json_t *build_sock_ev_getsockname(const SockEvGetsockname *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
-	if (ev->super.success) add(json_details, "addr", build_addr(&ev->addr));
-
+        add(json_details, "addr", build_addr(&ev->addr));
 	return json_ev;
 }
 
 static json_t *build_sock_ev_getpeername(const SockEvGetpeername *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
-	if (ev->super.success) add(json_details, "addr", build_addr(&ev->addr));
-
+        add(json_details, "addr", build_addr(&ev->addr));
 	return json_ev;
 }
 
@@ -591,33 +467,25 @@ static json_t *build_sock_ev_sockatmark(const SockEvSockatmark *ev) {
 
 static json_t *build_sock_ev_isfdtype(const SockEvIsfdtype *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "fdtype", json_integer(ev->fdtype));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_write(const SockEvWrite *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_read(const SockEvRead *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_close(const SockEvClose *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "detected", json_boolean(ev->detected));
-
 	return json_ev;
 }
 
@@ -628,102 +496,82 @@ static json_t *build_sock_ev_dup(const SockEvDup *ev) {
 
 static json_t *build_sock_ev_dup2(const SockEvDup2 *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "newfd", json_integer(ev->newfd));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_dup3(const SockEvDup3 *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "newfd", json_integer(ev->newfd));
 	add(json_details, "O_CLOEXEC", json_boolean(ev->o_cloexec));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_writev(const SockEvWritev *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "iovec", build_iovec(&ev->iovec));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_readv(const SockEvReadv *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
 	add(json_details, "iovec", build_iovec(&ev->iovec));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_ioctl(const SockEvIoctl *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	char *request = alloc_ioctl_request_str(ev->request);
 	add(json_details, "request", json_string(request));
 	free(request);
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_sendfile(const SockEvSendfile *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "bytes", json_integer(ev->bytes));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_poll(const SockEvPoll *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", build_timeout(&ev->timeout));
 	add(json_details, "requested_events",
 	    build_poll_events(&ev->requested_events));
 	add(json_details, "returned_events",
 	    build_poll_events(&ev->returned_events));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_ppoll(const SockEvPpoll *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", build_timeout(&ev->timeout));
 	add(json_details, "requested_events",
 	    build_poll_events(&ev->requested_events));
 	add(json_details, "returned_events",
 	    build_poll_events(&ev->returned_events));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_select(const SockEvSelect *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", build_timeout(&ev->timeout));
 	add(json_details, "requested_events",
 	    build_select_events(&ev->requested_events));
 	add(json_details, "returned_events",
 	    build_select_events(&ev->returned_events));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_pselect(const SockEvPselect *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", build_timeout(&ev->timeout));
 	add(json_details, "requested_events",
 	    build_select_events(&ev->requested_events));
 	add(json_details, "returned_events",
 	    build_select_events(&ev->returned_events));
-
 	return json_ev;
 }
 
@@ -791,29 +639,23 @@ static json_t *build_sock_ev_epoll_ctl(const SockEvEpollCtl *ev) {
 
 static json_t *build_sock_ev_epoll_wait(const SockEvEpollWait *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", json_integer(ev->timeout));
 	add(json_details, "returned_events",
 	    build_epoll_events(ev->returned_events));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_epoll_pwait(const SockEvEpollPwait *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "timeout", json_integer(ev->timeout));
 	add(json_details, "returned_events",
 	    build_epoll_events(ev->returned_events));
-
 	return json_ev;
 }
 
 static json_t *build_sock_ev_fdopen(const SockEvFdopen *ev) {
 	BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
 	add(json_details, "mode", json_string(ev->mode));
-
 	return json_ev;
 }
 
