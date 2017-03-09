@@ -15,6 +15,7 @@
 #include <linux/sockios.h>
 #include <linux/wireless.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -30,10 +31,7 @@ char *alloc_sock_type_str(int type);
 
 // Socket options
 char *alloc_sockopt_level(int level);
-char *alloc_sol_socket_sockopt(int optname);
-char *alloc_ipproto_ip_sockopt(int optname);
-char *alloc_ipproto_ipv6_sockopt(int optname);
-char *alloc_ipproto_tcp_sockopt(int optname);
+char *alloc_sockoptname(int level, int optname);
 
 char *alloc_fcntl_cmd_str(int cmd);
 char *alloc_ioctl_request_str(int request);
@@ -52,6 +50,7 @@ static const IntStrPair SOCKET_TYPES[] = {{SOCK_STREAM, "SOCK_STREAM"},
 static const IntStrPair SOCKOPT_LEVELS[] = {{IPPROTO_IP, "IPPROTO_IP"},
                                             {SOL_SOCKET, "SOL_SOCKET"},
                                             {IPPROTO_TCP, "IPPROTO_TCP"},
+                                            {IPPROTO_UDP, "IPPROTO_UDP"},
                                             {IPPROTO_IPV6, "IPROTO_IPV6"}};
 
 static const IntStrPair SOL_SOCKET_OPTIONS[] = {
@@ -237,6 +236,10 @@ static const IntStrPair IPPROTO_TCP_OPTIONS[] = {
     {TCP_TIMESTAMP, "TCP_TIMESTAMP"},
     {TCP_NOTSENT_LOWAT, "TCP_NOTSENT_LOWAT"}
 #endif
+};
+
+static const IntStrPair IPPROTO_UDP_OPTIONS[] = {
+    {UDP_CORK, "UDP_CORK"}
 };
 
 static const IntStrPair FCNTL_CMDS[] = {

@@ -347,25 +347,7 @@ static void add_sockopt(json_t *details, const Sockopt *sockopt) {
 	add(details, "level", json_string(level));
 	free(level);
 
-	char *optname;
-	switch (sockopt->level) {
-		case SOL_SOCKET:
-			optname = alloc_sol_socket_sockopt(sockopt->optname);
-			break;
-		case IPPROTO_TCP:
-			optname = alloc_ipproto_tcp_sockopt(sockopt->optname);
-			break;
-		case IPPROTO_IP:
-			optname = alloc_ipproto_ip_sockopt(sockopt->optname);
-			break;
-		case IPPROTO_IPV6:
-			optname = alloc_ipproto_ipv6_sockopt(sockopt->optname);
-			break;
-		default:
-			LOG(WARN, "Unknown sockopt level: %d.", sockopt->level);
-			optname = alloc_sol_socket_sockopt(sockopt->optname);
-			break;
-	}
+	char *optname = alloc_sockoptname(sockopt->level, sockopt->optname);
 	add(details, "optname", json_string(optname));
 	free(optname);
 

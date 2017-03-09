@@ -28,11 +28,12 @@ error:
         return false;
 }
 
-#define MAP_GET(MAP, KEY)                                                     \
+#define MAP_GET(MAP, KEY) {                                                    \
         char *str;                                                            \
         int map_size = sizeof(MAP) / sizeof(IntStrPair);                      \
         if (!alloc_string_from_cons(KEY, MAP, map_size, &str)) LOG_FUNC_WARN; \
-        return str;
+        return str;\
+}
 
 char *alloc_sock_domain_str(int domain) { MAP_GET(SOCKET_DOMAINS, domain); }
 
@@ -40,15 +41,25 @@ char *alloc_sock_type_str(int type) { MAP_GET(SOCKET_TYPES, type); }
 
 char *alloc_sockopt_level(int level) { MAP_GET(SOCKOPT_LEVELS, level); }
 
-char *alloc_sol_socket_sockopt(int opt) { MAP_GET(SOL_SOCKET_OPTIONS, opt); }
-
-char *alloc_ipproto_ip_sockopt(int opt) { MAP_GET(IPPROTO_IP_OPTIONS, opt); }
-
-char *alloc_ipproto_ipv6_sockopt(int opt) {
-        MAP_GET(IPPROTO_IPV6_OPTIONS, opt);
+char *alloc_sockoptname(int level, int optname) {
+        switch (level) {
+                case SOL_SOCKET:
+                        MAP_GET(SOL_SOCKET_OPTIONS, optname);
+                case IPPROTO_TCP:
+                        MAP_GET(IPPROTO_TCP_OPTIONS, optname);
+                case IPPROTO_IP:
+                         MAP_GET(IPPROTO_IP_OPTIONS, optname);
+                case IPPROTO_IPV6:
+                         MAP_GET(IPPROTO_IPV6_OPTIONS, optname);
+                case IPPROTO_UDP:
+                         MAP_GET(IPPROTO_UDP_OPTIONS, optname);
+                default:
+                        LOG(WARN, "Unknown sockopt level: %d.", level);
+                        MAP_GET(SOL_SOCKET_OPTIONS, optname);
+        }
+        // Unreachable
+        return NULL;
 }
-
-char *alloc_ipproto_tcp_sockopt(int opt) { MAP_GET(IPPROTO_TCP_OPTIONS, opt); }
 
 char *alloc_fcntl_cmd_str(int cmd) { MAP_GET(FCNTL_CMDS, cmd); }
 
