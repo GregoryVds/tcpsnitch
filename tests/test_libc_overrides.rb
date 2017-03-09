@@ -50,6 +50,11 @@ describe "libc overrides" do
         it "#{dgram} should not crash" do
           assert run_c_program(dgram)
         end
+
+        it "should be in JSON with #{dgram}" do
+          run_c_program(stream)
+          assert_event_present(syscall)
+        end
       end
 
       unless [SOCK_EV_POLL, SOCK_EV_PPOLL, SOCK_EV_SOCKATMARK].include?(syscall) 
