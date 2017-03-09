@@ -8,14 +8,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #ifdef __ANDROID__
-#include <sys/system_properties.h>
 #include <android/log.h>
+#include <sys/system_properties.h>
 #endif
 #include "constants.h"
 #include "lib.h"
 #include "logger.h"
-#include "string_builders.h"
 #include "sock_events.h"
+#include "string_builders.h"
 
 long conf_opt_b;
 long conf_opt_c;
@@ -60,7 +60,7 @@ static char *create_logs_dir_at_path(const char *path) {
                         free(full_path);
                         i++;
                         full_path = alloc_append_int_to_path(base_path, i);
-               } else if (!dir && errno == ENOENT)
+                } else if (!dir && errno == ENOENT)
                         break;  // Free.
                 else if (!dir)
                         goto error3;  // Failure for some other reason.
@@ -253,4 +253,3 @@ __attribute__((destructor)) static void cleanup(void) {
         // tcp_free();
         // tcpsnitch_free();
 }
-

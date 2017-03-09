@@ -19,7 +19,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "constant_strings.h"
 #include "constants.h"
 #include "init.h"
 #include "json_builder.h"

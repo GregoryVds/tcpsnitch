@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "packet_sniffer.h"
 #include <pcap.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -10,10 +11,9 @@
 #include "lib.h"
 #include "logger.h"
 #include "logger.h"
-#include "packet_sniffer.h"
 #include "string_builders.h"
 
-#define BUFFER_SIZE 8*100000 // In MB = 8MB
+#define BUFFER_SIZE 8 * 100000  // In MB = 8MB
 
 typedef struct {
         pcap_t *handle;
@@ -90,7 +90,7 @@ char *alloc_capture_filter(const struct sockaddr *addr1,
         static const char *PORT_FILTER = "port %s";
         static const char *SINGLE_FILTER = "host %s and port %s";
         static const char *DOUBLE_FILTER = "port %s and host %s and port %s";
-        
+
         // Build string rep of hosts/ports
         char *port1 = NULL, *port2 = NULL, *ip1 = NULL, *ip2 = NULL;
         if (addr1) {
@@ -108,7 +108,7 @@ char *alloc_capture_filter(const struct sockaddr *addr1,
 
         if (addr1 && addr2)
                 snprintf(filter, n, DOUBLE_FILTER, port1, ip2, port2);
-        else if (addr1) 
+        else if (addr1)
                 snprintf(filter, n, PORT_FILTER, port1);
         else if (addr2)
                 snprintf(filter, n, SINGLE_FILTER, ip2, port2);

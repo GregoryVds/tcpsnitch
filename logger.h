@@ -23,10 +23,11 @@ void print_trace(void);
 #ifdef __ANDROID__
 #define LOG_FUNC_ERROR LOG(ERROR, "%s failed.", __func__)
 #else
-#define LOG_FUNC_ERROR {\
-        LOG(ERROR, "%s failed.", __func__)\
-        print_trace();\
-}
+#define LOG_FUNC_ERROR                             \
+        {                                          \
+                LOG(ERROR, "%s failed.", __func__) \
+                print_trace();                     \
+        }
 #endif
 
 #define LOG_FUNC_WARN LOG(WARN, "%s", __func__)

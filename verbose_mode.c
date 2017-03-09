@@ -187,22 +187,21 @@ static void output_ev_fcntl(const SockEvFcntl *ev) {
 }
 
 static void output_ev_epoll_ctl(const SockEvEpollCtl *ev) {
-	OUTPUT_EV("epoll_ctl=%d", ev->super.return_value);
+        OUTPUT_EV("epoll_ctl=%d", ev->super.return_value);
 }
 
-
 static void output_ev_epoll_wait(const SockEvEpollWait *ev) {
-	OUTPUT_EV("epoll_wait=%d", ev->super.return_value);
+        OUTPUT_EV("epoll_wait=%d", ev->super.return_value);
 }
 
 static void output_ev_epoll_pwait(const SockEvEpollPwait *ev) {
-	OUTPUT_EV("epoll_pwait=%d", ev->super.return_value);
+        OUTPUT_EV("epoll_pwait=%d", ev->super.return_value);
 }
 
 static void output_ev_fdopen(const SockEvFdopen *ev) {
         OUTPUT_EV("fdopen()=%d", ev->super.return_value);
 }
- 
+
 void output_event(const SockEvent *ev) {
 #ifndef __ANDROID__
         if (!_stdout) return;  // We don't bother handling a fdopen() fail.
@@ -263,18 +262,18 @@ void output_event(const SockEvent *ev) {
                         output_ev_recvmmsg((const SockEvRecvmmsg *)ev);
                         break;
 #endif
-		case SOCK_EV_GETSOCKNAME:
-			output_ev_getsockname((const SockEvGetsockname *)ev);
-			break;
-		case SOCK_EV_GETPEERNAME:
-			output_ev_getpeername((const SockEvGetpeername *)ev);
-			break;
-		case SOCK_EV_SOCKATMARK:
-			output_ev_sockatmark((const SockEvSockatmark *)ev);
-			break;
-		case SOCK_EV_ISFDTYPE:
-			output_ev_isfdtype((const SockEvIsfdtype *)ev);
-			break;
+                case SOCK_EV_GETSOCKNAME:
+                        output_ev_getsockname((const SockEvGetsockname *)ev);
+                        break;
+                case SOCK_EV_GETPEERNAME:
+                        output_ev_getpeername((const SockEvGetpeername *)ev);
+                        break;
+                case SOCK_EV_SOCKATMARK:
+                        output_ev_sockatmark((const SockEvSockatmark *)ev);
+                        break;
+                case SOCK_EV_ISFDTYPE:
+                        output_ev_isfdtype((const SockEvIsfdtype *)ev);
+                        break;
                 case SOCK_EV_DUP:
                         output_ev_dup((const SockEvDup *)ev);
                         break;
@@ -302,7 +301,7 @@ void output_event(const SockEvent *ev) {
                 case SOCK_EV_IOCTL:
                         output_ev_ioctl((const SockEvIoctl *)ev);
                         break;
-	        case SOCK_EV_SENDFILE:
+                case SOCK_EV_SENDFILE:
                         output_ev_sendfile((const SockEvSendfile *)ev);
                         break;
                 case SOCK_EV_POLL:

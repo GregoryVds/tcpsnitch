@@ -141,7 +141,6 @@ static void set_log_path(const char *path) {
 #else
                 log_to_stderr(ERROR, str, __FILE__, __LINE__);
 #endif
-
         }
 }
 
@@ -166,18 +165,18 @@ void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
 
 #ifndef __ANDROID__
 void print_trace(void) {
-	void *array[10];
-	size_t size;
-	char **strings;
-	size_t i;
+        void *array[10];
+        size_t size;
+        char **strings;
+        size_t i;
 
-	size = backtrace(array, 10);
-	strings = backtrace_symbols(array, size);
+        size = backtrace(array, 10);
+        strings = backtrace_symbols(array, size);
 
-	printf("Obtained %zd stack frames.\n", size);
+        printf("Obtained %zd stack frames.\n", size);
 
-	for (i = 0; i < size; i++) fprintf(_stderr, "     %s\n", strings[i]);
+        for (i = 0; i < size; i++) fprintf(_stderr, "     %s\n", strings[i]);
 
-	free(strings);
+        free(strings);
 }
 #endif

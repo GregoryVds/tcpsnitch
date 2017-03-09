@@ -26,4 +26,3 @@ void reset_tcpsnitch(void);
 void init_tcpsnitch(void);
 
 #endif
-
