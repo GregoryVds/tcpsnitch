@@ -28,6 +28,29 @@
 #include "sock_events.h"
 #include "string_builders.h"
 
+#define arg2 a
+#define arg3 arg2, b
+#define arg4 arg3, c
+#define arg5 arg4, d
+#define arg6 arg5, e
+
+#define override(FUNCTION, RETURN_TYPE, ARGS_COUNT, ...)                       \
+        typedef RETURN_TYPE (*FUNCTION ## _type)(int fd, __VA_ARGS__);         \
+        FUNCTION ## _type orig_ ## FUNCTION;                                   \
+                                                                               \
+        RETURN_TYPE FUNCTION(int fd, __VA_ARGS__) {                            \
+                if (!orig_ ## FUNCTION)                                        \
+                        orig_ ## FUNCTION =                                    \
+                            (FUNCTION ## _type)dlsym(RTLD_NEXT, #FUNCTION);    \
+                RETURN_TYPE ret = orig_ ## FUNCTION(fd, arg ## ARGS_COUNT);    \
+                int err = errno;                                               \
+                if (is_inet_socket(fd))                                        \
+                        sock_ev_ ## FUNCTION(fd, ret, err, arg ## ARGS_COUNT); \
+                errno = err;                                                   \
+                return ret;                                                    \
+        }
+
+
 /*
  Use "standard" font here to generate ASCII arts:
  http://patorjk.com/software/taag/#p=display&f=Standard
@@ -59,20 +82,6 @@ int socket(int domain, int type, int protocol) {
         return fd;
 }
 
-typedef int (*bind_type)(int fd, const struct sockaddr *addr, socklen_t len);
-bind_type orig_bind;
-
-int bind(int fd, const struct sockaddr *addr, socklen_t len) {
-        if (!orig_bind) orig_bind = (bind_type)dlsym(RTLD_NEXT, "bind");
-
-        int ret = orig_bind(fd, addr, len);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_bind(fd, ret, err, addr, len);
-
-        errno = err;
-        return ret;
-}
-
 typedef int (*connect_type)(int fd, const struct sockaddr *addr, socklen_t len);
 connect_type orig_connect;
 
@@ -89,152 +98,21 @@ int connect(int fd, const struct sockaddr *addr, socklen_t len) {
         return ret;
 }
 
-typedef int (*shutdown_type)(int fd, int how);
-shutdown_type orig_shutdown;
-
-int shutdown(int fd, int how) {
-        if (!orig_shutdown)
-                orig_shutdown = (shutdown_type)dlsym(RTLD_NEXT, "shutdown");
-
-        int ret = orig_shutdown(fd, how);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_shutdown(fd, ret, err, how);
-
-        errno = err;
-        return ret;
-}
-
-typedef int (*listen_type)(int fd, int n);
-listen_type orig_listen;
-
-int listen(int fd, int n) {
-        if (!orig_listen) orig_listen = (listen_type)dlsym(RTLD_NEXT, "listen");
-
-        int ret = orig_listen(fd, n);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_listen(fd, ret, err, n);
-
-        errno = err;
-        return ret;
-}
-
-typedef int (*accept_type)(int fd, struct sockaddr *addr, socklen_t *addr_len);
-accept_type orig_accept;
-
-int accept(int fd, struct sockaddr *addr, socklen_t *addr_len) {
-        if (!orig_accept) orig_accept = (accept_type)dlsym(RTLD_NEXT, "accept");
-
-        int ret = orig_accept(fd, addr, addr_len);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_accept(fd, ret, err, addr, addr_len);
-
-        errno = err;
-        return ret;
-}
-
-typedef int (*accept4_type)(int fd, struct sockaddr *addr, socklen_t *addr_len,
-                            int flags);
-accept4_type orig_accept4;
-
-int accept4(int fd, struct sockaddr *addr, socklen_t *addr_len, int flags) {
-        if (!orig_accept4)
-                orig_accept4 = (accept4_type)dlsym(RTLD_NEXT, "accept4");
-
-        int ret = orig_accept4(fd, addr, addr_len, flags);
-        int err = errno;
-        if (is_inet_socket(fd))
-                sock_ev_accept4(fd, ret, err, addr, addr_len, flags);
-
-        errno = err;
-        return ret;
-}
-
-typedef int (*getsockopt_type)(int fd, int level, int optname, void *optval,
-                               socklen_t *optlen);
-getsockopt_type orig_getsockopt;
-
-int getsockopt(int fd, int level, int optname, void *optval,
-               socklen_t *optlen) {
-        if (!orig_getsockopt)
-                orig_getsockopt =
-                    (getsockopt_type)dlsym(RTLD_NEXT, "getsockopt");
-
-        int ret = orig_getsockopt(fd, level, optname, optval, optlen);
-        int err = errno;
-        if (is_inet_socket(fd))
-                sock_ev_getsockopt(fd, ret, err, level, optname, optval,
-                                   *optlen);
-
-        errno = err;
-        return ret;
-}
-
-typedef int (*setsockopt_type)(int fd, int level, int optname,
-                               const void *optval, socklen_t optlen);
-setsockopt_type orig_setsockopt;
-
-int setsockopt(int fd, int level, int optname, const void *optval,
-               socklen_t optlen) {
-        if (!orig_setsockopt)
-                orig_setsockopt =
-                    (setsockopt_type)dlsym(RTLD_NEXT, "setsockopt");
-
-        int ret = orig_setsockopt(fd, level, optname, optval, optlen);
-        int err = errno;
-        if (is_inet_socket(fd))
-                sock_ev_setsockopt(fd, ret, err, level, optname, optval,
-                                   optlen);
-
-        errno = err;
-        return ret;
-}
-
-#if defined(__ANDROID__)
-typedef ssize_t (*send_type)(int fd, const void *buf, size_t n,
-                             unsigned int flags);
-#else
-typedef ssize_t (*send_type)(int fd, const void *buf, size_t n, int flags);
-#endif
-
-send_type orig_send;
+override(bind, int, 3, const struct sockaddr *a, socklen_t b)
+override(shutdown, int, 2, int a)
+override(listen, int, 2, int a)
+override(accept, int, 3, struct sockaddr *a, socklen_t *b)
+override(accept4, int, 4, struct sockaddr *a, socklen_t *b, int c)
+override(getsockopt, int, 5, int a, int b, void *c, socklen_t *d)
+override(setsockopt, int, 5, int a, int b, const void *c, socklen_t d)
 
 #if defined(__ANDROID__) && __ANDROID_API__ <= 19
-ssize_t send(int fd, const void *buf, size_t n, unsigned int flags) {
+override(send, ssize_t, 4, const void *a, size_t b, unsigned int c)
+override(recv, ssize_t, 4, void *a, size_t b, unsigned int c)
 #else
-ssize_t send(int fd, const void *buf, size_t n, int flags) {
+override(send, ssize_t, 4, const void *a, size_t b, int c)
+override(recv, ssize_t, 4, void *a, size_t b, int c)
 #endif
-        if (!orig_send) orig_send = (send_type)dlsym(RTLD_NEXT, "send");
-
-        ssize_t ret = orig_send(fd, buf, n, flags);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_send(fd, (int)ret, err, n, flags);
-
-        errno = err;
-        return ret;
-}
-
-#if defined(__ANDROID__) && __ANDROID_API__ <= 19
-typedef ssize_t (*recv_type)(int fd, void *buf, size_t n, unsigned int flags);
-#else
-typedef ssize_t (*recv_type)(int fd, void *buf, size_t n, int flags);
-#endif
-
-recv_type orig_recv;
-
-#if defined(__ANDROID__) && __ANDROID_API__ <= 19
-ssize_t recv(int fd, void *buf, size_t n, unsigned int flags) {
-#else
-ssize_t recv(int fd, void *buf, size_t n, int flags) {
-#endif
-        if (!orig_recv) orig_recv = (recv_type)dlsym(RTLD_NEXT, "recv");
-
-        ssize_t ret = orig_recv(fd, buf, n, flags);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_recv(fd, ret, err, n, flags);
-
-        errno = err;
-        return ret;
-}
 
 typedef ssize_t (*sendto_type)(int fd, const void *buf, size_t n, int flags,
                                const struct sockaddr *addr, socklen_t addr_len);
@@ -453,35 +331,36 @@ int sockatmark(int fd) {
         return ret;
 }
 
-typedef int (*isfdtype_type)(int fd, int fdtype);
-isfdtype_type orig_isfdtype;
+    // typedef int (*isfdtype_type)(int fd, int fdtype);
+    // isfdtype_type orig_isfdtype;
+    //
+    // int isfdtype(int fd, int fdtype) {
+    //        if (!orig_isfdtype)
+    //                orig_isfdtype = (isfdtype_type)dlsym(RTLD_NEXT,
+    //                "isfdtype");
+    //
+    //        int ret = orig_isfdtype(fd, fdtype);
+    //        int err = errno;
+    //        if (is_inet_socket(fd)) sock_ev_isfdtype(fd, ret, err, fdtype);
+    //
+    //        errno = err;
+    //        return ret;
+    //}
 
-int isfdtype(int fd, int fdtype) {
-        if (!orig_isfdtype)
-                orig_isfdtype = (isfdtype_type)dlsym(RTLD_NEXT, "isfdtype");
+    /*
+      _   _ _   _ ___ ____ _____ ____       _    ____ ___
+     | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
+     | | | |  \| || |\___ \ | | | | | |   / _ \ | |_) | |
+     | |_| | |\  || | ___) || | | |_| |  / ___ \|  __/| |
+      \___/|_| \_|___|____/ |_| |____/  /_/   \_\_|  |___|
 
-        int ret = orig_isfdtype(fd, fdtype);
-        int err = errno;
-        if (is_inet_socket(fd)) sock_ev_isfdtype(fd, ret, err, fdtype);
+     unistd.h - standard symbolic constants and types
 
-        errno = err;
-        return ret;
-}
+     functions: write(), read(), close(), fork(), dup(), dup2(), dup3()
 
-/*
-  _   _ _   _ ___ ____ _____ ____       _    ____ ___
- | | | | \ | |_ _/ ___|_   _|  _ \     / \  |  _ \_ _|
- | | | |  \| || |\___ \ | | | | | |   / _ \ | |_) | |
- | |_| | |\  || | ___) || | | |_| |  / ___ \|  __/| |
-  \___/|_| \_|___|____/ |_| |____/  /_/   \_\_|  |___|
+    */
 
- unistd.h - standard symbolic constants and types
-
- functions: write(), read(), close(), fork(), dup(), dup2(), dup3()
-
-*/
-
-typedef ssize_t (*write_type)(int fd, const void *buf, size_t n);
+    typedef ssize_t (*write_type)(int fd, const void *buf, size_t n);
 write_type orig_write;
 
 ssize_t write(int fd, const void *buf, size_t n) {

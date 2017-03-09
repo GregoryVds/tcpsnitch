@@ -612,11 +612,11 @@ error:
 }
 
 void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
-                        const void *optval, socklen_t optlen) {
+                        const void *optval, socklen_t *optlen) {
         // Inst. local vars Socket *sock& SockEvGetsockopt *ev
         SOCK_EV_PRELUDE(SOCK_EV_GETSOCKOPT, SockEvGetsockopt);
 
-        fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
+        fill_sockopt(&ev->sockopt, level, optname, optval, *optlen);
 
         SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
@@ -630,11 +630,12 @@ void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
 
         SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
-
-void sock_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
+void sock_ev_send(int fd, int ret, int err, const void *buf, size_t bytes,
+                  int flags) {
         // Inst. local vars Socket *sock& SockEvSend *ev
         SOCK_EV_PRELUDE(SOCK_EV_SEND, SockEvSend);
 
+        UNUSED(buf);
         ev->bytes = bytes;
         ev->flags = flags;
         sock->bytes_sent += bytes;
@@ -642,10 +643,12 @@ void sock_ev_send(int fd, int ret, int err, size_t bytes, int flags) {
         SOCK_EV_POSTLUDE(SOCK_EV_SEND);
 }
 
-void sock_ev_recv(int fd, int ret, int err, size_t bytes, int flags) {
+void sock_ev_recv(int fd, int ret, int err, void *buf, size_t bytes,
+                  int flags) {
         // Inst. local vars Socket *sock& SockEvRecv *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECV, SockEvRecv);
 
+        UNUSED(buf);
         ev->bytes = bytes;
         ev->flags = flags;
         sock->bytes_received += bytes;

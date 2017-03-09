@@ -6,8 +6,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <time.h>
 
 typedef enum SockEventType {
@@ -155,14 +155,14 @@ typedef struct {
         SockEvent super;
         size_t bytes;
         int flags;
-      	Addr addr;
+        Addr addr;
 } SockEvSendto;
 
 typedef struct {
         SockEvent super;
         size_t bytes;
         int flags;
-      	Addr addr;
+        Addr addr;
 } SockEvRecvfrom;
 
 typedef struct {
@@ -174,7 +174,7 @@ typedef struct {
         Iovec iovec;
         struct sockaddr_storage addr;
         int flags;
-        struct msghdr *msghdr; 
+        struct msghdr *msghdr;
 } Msghdr;
 
 typedef struct {
@@ -230,9 +230,7 @@ typedef struct {
         Addr addr;
 } SockEvGetpeername;
 
-typedef struct {
-        SockEvent super;
-} SockEvSockatmark;
+typedef struct { SockEvent super; } SockEvSockatmark;
 
 typedef struct {
         SockEvent super;
@@ -379,7 +377,7 @@ struct SockEventNode {
 
 typedef struct {
         // To be freed
-        char *directory;     // Directory for all logging purpose.
+        char *directory;      // Directory for all logging purpose.
         SockEventNode *head;  // Head for list of events.
         SockEventNode *tail;  // Tail for list of events.
         // Others
@@ -411,63 +409,64 @@ void tcp_stop_capture(Socket *con);
 void sock_ev_socket(int fd, int domain, int type, int protocol);
 
 void sock_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
-                 socklen_t len);
+                  socklen_t len);
 
 void sock_ev_connect(int fd, int ret, int err, const struct sockaddr *addr,
-                    socklen_t len);
+                     socklen_t len);
 
 void sock_ev_shutdown(int fd, int ret, int err, int how);
 
 void sock_ev_listen(int fd, int ret, int err, int backlog);
 
 void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
-                   socklen_t *addr_len);
+                    socklen_t *addr_len);
 
 void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
-                   socklen_t *addr_len, int flags);
+                     socklen_t *addr_len, int flags);
 
 void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
-                       const void *optval, socklen_t optlen);
+                        const void *optval, socklen_t *optlen);
 
 void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
-                       const void *optval, socklen_t optlen);
+                        const void *optval, socklen_t optlen);
 
-void sock_ev_send(int fd, int ret, int err, size_t bytes, int flags);
+void sock_ev_send(int fd, int ret, int err, const void *buf, size_t bytes,
+                  int flags);
 
-void sock_ev_recv(int fd, int ret, int err, size_t bytes, int flags);
+void sock_ev_recv(int fd, int ret, int err, void *buf, size_t bytes, int flags);
 
 void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
-                   const struct sockaddr *addr, socklen_t len);
+                    const struct sockaddr *addr, socklen_t len);
 
 void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
-                     const struct sockaddr *addr, socklen_t *len);
+                      const struct sockaddr *addr, socklen_t *len);
 
 void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
-                    int flags);
+                     int flags);
 
 void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
-                    int flags);
+                     int flags);
 #if !defined(__ANDROID__)
 void sock_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                     unsigned int vlen, int flags);
+                      unsigned int vlen, int flags);
 #elif __ANDROID_API__ >= 21
 void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
-                     unsigned int vlen, int flags);
+                      unsigned int vlen, int flags);
 #endif
 
 #if !defined(__ANDROID__)
 void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                     unsigned int vlen, int flags, struct timespec *tmo);
+                      unsigned int vlen, int flags, struct timespec *tmo);
 #elif __ANDROID_API__ >= 21
 void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                     unsigned int vlen, int flags, const struct timespec *tmo);
+                      unsigned int vlen, int flags, const struct timespec *tmo);
 #endif
 
 void sock_ev_getsockname(int fd, int ret, int err, struct sockaddr *addr,
-                        socklen_t *addrlen);
+                         socklen_t *addrlen);
 
 void sock_ev_getpeername(int fd, int ret, int err, struct sockaddr *addr,
-                        socklen_t *addrlen);
+                         socklen_t *addrlen);
 
 void sock_ev_sockatmark(int fd, int ret, int err);
 
@@ -486,10 +485,10 @@ void sock_ev_dup2(int fd, int ret, int err, int newfd);
 void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags);
 
 void sock_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
-                   int iovec_count);
+                    int iovec_count);
 
 void sock_ev_readv(int fd, int ret, int err, const struct iovec *iovec,
-                  int iovec_count);
+                   int iovec_count);
 
 #ifdef __ANDROID__
 void sock_ev_ioctl(int fd, int ret, int err, int request);
@@ -500,31 +499,31 @@ void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request);
 void sock_ev_sendfile(int fd, int ret, int err, size_t bytes);
 
 void sock_ev_poll(int fd, int ret, int err, short requested_events,
-                 short returned_event, int timeout);
+                  short returned_event, int timeout);
 
 void sock_ev_ppoll(int fd, int ret, int err, short requested_events,
-                  short returned_event, const struct timespec *timeout);
+                   short returned_event, const struct timespec *timeout);
 
 void sock_ev_select(int fd, int ret, int err, bool req_read, bool req_write,
-                   bool req_except, bool ret_read, bool ret_write,
-                   bool ret_except, struct timeval *timeout);
+                    bool req_except, bool ret_read, bool ret_write,
+                    bool ret_except, struct timeval *timeout);
 
 void sock_ev_pselect(int fd, int ret, int err, bool req_read, bool req_write,
-                    bool req_except, bool ret_read, bool ret_write,
-                    bool ret_except, const struct timespec *timeout);
+                     bool req_except, bool ret_read, bool ret_write,
+                     bool ret_except, const struct timespec *timeout);
 
 void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...);
 
 void sock_ev_epoll_ctl(int fd, int ret, int err, int op,
-                      uint32_t requested_events);
+                       uint32_t requested_events);
 
 void sock_ev_epoll_wait(int fd, int ret, int err, int timeout,
-                       uint32_t returned_events);
-
-void sock_ev_epoll_pwait(int fd, int ret, int err, int timeout,
                         uint32_t returned_events);
 
-void sock_ev_fdopen(int fd, FILE *ret, int err, const char *mode); 
+void sock_ev_epoll_pwait(int fd, int ret, int err, int timeout,
+                         uint32_t returned_events);
+
+void sock_ev_fdopen(int fd, FILE *ret, int err, const char *mode);
 
 void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 
