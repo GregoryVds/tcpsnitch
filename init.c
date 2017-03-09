@@ -85,7 +85,7 @@ error2:
 error1:
         free(dirname);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -114,7 +114,7 @@ error2:
 error1:
         LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
 }
 #endif
 
@@ -162,7 +162,7 @@ static void init_logs(void) {
         free(log_file_path);
         return;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         LOG(ERROR, "No logs to file.");
 }
 

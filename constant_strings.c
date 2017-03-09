@@ -24,14 +24,14 @@ bool alloc_string_from_cons(int cons, const IntStrPair *map, int map_size,
         snprintf(*str_ptr, str_size, "%d", cons);
         return false;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return false;
 }
 
 #define MAP_GET(MAP, KEY)                                                     \
         char *str;                                                            \
         int map_size = sizeof(MAP) / sizeof(IntStrPair);                      \
-        if (!alloc_string_from_cons(KEY, MAP, map_size, &str)) LOG_FUNC_FAIL; \
+        if (!alloc_string_from_cons(KEY, MAP, map_size, &str)) LOG_FUNC_WARN; \
         return str;
 
 char *alloc_sock_domain_str(int domain) { MAP_GET(SOCKET_DOMAINS, domain); }

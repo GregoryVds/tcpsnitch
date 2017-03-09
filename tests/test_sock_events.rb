@@ -18,12 +18,12 @@ describe 'tcp_spy' do
     it 'should properly handle 2 consecutive connections' do
       run_c_program('consecutive_connections')
       pattern0 = [
-        { type: TCP_EV_SOCKET }.ignore_extra_keys!,
-        { type: TCP_EV_CLOSE }.ignore_extra_keys!
+        { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
+        { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
       pattern1 = [
-        { type: TCP_EV_SOCKET }.ignore_extra_keys!,
-        { type: TCP_EV_CLOSE }.ignore_extra_keys!
+        { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
+        { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern0, read_json_as_array(0))
       assert_json_match(pattern1, read_json_as_array(1))
@@ -32,12 +32,12 @@ describe 'tcp_spy' do
     it 'should properly handle 2 concurrent connections' do
       run_c_program('concurrent_connections')
       pattern0 = [
-        { type: TCP_EV_SOCKET }.ignore_extra_keys!,
-        { type: TCP_EV_CLOSE }.ignore_extra_keys!
+        { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
+        { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
       pattern1 = [
-        { type: TCP_EV_SOCKET }.ignore_extra_keys!,
-        { type: TCP_EV_CLOSE }.ignore_extra_keys!
+        { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
+        { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
       assert_json_match(pattern0, read_json_as_array(0))
       assert_json_match(pattern1, read_json_as_array(1))
@@ -52,6 +52,7 @@ describe 'tcp_spy' do
           details: Hash,
           return_value: Integer,
           success: Boolean,
+          thread_id: Integer,
           timestamp: {
             sec: Integer,
             usec: Integer
@@ -66,15 +67,16 @@ describe 'tcp_spy' do
   addr = {
     sa_family: String,
     ip: String,
-    port: String,
-    hostname: String,
-    service: String
+    port: String
+  #  hostname: String,
+  #  service: String
   }
 
 	sock_opt = {
 		level: String,
    	optname: String,
-		optlen: Integer
+		optlen: Integer,
+    optval: Object
 	}
 
   send_flags = {
@@ -140,57 +142,57 @@ describe 'tcp_spy' do
 	}
 
   DETAILS = {
-    TCP_EV_SOCKET => { 
+    SOCK_EV_SOCKET => { 
       domain: String,
       protocol: Integer,
       SOCK_CLOEXEC: Boolean,
       SOCK_NONBLOCK: Boolean,
       type: String
     },
-    TCP_EV_BIND => {
+    SOCK_EV_BIND => {
       addr: addr
     },
-    TCP_EV_CONNECT => {
+    SOCK_EV_CONNECT => {
       addr: addr
     },
-    TCP_EV_SHUTDOWN => {
+    SOCK_EV_SHUTDOWN => {
       SHUT_RD: Boolean,
       SHUT_WR: Boolean
     },
-    TCP_EV_LISTEN => {
+    SOCK_EV_LISTEN => {
       backlog: Integer
     },
-    TCP_EV_GETSOCKOPT => sock_opt,
-    TCP_EV_SETSOCKOPT => sock_opt,
-    TCP_EV_SEND => {
+    SOCK_EV_GETSOCKOPT => sock_opt,
+    SOCK_EV_SETSOCKOPT => sock_opt,
+    SOCK_EV_SEND => {
       bytes: Integer,
       flags: send_flags
     },
-    TCP_EV_RECV => {
+    SOCK_EV_RECV => {
       bytes: Integer,
       flags: recv_flags
     },
-    TCP_EV_SENDTO => {
+    SOCK_EV_SENDTO => {
       bytes: Integer,
       flags: send_flags,
       addr: addr
     },
-    TCP_EV_RECVFROM => {
+    SOCK_EV_RECVFROM => {
       bytes: Integer,
       flags: recv_flags,
       addr: addr
     },
-    TCP_EV_SENDMSG => {
+    SOCK_EV_SENDMSG => {
       bytes: Integer,
       flags: send_flags,
       msghdr: msghdr
     },
-    TCP_EV_RECVMSG => {
+    SOCK_EV_RECVMSG => {
       bytes: Integer,
       flags: recv_flags,
       msghdr: msghdr
     },
-    TCP_EV_SENDMMSG => {
+    SOCK_EV_SENDMMSG => {
       bytes: Integer,
       flags: send_flags,
       mmsghdr_count: Integer,
@@ -201,7 +203,7 @@ describe 'tcp_spy' do
         }
       ].ignore_extra_values!
     },
-    TCP_EV_RECVMMSG => {
+    SOCK_EV_RECVMMSG => {
       bytes: Integer,
       flags: recv_flags,
       mmsghdr_count: Integer,
@@ -213,93 +215,93 @@ describe 'tcp_spy' do
       ].ignore_extra_values!,
       timeout: timeout
     },
-    TCP_EV_WRITE => {
+    SOCK_EV_WRITE => {
       bytes: Integer
     },
-    TCP_EV_READ => {
+    SOCK_EV_READ => {
       bytes: Integer
     },
-    TCP_EV_GETSOCKNAME => {
+    SOCK_EV_GETSOCKNAME => {
       addr: addr
     },
-    TCP_EV_GETPEERNAME => {
+    SOCK_EV_GETPEERNAME => {
       addr: addr
     },
-    TCP_EV_SOCKATMARK => {
+    SOCK_EV_SOCKATMARK => {
     },
-    TCP_EV_ISFDTYPE => {
+    SOCK_EV_ISFDTYPE => {
       fdtype: Integer
     },
-    TCP_EV_CLOSE => {
+    SOCK_EV_CLOSE => {
       detected: Boolean
     },
-    TCP_EV_DUP => {},
-    TCP_EV_DUP2 => {
+    SOCK_EV_DUP => {},
+    SOCK_EV_DUP2 => {
       newfd: Integer
     },
-    TCP_EV_DUP3 => {
+    SOCK_EV_DUP3 => {
       newfd: Integer,
       O_CLOEXEC: Boolean
     },
-    TCP_EV_WRITEV => {
+    SOCK_EV_WRITEV => {
       bytes: Integer,
       iovec: {
         iovec_count: Integer,
         iovec_sizes: [Integer].ignore_extra_values!
       }
     },
-    TCP_EV_READV => {
+    SOCK_EV_READV => {
       bytes: Integer,
       iovec: {
         iovec_count: Integer,
         iovec_sizes: [Integer].ignore_extra_values!
       }
     },
-    TCP_EV_IOCTL => {
+    SOCK_EV_IOCTL => {
       request: String
     },
-    TCP_EV_SENDFILE => {
+    SOCK_EV_SENDFILE => {
       bytes: Integer
     },
-    TCP_EV_POLL => {
+    SOCK_EV_POLL => {
       timeout: timeout,
       requested_events: poll_events,
       returned_events: poll_events
     },
-    TCP_EV_PPOLL => {
+    SOCK_EV_PPOLL => {
       timeout: timeout,
       requested_events: poll_events,
       returned_events: poll_events
     },
-    TCP_EV_SELECT => {
+    SOCK_EV_SELECT => {
       timeout: timeout,
       requested_events: select_events,
       returned_events: select_events
     },
-    TCP_EV_PSELECT => {
+    SOCK_EV_PSELECT => {
       timeout: timeout,
       requested_events: select_events,
       returned_events: select_events
     },
-    TCP_EV_FCNTL => {
+    SOCK_EV_FCNTL => {
       cmd: String
     }.ignore_extra_keys!,
-    TCP_EV_EPOLL_CTL => {
+    SOCK_EV_EPOLL_CTL => {
       op: String,
       requested_events: epoll_events
     },
-    TCP_EV_EPOLL_WAIT => {
+    SOCK_EV_EPOLL_WAIT => {
       timeout: Integer,
       returned_events: epoll_events
     },
-    TCP_EV_EPOLL_PWAIT => {
+    SOCK_EV_EPOLL_PWAIT => {
       timeout: Integer,
       returned_events: epoll_events
     },
-    TCP_EV_FDOPEN => {
+    SOCK_EV_FDOPEN => {
       mode: String,
     },
-    TCP_EV_TCP_INFO => {
+    SOCK_EV_TCP_INFO => {
       state: Integer,
       ca_state: Integer,
       retransmits: Integer,
@@ -342,6 +344,13 @@ describe 'tcp_spy' do
         pattern = [
           {
             type: syscall,
+            return_value: Integer,
+            success: Boolean,
+            thread_id: Integer,
+            timestamp: {
+              sec: Integer,
+              usec: Integer
+            },
             details: DETAILS[syscall]
           }.ignore_extra_keys!
         ].ignore_extra_values!

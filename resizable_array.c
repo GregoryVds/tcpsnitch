@@ -31,7 +31,7 @@ static bool init(int init_size) {
         size = init_size;
         return true;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return false;
 }
 
@@ -51,7 +51,7 @@ static bool double_size(int index) {
         size = new_size;
         return true;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return false;
 }
 
@@ -74,7 +74,7 @@ bool ra_put_elem(int index, ELEM_TYPE elem) {
         return true;
 error:
         pthread_rwlock_unlock(&rwlock);
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return false;
 }
 
@@ -92,7 +92,7 @@ ELEM_TYPE ra_get_and_lock_elem(int index) {
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
         pthread_rwlock_unlock(&rwlock);
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -109,7 +109,7 @@ error2:
         LOG(ERROR, "No item at index %d.", index);
 error_out:
         pthread_rwlock_unlock(&rwlock);
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
 }
 
 ELEM_TYPE ra_remove_elem(int index) {
@@ -131,7 +131,7 @@ ELEM_TYPE ra_remove_elem(int index) {
 error:
         LOG(ERROR, "OOB (index %d, bound %d).", index, size - 1);
         pthread_rwlock_unlock(&rwlock);
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 

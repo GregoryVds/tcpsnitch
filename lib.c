@@ -50,7 +50,7 @@ bool is_socket(int fd) {
 	return S_ISSOCK(statbuf.st_mode);
 error:
 	LOG(ERROR, "fstat() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	LOG(ERROR, "Assume fd is not a socket.");
 	return false;
 }
@@ -64,7 +64,7 @@ bool is_inet_socket(int fd) {
 	return (optval == AF_INET || optval == AF_INET6);
 error:
 	LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	LOG(ERROR, "Assume socket is not a INET socket.");
 	return false;
 }
@@ -78,7 +78,7 @@ bool is_tcp_socket(int fd) {
 	return optval == SOCK_STREAM;
 error:
 	LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	LOG(ERROR, "Assume socket is not a TCP socket.");
 	return false;
 }
@@ -99,7 +99,7 @@ error2:
 error3:
 	LOG(ERROR, "fclose() failed. %s.", strerror(errno));
 error_out:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return -1;
 }
 
@@ -108,7 +108,7 @@ int fill_timeval(struct timeval *timeval) {
 	return 0;
 error:
 	LOG(ERROR, "gettimeofday() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return -1;
 }
 
@@ -118,7 +118,7 @@ int fill_tcp_info(int fd, struct tcp_info *info) {
 	return 0;
 error:
 	LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return -1;
 }
 
@@ -127,7 +127,7 @@ time_t get_time_sec(void) {
 	if (fill_timeval(&tv)) goto error;
 	return tv.tv_sec;
 error:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return 0;
 }
 
@@ -138,7 +138,7 @@ unsigned long get_time_micros(void) {
 	time_micros = tv.tv_sec * (unsigned long)1000000 + tv.tv_usec;
 	return time_micros;
 error:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return 0;
 }
 
@@ -154,7 +154,7 @@ error1:
 error2:
 	LOG(ERROR, "strtol() failed. Overflow.");
 error_out:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return -1;
 }
 
@@ -164,7 +164,7 @@ long get_env_as_long(const char *env_var) {
 	return parse_long(var_str);
 error:
 	LOG(ERROR, "getenv() failed. Variable %s is not set.", env_var);
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return -1;
 }
 
@@ -202,7 +202,7 @@ int get_int_len(int i) {
 	}
 	return l;
 error:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	LOG(ERROR, "Negative numbers not supported.");
 	return 0;
 }
@@ -213,7 +213,7 @@ bool mutex_lock(pthread_mutex_t *mutex) {
 	return true;
 error:
 	LOG(ERROR, "pthread_mutex_lock() failed. %s.", strerror(rc));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return false;
 }
 
@@ -223,7 +223,7 @@ bool mutex_unlock(pthread_mutex_t *mutex) {
 	return true;
 error:
 	LOG(ERROR, "pthread_mutex_unlock() failed. %s.", strerror(rc));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return false;
 }
 
@@ -233,7 +233,7 @@ bool mutex_destroy(pthread_mutex_t *mutex) {
 	return true;
 error:
 	LOG(ERROR, "pthread_mutex_destroy() failed. %s.", strerror(rc));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return false;
 }
 
@@ -248,7 +248,7 @@ bool mutex_init(pthread_mutex_t *mutex) {
 	return true;
 error:
 	LOG(ERROR, "mutex_init() failed. %s.", strerror(rc));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return false;
 }
 
@@ -258,7 +258,7 @@ void *my_malloc(size_t size) {
 	return ret;
 error:
 	LOG(ERROR, "malloc() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -268,7 +268,7 @@ void *my_calloc(size_t size) {
 	return ret;
 error:
 	LOG(ERROR, "calloc() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -278,7 +278,7 @@ int my_fputs(const char *s, FILE *stream) {
 	return ret;
 error:
 	LOG(ERROR, "fputs() failed. %s.", strerror(errno));
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return ret;
 }
 
@@ -303,7 +303,7 @@ error2:
 error3:
 	free(dirname);
 error_out:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 

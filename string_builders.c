@@ -44,7 +44,7 @@ error1:
 cleanup_out:
         free(addr_str);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -80,7 +80,7 @@ error1:
 cleanup_out:
         free(port_str);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -104,7 +104,7 @@ error2:
 error1:
         free(addr_str);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -119,7 +119,7 @@ bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
 error:
         LOG(ERROR, "getnameinfo() failed. %s.", gai_strerror(rc));
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return false;
 }
 
@@ -137,7 +137,7 @@ error1:
 error2:
         LOG(ERROR, "path2 is NULL.");
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -151,7 +151,7 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         snprintf(full_path + path1_len, i_len + 2, "_%d", i);
         return full_path;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -179,7 +179,7 @@ char *alloc_dirname_str(void) {
         free(app_name);
         return str;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -196,7 +196,7 @@ char *alloc_android_opt_d(void) {
         free(app_name);
         return opt_d;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -231,7 +231,7 @@ error2:
 error1:
         LOG(ERROR, "fopen() failed. %s.", strerror(errno));
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -251,7 +251,7 @@ char *alloc_app_name(void) {
         free(cmdline);
         return app_name;
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -279,7 +279,7 @@ error3:
 error2:
         pclose(fp);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -291,7 +291,7 @@ char *alloc_error_str(int err) {
         strncpy(alloc_str, ori_str, str_len);
         return alloc_str;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -305,7 +305,7 @@ char *alloc_property(const char *property) {
 error1:
         LOG(ERROR, "__system_property_get() failed.");
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 #endif
@@ -324,7 +324,7 @@ char *alloc_str_opt(const char *opt) {
 error:
         LOG(ERROR, "Env %s was not set", opt);
 error1:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 #endif
 }

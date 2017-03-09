@@ -20,7 +20,8 @@ void print_trace(void);
                 logger(lvl, _buf, __FILE__, __LINE__);        \
         }
 
-#define LOG_FUNC_FAIL LOG(ERROR, "%s failed.", __func__)
+#define LOG_FUNC_ERROR LOG(ERROR, "%s failed.", __func__)
+#define LOG_FUNC_WARN LOG(WARN, "%s failed.", __func__)
 
 #define D(format, args...) LOG(DEBUG, format, ##args)
 

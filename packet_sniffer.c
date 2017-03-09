@@ -40,7 +40,7 @@ static pcap_t *get_capture_handle(void) {
 
         return handle;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         LOG(ERROR, "pcap_open_live() failed. %s.", err_buf);
         return NULL;
 }
@@ -129,7 +129,7 @@ error2:
 error1:
         free(port1);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -197,7 +197,7 @@ error2:
 error1:
         pcap_close(handle);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -222,6 +222,6 @@ error1:
         LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
         LOG(ERROR, "Ending packet capture immediately.");
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return -1;
 }

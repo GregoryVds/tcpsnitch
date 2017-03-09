@@ -62,7 +62,7 @@ static SocketState *alloc_connection(int fd) {
 	con->directory = create_numbered_dir_in_path(logs_dir_path, con->id);
 	return con;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -131,7 +131,7 @@ static SockEvent *alloc_event(SockEventType type, int return_value, int err,
         ev->thread_id = syscall(SYS_gettid);
         return ev;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return NULL;
 }
 
@@ -191,7 +191,7 @@ static void push_event(SocketState *con, SockEvent *ev) {
         con->events_count++;
         return;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return;
 }
 
@@ -225,7 +225,7 @@ static socklen_t fill_iovec(Iovec *iov1, const struct iovec *iov2,
         }
         return bytes;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return -1;
 }
 
@@ -314,7 +314,7 @@ error1:
         LOG(ERROR, "bind() failed. %s.", strerror(errno));
         goto error_out;
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         LOG(INFO, "Packet capture filter on dest IP/PORT only.");
         return -1;
 }
@@ -356,7 +356,7 @@ error2:
 error1:
         LOG(ERROR, "con->directory is NULL.");
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return;
 }
 
@@ -452,7 +452,7 @@ error1:
         free(pcap_file_path);
 error_out:
         ra_unlock_elem(fd);
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return;
 }
 
@@ -479,7 +479,7 @@ error2:
 error1:
         free(json_dump_switch);
 error_out:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
 }
 
 #define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                                  \
@@ -497,13 +497,13 @@ error_out:
 		}                                                              \
 		con = alloc_connection(fd);                                    \
 		if (!con || !ra_put_elem(fd, con)) {                           \
-			LOG_FUNC_FAIL;                                         \
+			LOG_FUNC_ERROR;                                         \
 			return;                                                \
 		}                                                              \
 		con = NULL;                                                    \
 		con = ra_get_and_lock_elem(fd);                                \
 		if (!con) {                                                    \
-			LOG_FUNC_FAIL;                                         \
+			LOG_FUNC_ERROR;                                         \
 			return;                                                \
 		}                                                              \
 		if (conf_opt_t) start_json_dumper_thread(con, fd);             \
@@ -513,7 +513,7 @@ error_out:
 	ev_type *ev =                                                          \
 	    (ev_type *)alloc_event(ev_type_cons, ret, err, con->events_count); \
 	if (!ev) {                                                             \
-		LOG_FUNC_FAIL;                                                 \
+		LOG_FUNC_ERROR;                                                 \
 		ra_unlock_elem(fd);                                            \
 		return;                                                        \
 	}
@@ -670,7 +670,7 @@ void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT);
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         ra_unlock_elem(fd);
 }
 
@@ -685,7 +685,7 @@ void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT4);
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         ra_unlock_elem(fd);
 }
 
@@ -903,7 +903,7 @@ void sock_ev_close(int fd, int ret, int err, bool detected) {
         free_connection(con);
         return;
 error:
-        LOG_FUNC_FAIL;
+        LOG_FUNC_ERROR;
         return;
 }
 

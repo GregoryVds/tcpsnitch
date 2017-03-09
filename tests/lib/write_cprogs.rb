@@ -263,8 +263,9 @@ RECVFROM = CProg.new(<<-EOT, 'recvfrom')
 #{CONNECT}
 #{send_http_get}
   char buf[42];
-  socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
+  struct sockaddr_storage addrfrom;
+  socklen_t fromlen = sizeof(addrfrom);
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addrfrom,
                &fromlen) < 0) {
     fprintf(stderr, "recvfrom() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
@@ -275,8 +276,9 @@ RECVFROM_DGRAM = CProg.new(<<-EOT, 'recvfrom_dgram')
 #{CONNECT_DGRAM}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
-  socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
+  struct sockaddr_storage addrfrom;
+  socklen_t fromlen = sizeof(addrfrom);
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addrfrom,
                &fromlen) != -1) {
     fprintf(stderr, "recvfrom() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
@@ -287,8 +289,9 @@ RECVFROM_FAIL = CProg.new(<<-EOT, 'recvfrom_fail')
 #{CONNECT}
   fcntl(sock, F_SETFL, O_NONBLOCK);
   char buf[42];
-  socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
+  struct sockaddr_storage addrfrom;
+  socklen_t fromlen = sizeof(addrfrom);
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addrfrom,
                &fromlen) != -1) {
     return(EXIT_FAILURE);
   }

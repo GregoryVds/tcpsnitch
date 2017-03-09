@@ -46,7 +46,7 @@ static json_t *build_addr(const Addr *addr) {
         return json_addr;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -65,7 +65,7 @@ static json_t *build_send_flags(int flags) {
 	return json_flags;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -89,7 +89,7 @@ static json_t *build_recv_flags(int flags) {
 	return json_flags;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -103,7 +103,7 @@ static json_t *build_timeout(const Timeout *timeout) {
 	return json_timeout;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -122,7 +122,7 @@ static json_t *build_poll_events(const PollEvents *events) {
 	return json_events;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -137,7 +137,7 @@ static json_t *build_select_events(const SelectEvents *events) {
 	return json_events;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -158,7 +158,7 @@ static json_t *build_epoll_events(uint32_t events) {
 	return json_events;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -181,7 +181,7 @@ static json_t *build_iovec(const Iovec *iovec) {
 	return json_iovec;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -213,7 +213,7 @@ static json_t *build_control_data(struct msghdr *msgh) {
 	return json_cd_list;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -232,7 +232,7 @@ static json_t *build_tcp_msghdr(const Msghdr *msg) {
 	return json_msghdr;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -258,7 +258,7 @@ static json_t *build_tcp_mmsghdr_vec(const Mmsghdr *tcp_mmsghdr_vec,
 	return json_mmsghdr_vec;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -272,7 +272,7 @@ static json_t *build_timeval(const struct timeval *tv) {
 	return json_timeval;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -286,7 +286,7 @@ static json_t *build_linger(const struct linger *linger) {
 	return json_linger;
 error:
 	LOG(ERROR, "json_object() failed.");
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }
 
@@ -411,7 +411,7 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
 	json_t *json_ev = json_object();                    \
 	if (!json_ev) {                                     \
 		LOG(ERROR, "json_object() failed.");        \
-		LOG_FUNC_FAIL;                              \
+		LOG_FUNC_ERROR;                              \
 		return NULL;                                \
 	}                                                   \
 	build_shared_fields(json_ev, (const SockEvent *)ev); \
@@ -1033,6 +1033,6 @@ char *alloc_sock_ev_json(const SockEvent *ev) {
 	json_decref(json_ev);
 	return json_string;
 error:
-	LOG_FUNC_FAIL;
+	LOG_FUNC_ERROR;
 	return NULL;
 }

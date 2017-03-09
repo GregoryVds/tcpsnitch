@@ -38,8 +38,9 @@ int main(void) {
   send(sock, req, sizeof(char)*strlen(req), 0);
 
   char buf[42];
-  socklen_t fromlen = sizeof(buf);
-  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addr,
+  struct sockaddr_storage addrfrom;
+  socklen_t fromlen = sizeof(addrfrom);
+  if (recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&addrfrom,
                &fromlen) < 0) {
     fprintf(stderr, "recvfrom() failed: %s\n.", strerror(errno));
     return(EXIT_FAILURE);
