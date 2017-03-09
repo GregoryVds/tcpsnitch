@@ -20,7 +20,15 @@ void print_trace(void);
                 logger(lvl, _buf, __FILE__, __LINE__);        \
         }
 
+#ifdef __ANDROID__
 #define LOG_FUNC_ERROR LOG(ERROR, "%s failed.", __func__)
+#else
+#define LOG_FUNC_ERROR {\
+        LOG(ERROR, "%s failed.", __func__)\
+        print_trace();\
+}
+#endif
+
 #define LOG_FUNC_WARN LOG(WARN, "%s failed.", __func__)
 
 #define D(format, args...) LOG(DEBUG, format, ##args)
