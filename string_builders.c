@@ -108,17 +108,15 @@ error_out:
         return NULL;
 }
 
-bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
+bool alloc_name_str(const struct sockaddr *addr, socklen_t n, char **name,
                     char **serv) {
-        if (!(*name = my_malloc(sizeof(char) * NI_MAXHOST))) goto error_out;
-        if (!(*serv = my_malloc(sizeof(char) * NI_MAXSERV))) goto error_out;
-        int rc =
-            getnameinfo(addr, len, *name, NI_MAXHOST, *serv, NI_MAXSERV, 0);
+        *name = my_malloc(sizeof(char) * NI_MAXHOST);
+        *serv = my_malloc(sizeof(char) * NI_MAXSERV);
+        int rc = getnameinfo(addr, n, *name, NI_MAXHOST, *serv, NI_MAXSERV, 0);
         if (rc) goto error;
         return true;
 error:
         LOG(ERROR, "getnameinfo() failed. %s.", gai_strerror(rc));
-error_out:
         LOG_FUNC_ERROR;
         return false;
 }
@@ -128,7 +126,6 @@ char *alloc_concat_path(const char *path1, const char *path2) {
         if (!path2) goto error2;
         int full_path_length = strlen(path1) + strlen(path2) + 2;
         char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
-        if (!full_path) goto error_out;
         snprintf(full_path, full_path_length, "%s/%s", path1, path2);
         return full_path;
 error1:
@@ -146,13 +143,9 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         int i_len = get_int_len(i);
         int full_path_length = path1_len + i_len + 2;  // Underscore + null byte
         char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
-        if (!full_path) goto error;
         strncpy(full_path, path1, path1_len);
         snprintf(full_path + path1_len, i_len + 2, "_%d", i);
         return full_path;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
 }
 
 char *alloc_dirname_str(void) {
@@ -191,13 +184,9 @@ char *alloc_android_opt_d(void) {
         const char *sufix = "/tcpsnitch";
         int n = strlen(prefix) + strlen(app_name) + strlen(sufix) + 1;
         char *opt_d = (char *)my_malloc(sizeof(char) * n);
-        if (!opt_d) goto error;
         sprintf(opt_d, "%s%s%s", prefix, app_name, sufix);
         free(app_name);
         return opt_d;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
 }
 
 char *alloc_pcap_path_str(SocketState *con) {
@@ -216,7 +205,6 @@ char *alloc_cmdline_str(void) {
 
         // Read cmdline file into cmdline array
         char *cmdline = (char *)my_malloc(sizeof(char) * cmd_line_length);
-        if (!cmdline) goto error2;
         int rc = fread(cmdline, 1, cmd_line_length, fp);
         if (!rc) goto error3;
 
@@ -225,7 +213,6 @@ char *alloc_cmdline_str(void) {
 error3:
         LOG(ERROR, "fread() failed. %s.", strerror(errno));
         free(cmdline);
-error2:
         fclose(fp);
         goto error_out;
 error1:
@@ -287,24 +274,18 @@ char *alloc_error_str(int err) {
         char *ori_str = strerror(err);
         size_t str_len = strlen(ori_str) + 1;
         char *alloc_str = (char *)my_malloc(str_len);
-        if (!alloc_str) goto error;
         strncpy(alloc_str, ori_str, str_len);
         return alloc_str;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
 }
 
 #ifdef __ANDROID__
 char *alloc_property(const char *property) {
         char *prop = my_malloc(sizeof(char)*(PROP_VALUE_MAX+1));
-        if (!prop) goto error;
         int n = __system_property_get(property, prop);
-        if (!n) goto error1;
+        if (!n) goto error;
         return prop;
-error1:
-        LOG(ERROR, "__system_property_get() failed.");
 error:
+        LOG(ERROR, "__system_property_get() failed.");
         LOG_FUNC_ERROR;
         return NULL;
 }
@@ -318,12 +299,10 @@ char *alloc_str_opt(const char *opt) {
         if (!env_val) goto error;
         int n = strlen(env_val) + 1;
         char *opt_str = (char *)my_malloc(n * sizeof(char));
-        if (!opt_str) goto error1;
         strncpy(opt_str, env_val, n);
         return opt_str;
 error:
         LOG(ERROR, "Env %s was not set", opt);
-error1:
         LOG_FUNC_ERROR;
         return NULL;
 #endif

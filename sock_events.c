@@ -174,19 +174,15 @@ static void free_events_list(SockEventNode *head) {
 
 static void push_event(SocketState *con, SockEvent *ev) {
         SockEventNode *node = (SockEventNode *)my_malloc(sizeof(SockEventNode));
-        if (!node) goto error;
-
         node->data = ev;
         node->next = NULL;
+
         if (!con->head)
                 con->head = node;
         else
                 con->tail->next = node;
         con->tail = node;
         con->events_count++;
-        return;
-error:
-        LOG_FUNC_ERROR;
         return;
 }
 
@@ -211,17 +207,12 @@ static socklen_t fill_iovec(Iovec *iov1, const struct iovec *iov2,
         if (iovec_count <= 0) return 0;
 
         iov1->iovec_sizes = (size_t *)my_malloc(sizeof(size_t *) * iovec_count);
-        if (!iov1->iovec_sizes) goto error;
-
         socklen_t bytes = 0;
         for (int i = 0; i < iovec_count; i++) {
                 if (iov1->iovec_sizes) iov1->iovec_sizes[i] = iov2[i].iov_len;
                 bytes += iov2[i].iov_len;
         }
         return bytes;
-error:
-        LOG_FUNC_ERROR;
-        return -1;
 }
 
 static socklen_t fill_tcp_msghdr(Msghdr *m1, const struct msghdr *m2) {
@@ -264,12 +255,9 @@ static void fill_sockopt(Sockopt *sockopt, int level, int optname,
                          const void *optval, socklen_t optlen) {
         sockopt->level = level;
         sockopt->optname = optname;
-
+        sockopt->optlen = optlen;
         sockopt->optval = my_malloc(optlen);
-        if (sockopt->optval) {
-                sockopt->optlen = optlen;
-                memcpy(sockopt->optval, optval, optlen);
-        }
+        memcpy(sockopt->optval, optval, optlen);
         return;
 }
 
@@ -355,7 +343,7 @@ error_out:
 
 static void tcp_dump_tcp_info(int fd) {
         struct tcp_info *info =
-            (struct tcp_info *)malloc(sizeof(struct tcp_info));
+            (struct tcp_info *)my_malloc(sizeof(struct tcp_info));
         int ret = fill_tcp_info(fd, info);
         int err = errno;
         sock_ev_tcp_info(fd, ret, err, info);
@@ -1071,7 +1059,7 @@ void sock_ev_fdopen(int fd, FILE *_ret, int err, const char *mode) {
 
         int n = strlen(mode) + 1;
         ev->mode = (char *)my_malloc(sizeof(char) * n);
-        if (ev->mode) strncpy(ev->mode, mode, n);
+        strncpy(ev->mode, mode, n);
 
         SOCK_EV_POSTLUDE(SOCK_EV_FDOPEN);
 }

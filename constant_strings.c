@@ -7,7 +7,6 @@ bool alloc_string_from_cons(int cons, const IntStrPair *map, int map_size,
                             char **str_ptr) {
         static const int str_size = MEMBER_SIZE(IntStrPair, str);
         *str_ptr = (char *)my_malloc(str_size);
-        if (!*str_ptr) goto error;
 
         // Search for const in map.
         const IntStrPair *cur;
@@ -20,11 +19,9 @@ bool alloc_string_from_cons(int cons, const IntStrPair *map, int map_size,
         }
 
         // No match found, just write the constant digit.
-        LOG(WARN, "alloc_string_from_cons: no match found for %d.", cons);
+        LOG_FUNC_WARN;
+        LOG(WARN, "No match found for %d.", cons);
         snprintf(*str_ptr, str_size, "%d", cons);
-        return false;
-error:
-        LOG_FUNC_ERROR;
         return false;
 }
 

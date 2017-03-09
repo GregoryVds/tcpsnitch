@@ -15,7 +15,11 @@
 #include <linux/sockios.h>
 #include <linux/wireless.h>
 #include <netinet/tcp.h>
+#ifdef __ANDROID__
+#include <linux/udp.h>
+#else
 #include <netinet/udp.h>
+#endif
 #include <sys/socket.h>
 #include <unistd.h>
 

@@ -105,7 +105,6 @@ char *alloc_capture_filter(const struct sockaddr *addr1,
         // Build filter string
         static int n = 200;
         char *filter = (char *)my_malloc(sizeof(char) * n);
-        if (!filter) goto error4;
 
         if (addr1 && addr2)
                 snprintf(filter, n, DOUBLE_FILTER, port1, ip2, port2);
@@ -120,8 +119,6 @@ char *alloc_capture_filter(const struct sockaddr *addr1,
         free(port2);
         free(ip2);
         return filter;
-error4:
-        free(ip2);
 error3:
         free(port2);
 error2:
@@ -171,13 +168,11 @@ bool *start_capture(const char *filter_str, const char *path) {
         // Alloc flag for controlling capture end. This flag can be turned off
         // at any time by called thread to end the capture.
         bool *switch_flag = my_malloc(sizeof(bool));
-        if (!switch_flag) goto error2;
         (*switch_flag) = true;
 
         // Start capture in another thread.
         CaptureThreadArgs *args =
             (CaptureThreadArgs *)my_malloc(sizeof(CaptureThreadArgs));
-        if (!args) goto error3;
         args->handle = handle;
         args->dump = dump;
         args->switch_flag = switch_flag;
@@ -190,9 +185,7 @@ bool *start_capture(const char *filter_str, const char *path) {
 error4:
         LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
         free(args);
-error3:
         free(switch_flag);
-error2:
         pcap_dump_close(dump);
 error1:
         pcap_close(handle);
@@ -206,7 +199,6 @@ int stop_capture(bool *switch_flag, int delay_ms) {
         // Prepare args for thread
         DelayStopThreadArgs *args =
             (DelayStopThreadArgs *)my_malloc(sizeof(DelayStopThreadArgs));
-        if (!args) goto error_out;
         args->switch_flag = switch_flag;
         args->delay_ms = delay_ms;
 
@@ -215,13 +207,12 @@ int stop_capture(bool *switch_flag, int delay_ms) {
         int rc = pthread_create(&delay_thread, NULL, delayed_stop_thread, args);
         if (rc != 0) {
                 *(switch_flag) = false;
-                goto error1;
+                goto error;
         }
         return 0;
-error1:
+error:
         LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
         LOG(ERROR, "Ending packet capture immediately.");
-error_out:
         LOG_FUNC_ERROR;
         return -1;
 }

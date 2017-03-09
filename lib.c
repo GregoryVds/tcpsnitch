@@ -259,7 +259,7 @@ void *my_malloc(size_t size) {
 error:
 	LOG(ERROR, "malloc() failed.");
 	LOG_FUNC_ERROR;
-	return NULL;
+        abort();
 }
 
 void *my_calloc(size_t size) {
@@ -269,7 +269,7 @@ void *my_calloc(size_t size) {
 error:
 	LOG(ERROR, "calloc() failed.");
 	LOG_FUNC_ERROR;
-	return NULL;
+        abort();
 }
 
 int my_fputs(const char *s, FILE *stream) {
@@ -289,7 +289,7 @@ char *create_numbered_dir_in_path(const char *path, int dir_number) {
 
 	// Build string "[path]/[dir_number] in dir_path"
 	if (!(n = get_int_len(dir_number) + 2)) goto error_out;  // +"/" & "\0"
-	if (!(dirname = (char *)my_malloc(sizeof(char) * n))) goto error_out;
+	dirname = (char *)my_malloc(sizeof(char) * n);
 	snprintf(dirname, n, "%d", dir_number);
 	if (!(dir_path = alloc_concat_path(path, dirname))) goto error3;
 
