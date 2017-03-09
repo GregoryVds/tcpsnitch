@@ -391,6 +391,7 @@ static bool should_dump_json(const SocketState *con) {
 }
 
 static void tcp_dump_tcp_info(int fd) {
+        if (!is_tcp_socket(fd)) return;
         struct tcp_info *info =
             (struct tcp_info *)malloc(sizeof(struct tcp_info));
         int ret = fill_tcp_info(fd, info);
@@ -399,6 +400,7 @@ static void tcp_dump_tcp_info(int fd) {
 }
 
 static bool should_dump_tcp_info(const SocketState *con) {
+
         if (conf_opt_u > 0) {
                 long cur_time = get_time_micros();
                 long time_elasped = cur_time - con->last_info_dump_micros;
