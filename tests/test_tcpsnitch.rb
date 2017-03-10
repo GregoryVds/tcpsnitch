@@ -113,7 +113,7 @@ describe "tcpsnitch" do
     it "should not pretty print the JSON without -p" do
       reset_dir(TEST_DIR)
       tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert system("test $(wc -l < #{json_file_str}) -eq 2") 
+      assert system("test $(wc -l < #{json_file_str}) -eq 1") 
     end
   end
 

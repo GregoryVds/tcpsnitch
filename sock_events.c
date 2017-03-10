@@ -503,7 +503,7 @@ const char *string_from_sock_event_type(SockEventType type) {
 #define SOCK_TYPE_MASK 0b1111
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
         /* Check if connection already exits and was not properly closed. */
-        if (ra_is_present(fd)) sock_ev_close(fd, 0, 0, false);
+        if (ra_is_present(fd)) sock_ev_close(fd, 0, 0);
         int err = 0;
         int ret = fd;
 
@@ -634,8 +634,8 @@ void sock_ev_send(int fd, int ret, int err, const void *buf, size_t bytes,
                   int flags) {
         // Inst. local vars Socket *sock& SockEvSend *ev
         SOCK_EV_PRELUDE(SOCK_EV_SEND, SockEvSend);
-
         UNUSED(buf);
+
         ev->bytes = bytes;
         ev->flags = flags;
         sock->bytes_sent += bytes;
@@ -647,8 +647,8 @@ void sock_ev_recv(int fd, int ret, int err, void *buf, size_t bytes,
                   int flags) {
         // Inst. local vars Socket *sock& SockEvRecv *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECV, SockEvRecv);
-
         UNUSED(buf);
+
         ev->bytes = bytes;
         ev->flags = flags;
         sock->bytes_received += bytes;
@@ -656,10 +656,11 @@ void sock_ev_recv(int fd, int ret, int err, void *buf, size_t bytes,
         SOCK_EV_POSTLUDE(SOCK_EV_RECV);
 }
 
-void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
-                    const struct sockaddr *addr, socklen_t len) {
+void sock_ev_sendto(int fd, int ret, int err, const void *buf, size_t bytes,
+                    int flags, const struct sockaddr *addr, socklen_t len) {
         // Inst. local vars Socket *sock& SockEvSendto *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDTO, SockEvSendto);
+        UNUSED(buf);
 
         ev->bytes = bytes;
         ev->flags = flags;
@@ -669,10 +670,11 @@ void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
         SOCK_EV_POSTLUDE(SOCK_EV_SENDTO);
 }
 
-void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
-                      const struct sockaddr *addr, socklen_t *len) {
+void sock_ev_recvfrom(int fd, int ret, int err, void *buf, size_t bytes,
+                      int flags, const struct sockaddr *addr, socklen_t *len) {
         // Inst. local vars Socket *sock& SockEvRecvfrom *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVFROM, SockEvRecvfrom);
+        UNUSED(buf);
 
         ev->bytes = bytes;
         ev->flags = flags;
@@ -788,9 +790,10 @@ void sock_ev_isfdtype(int fd, int ret, int err, int fdtype) {
         SOCK_EV_POSTLUDE(SOCK_EV_ISFDTYPE);
 }
 
-void sock_ev_write(int fd, int ret, int err, size_t bytes) {
+void sock_ev_write(int fd, int ret, int err, const void *buf, size_t bytes) {
         // Inst. local vars Socket *sock& SockEvWrite *ev
         SOCK_EV_PRELUDE(SOCK_EV_WRITE, SockEvWrite);
+        UNUSED(buf);
 
         ev->bytes = bytes;
         sock->bytes_sent += bytes;
@@ -798,9 +801,10 @@ void sock_ev_write(int fd, int ret, int err, size_t bytes) {
         SOCK_EV_POSTLUDE(SOCK_EV_WRITE);
 }
 
-void sock_ev_read(int fd, int ret, int err, size_t bytes) {
+void sock_ev_read(int fd, int ret, int err, void *buf, size_t bytes) {
         // Inst. local vars Socket *sock& SockEvRead *ev
         SOCK_EV_PRELUDE(SOCK_EV_READ, SockEvRead);
+        UNUSED(buf);
 
         ev->bytes = bytes;
         sock->bytes_received += bytes;
@@ -808,7 +812,7 @@ void sock_ev_read(int fd, int ret, int err, size_t bytes) {
         SOCK_EV_POSTLUDE(SOCK_EV_READ);
 }
 
-void sock_ev_close(int fd, int ret, int err, bool detected) {
+void sock_ev_close(int fd, int ret, int err) {
         Socket *sock = ra_remove_elem(fd);
         if (!sock) goto error;
 
@@ -817,7 +821,6 @@ void sock_ev_close(int fd, int ret, int err, bool detected) {
                                                      sock->events_count);
         if (!ev) goto error;
 
-        ev->detected = detected;
         if (sock->capture_switch != NULL)
                 stop_capture(sock->capture_switch, sock->rtt * 2);
 
@@ -892,10 +895,13 @@ void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request) {
         SOCK_EV_POSTLUDE(SOCK_EV_IOCTL);
 }
 
-void sock_ev_sendfile(int fd, int ret, int err, size_t bytes) {
+void sock_ev_sendfile(int fd, int ret, int err, int in_fd, off_t *offset,
+                      size_t bytes) {
         // Inst. local vars Socket *sock& SockEvSendfile *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDFILE, SockEvSendfile);
-
+        UNUSED(in_fd);
+        UNUSED(offset);
+        
         ev->bytes = bytes;
         sock->bytes_received += ev->bytes;
 

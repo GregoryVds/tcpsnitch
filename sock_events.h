@@ -1,5 +1,5 @@
-#ifndef TCP_SPY_H
-#define TCP_SPY_H
+#ifndef SOCK_EVENTS_H
+#define SOCK_EVENTS_H
 
 #include <netinet/tcp.h>
 #include <pcap/pcap.h>
@@ -247,10 +247,7 @@ typedef struct {
         size_t bytes;
 } SockEvRead;
 
-typedef struct {
-        SockEvent super;
-        bool detected;
-} SockEvClose;
+typedef struct { SockEvent super; } SockEvClose;
 
 typedef struct { SockEvent super; } SockEvDup;
 
@@ -435,11 +432,11 @@ void sock_ev_send(int fd, int ret, int err, const void *buf, size_t bytes,
 
 void sock_ev_recv(int fd, int ret, int err, void *buf, size_t bytes, int flags);
 
-void sock_ev_sendto(int fd, int ret, int err, size_t bytes, int flags,
-                    const struct sockaddr *addr, socklen_t len);
+void sock_ev_sendto(int fd, int ret, int err, const void *buf, size_t bytes,
+                    int flags, const struct sockaddr *addr, socklen_t len);
 
-void sock_ev_recvfrom(int fd, int ret, int err, size_t bytes, int flags,
-                      const struct sockaddr *addr, socklen_t *len);
+void sock_ev_recvfrom(int fd, int ret, int err, void *buf, size_t bytes,
+                      int flags, const struct sockaddr *addr, socklen_t *len);
 
 void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
                      int flags);
@@ -472,11 +469,11 @@ void sock_ev_sockatmark(int fd, int ret, int err);
 
 void sock_ev_isfdtype(int fd, int ret, int err, int fdtype);
 
-void sock_ev_write(int fd, int ret, int err, size_t bytes);
+void sock_ev_write(int fd, int ret, int err, const void *buf, size_t bytes);
 
-void sock_ev_read(int fd, int ret, int err, size_t bytes);
+void sock_ev_read(int fd, int ret, int err, void *buf, size_t bytes);
 
-void sock_ev_close(int fd, int ret, int err, bool detected);
+void sock_ev_close(int fd, int ret, int err);
 
 void sock_ev_dup(int fd, int ret, int err);
 
@@ -496,7 +493,8 @@ void sock_ev_ioctl(int fd, int ret, int err, int request);
 void sock_ev_ioctl(int fd, int ret, int err, unsigned long int request);
 #endif
 
-void sock_ev_sendfile(int fd, int ret, int err, size_t bytes);
+void sock_ev_sendfile(int fd, int ret, int err, int in_fd, off_t *offset,
+                      size_t bytes);
 
 void sock_ev_poll(int fd, int ret, int err, short requested_events,
                   short returned_event, int timeout);

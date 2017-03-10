@@ -486,7 +486,6 @@ static json_t *build_sock_ev_read(const SockEvRead *ev) {
 
 static json_t *build_sock_ev_close(const SockEvClose *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-        add(json_details, "detected", json_boolean(ev->detected));
         return json_ev;
 }
 
