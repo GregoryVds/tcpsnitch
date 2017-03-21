@@ -21,7 +21,7 @@ describe "packet_sniffer.c" do
 	
   it "should create a PCAP file on CONNECT" do
     run_c_program(SOCK_EV_CONNECT, "-c")
-    assert contains?(con_dir_str, PCAP_FILE) 
+    assert contains?(TEST_DIR, "0.pcap") 
   end
   
   # Need to capture on a single interface to use packetfu

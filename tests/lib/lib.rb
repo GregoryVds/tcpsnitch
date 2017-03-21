@@ -21,8 +21,8 @@ def rmdir(path)
   system("rm -rf #{path}")
 end
 
-def dir_exists?(path)
-  system("test -d #{path}")
+def file_exists?(path)
+  system("test -f #{path}")
 end
 
 def contains?(dir, el)
@@ -55,16 +55,12 @@ def log_file_str
   dir_str+"/"+LOG_FILE
 end
 
-def con_dir_str(con_id=0)
-  dir_str+"/#{con_id}/"
-end
-
 def json_file_str(con_id=0)
-  con_dir_str(con_id)+JSON_FILE
+  dir_str+"/#{con_id}.json"
 end
 
 def pcap_file_str(con_id=0)
-  con_dir_str(con_id)+PCAP_FILE
+  dir_str+"/#{con_id}.pcap"
 end
 
 def read_json_trace(con_id=0)
@@ -86,15 +82,6 @@ end
 
 def run_exec(exec, env='')
   system("#{env} #{LD_PRELOAD} #{exec} >/dev/null 2>&1") 
-end
-
-def run_pkt_script(script, env='')
-  file = Tempfile.new("foo")
-  file.write(script)
-  file.close
-  rc = tcpsnitch("-d #{TEST_DIR}", "#{PACKET_DRILL} #{file.path}")
-  file.unlink
-  rc
 end
 
 def tcpsnitch(options='', cmd='')

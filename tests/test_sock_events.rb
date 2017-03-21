@@ -11,7 +11,7 @@ describe 'tcp_spy' do
 
   before do
     WebServer.start
-    reset_dir(DEFAULT_PATH)
+    reset_dir(TEST_DIR)
   end
 
   describe '2 TCP connections' do

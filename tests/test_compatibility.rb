@@ -20,19 +20,5 @@ describe "compatibility tests" do
     it "should not crash" do
       assert tcpsnitch(curl) 
     end
-
-    it "should report some INFO" do
-      assert stderr(curl, LOG_LVL_INFO)
-    end
-
-    it "should report no WARN" do
-      skip
-      assert_empty stderr(curl, LOG_LVL_WARN)
-    end
-
-    it "should report no ERROR" do
-      skip
-      assert_empty stderr(curl, LOG_LVL_ERROR) 
-    end
   end
 end

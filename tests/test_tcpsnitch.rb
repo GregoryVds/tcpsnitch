@@ -45,12 +45,12 @@ describe "tcpsnitch" do
 
     it "should capture with -c" do
       run_c_program(SOCK_EV_SEND, "-c")
-      assert contains?(con_dir_str, PCAP_FILE)
+      assert contains?(TEST_DIR, "0.pcap")
     end
 
     it "should not capture without -c" do
       assert run_c_program(SOCK_EV_SEND)
-      assert !contains?(con_dir_str, PCAP_FILE)
+      assert !contains?(TEST_DIR, "0.pcap")
     end
     # Rest is tested in test_packet_sniffer.rb
   end
@@ -130,20 +130,6 @@ describe "tcpsnitch" do
 
     it "should print version" do
       assert_match(/version/, tcpsnitch_output('--version', ''))
-    end
-  end
-
-  describe "for any run" do
-    it "should save the os version" do
-      reset_dir(TEST_DIR)
-      tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert contains?(TEST_DIR, "uname.txt")  
-    end
-
-    it "should save the network config" do
-      reset_dir(TEST_DIR)
-      tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert contains?(TEST_DIR, "sysctl_net.txt") 
     end
   end
 end

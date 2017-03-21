@@ -49,10 +49,7 @@ static Socket *alloc_socket(int fd) {
         sock->id = connections_count;
         connections_count++;
         mutex_unlock(&connections_count_mutex);
-
         sock->fd = fd;
-        // Has to be done AFTER getting the sock->id
-        sock->directory = create_numbered_dir_in_path(logs_dir_path, sock->id);
         return sock;
 error:
         LOG_FUNC_ERROR;
@@ -300,8 +297,8 @@ error_out:
         return -1;
 }
 
-static void tcp_dump_json(Socket *sock) {
-        if (sock->directory == NULL) goto error1;
+static void dump_events_as_json(Socket *sock) {
+        if (OPT_D == NULL) goto error1;
         LOG_FUNC_INFO;
         char *json_str, *json_file_str;
 
@@ -333,7 +330,7 @@ error2:
         LOG(ERROR, "fclose() failed. %s.", strerror(errno));
         goto error_out;
 error1:
-        LOG(ERROR, "sock->directory is NULL.");
+        LOG(ERROR, "OPT_D is NULL.");
 error_out:
         LOG_FUNC_ERROR;
         return;
@@ -370,7 +367,6 @@ static bool should_dump_tcp_info(const Socket *sock) {
 void free_socket_state(Socket *sock) {
         if (!sock) return;  // NULL
         free_events_list(sock->head);
-        free(sock->directory);
         free(sock);
 }
 
@@ -827,7 +823,7 @@ void sock_ev_close(int fd, int ret, int err) {
         push_event(sock, (SockEvent *)ev);
         output_event((SockEvent *)ev);
 
-        tcp_dump_json(sock);
+        dump_events_as_json(sock);
         free_socket_state(sock);
         return;
 error:
@@ -1091,7 +1087,7 @@ void dump_all_sock_events(void) {
         for (long i = 0; i < ra_get_size(); i++) {
                 if (ra_is_present(i)) {
                         Socket *socket = ra_get_and_lock_elem(i);
-                        if (socket) tcp_dump_json(socket);
+                        if (socket) dump_events_as_json(socket);
                         ra_unlock_elem(i);
                 }
         }

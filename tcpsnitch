@@ -5,11 +5,6 @@ set -o nounset
 NAME="tcpsnitch"
 VERSION=1.0
 VERSION_STR="${NAME} version ${VERSION}"
-UNAME_FILE="uname.txt"
-SYSCTL_FILE="sysctl_net.txt"
-LIB_32="/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.${VERSION}"
-LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
-UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
 
 # Option default values
 OPT_B=0
@@ -135,38 +130,56 @@ if [[ $# -lt 1 ]]; then
         error "too few arguments"
         exit 1
 fi
-
+	
 # Test command is executable/in path
 command=$1
 if [ ${command:0:2} = "./" -o ${command:0:1} = "/" ]; then # $command is a path
-        if ! [[ -x $command ]]; then
-                error "invalid command: '$command' is not executable" 
-                exit 1
-        fi
+	if ! [[ -x $command ]]; then
+		error "invalid command: '$command' is not executable" 
+		exit 1
+	fi
 else
-        if ! which $command > /dev/null; then
-                error "invalid argument: '$command' is not in \$PATH"
-                exit 1
-        fi
+	if ! which $command > /dev/null; then
+		error "invalid argument: '$command' is not in \$PATH"
+		exit 1
+	fi
 fi
 
 # Create temp dir if option -d not used
 if [[ -z "$OPT_D" ]]; then
-        OPT_D=$(mktemp -d)
-        chmod 777 "$OPT_D"
+	OPT_D=$(mktemp -d)
+	chmod 777 "$OPT_D"
 fi
 
-# Save network config
-NET_CONFIG_PATH="${OPT_D}/${SYSCTL_FILE}"
-if [[ ! -e "$NET_CONFIG_PATH" ]]; then
-        sysctl net > "$NET_CONFIG_PATH" 2> /dev/null
-fi
+####################
+# Meta information #
+####################
 
-# Save os config
-OS_CONFIG_PATH="${OPT_D}/${UNAME_FILE}"
-if [[ ! -e "$OS_CONFIG_PATH" ]]; then
-       uname -a > "$OS_CONFIG_PATH"
-fi
+META_DIR="$OPT_D/meta"
+mkdir $META_DIR
+
+# app
+echo "$1" > "$META_DIR/app"
+# cmd
+echo "$@" > "$META_DIR/cmd"
+# TODO: connectivity
+echo "wifi" > "$META_DIR/wifi"
+# kernel
+uname -r > "$META_DIR/kernel"
+# machine
+uname -m > "$META_DIR/machine"
+# net
+sysctl net > "$META_DIR/net" 2>/dev/null
+# os
+uname -s > "$META_DIR/os"
+
+##############
+# Launch CMD #
+##############
+
+LIB_32="/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.${VERSION}"
+LIB_64="/usr/local/lib/x86_64-linux-gnu/libtcpsnitch.so.${VERSION}"
+UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
 
 ( \
 TCPSNITCH_OPT_B=$OPT_B \

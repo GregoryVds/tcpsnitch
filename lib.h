@@ -43,7 +43,6 @@ void *my_malloc(size_t size);
 void *my_calloc(size_t size);
 int my_fputs(const char *s, FILE *stream);
 
-char *create_numbered_dir_in_path(const char *path, int dir_number);
 bool is_dir_writable(const char *path);
 
 #endif

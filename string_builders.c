@@ -14,6 +14,7 @@
 #endif
 #include <sys/types.h>
 #include "constants.h"
+#include "init.h"
 #include "lib.h"
 #include "logger.h"
 
@@ -148,34 +149,6 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         return full_path;
 }
 
-char *alloc_dirname_str(void) {
-        // Base directory name is [APP_NAME]_[TIMESTAMP]_[PID]
-        // Prepare components
-        char *app_name = alloc_app_name();
-        if (!app_name) goto error;
-
-        int app_name_len = strlen(app_name);
-        static int timestamp_len = 10;
-        int pid = getpid();
-        int pid_len = get_int_len(pid);
-        int n = app_name_len + timestamp_len + pid_len + 3;  // 3 '_','_','\0'
-
-        char *str = (char *)my_calloc(sizeof(char) * n);
-        if (!str) goto error;
-
-        // Build string
-        strncat(str, app_name, app_name_len);
-        strncat(str, "_", 1);
-        snprintf(str + strlen(str), timestamp_len + 1, "%lu", get_time_sec());
-        strncat(str, "_", 1);
-        snprintf(str + strlen(str), pid_len + 1, "%d", pid);
-        free(app_name);
-        return str;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
-}
-
 // On Android, we don't chose the logs directory. We always write under:
 // /data/data/[app_name], which the internal storage of the app.
 char *alloc_android_opt_d(void) {
@@ -189,12 +162,21 @@ char *alloc_android_opt_d(void) {
         return opt_d;
 }
 
-char *alloc_pcap_path_str(Socket *con) {
-        return alloc_concat_path(con->directory, PCAP_FILE);
+char *alloc_file_name(int file_name, const char *extension) {
+	int n = get_int_len(file_name) + strlen(extension) + 1;
+	char *str = my_malloc(n*sizeof(char));
+	sprintf(str, "%d%s", file_name, extension);
+	char *ret = alloc_concat_path(logs_dir_path, str);
+	free(str);
+	return ret;
 }
 
 char *alloc_json_path_str(Socket *con) {
-        return alloc_concat_path(con->directory, JSON_FILE);
+        return alloc_file_name(con->id, ".json");
+}
+
+char *alloc_pcap_path_str(Socket *con) {
+        return alloc_file_name(con->id, ".pcap");
 }
 
 char *alloc_cmdline_str(void) {
@@ -237,34 +219,6 @@ char *alloc_app_name(void) {
         strncpy(app_name, app_name_start, n);
         free(cmdline);
         return app_name;
-error_out:
-        LOG_FUNC_ERROR;
-        return NULL;
-}
-
-char *alloc_kernel_str(void) {
-        static int kernel_width = 30;
-
-        // Open fd to output of "uname -r"
-        FILE *fp = popen("uname -r", "r");
-        if (!fp) goto error1;
-
-        // Read output into kernel_str
-        char *kernel_str = (char *)my_calloc(sizeof(char) * kernel_width);
-        if (!kernel_str) goto error2;
-        if (!fgets(kernel_str, kernel_width, fp)) goto error3;
-
-        pclose(fp);
-        // Erase \n at last position.
-        kernel_str[strlen(kernel_str) - 1] = '\0';
-        return kernel_str;
-error1:
-        LOG(ERROR, "popen() failed. %s.", strerror(errno));
-        goto error_out;
-error3:
-        LOG(ERROR, "fgets() failed.");
-error2:
-        pclose(fp);
 error_out:
         LOG_FUNC_ERROR;
         return NULL;

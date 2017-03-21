@@ -1,35 +1,15 @@
-
-NETSPY_PATH=`pwd`.chomp("\n")+"/../libnetspy.so"
-
 EXECUTABLE="../tcpsnitch"
 LD_PRELOAD="LD_PRELOAD=../libtcpsnitch.so.1.0"
 TEST_DIR="/tmp/netspy"
 
-PACKET_DRILL="packetdrill --tolerance_usecs=10000000"
-
-# packetdrill scripts
-PKT_SCRIPTS_PATH="./pkt_scripts"
-
-DEFAULT_PATH="/tmp/netspy"
-JSON_FILE="dump.json"
-PCAP_FILE="dump.pcap"
-
 # LOGS
 PROCESS_DIR_REGEX="*.out*"
-LOG_FILE="*.log"
+LOG_FILE="logs.txt"
 LOG_LABEL_ERROR="ERROR"
 LOG_LABEL_WARN="WARN"
 LOG_LABEL_INFO="INFO"
 
-# LOGS LVL
-LOG_LVL_ALWAYS  = 0
-LOG_LVL_ERROR   = 1
-LOG_LVL_WARN    = 2
-LOG_LVL_INFO    = 3
-LOG_LVL_DEBUG   = 4
-
 # EVENTS
-
 # sys/socket.h
 SOCK_EV_SOCKET="socket"
 SOCK_EV_BIND="bind"

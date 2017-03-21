@@ -48,11 +48,11 @@ static pthread_mutex_t init_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 // Find first directory available starting from [base_path] by concatenating
 // increasing integers.
 static char *create_logs_dir_at_path(const char *path) {
-        char *dirname, *base_path, *full_path;
+        char *app_name, *base_path, *full_path;
         int i = 0;
         DIR *dir;
-        if (!(dirname = alloc_dirname_str())) goto error_out;
-        if (!(base_path = alloc_concat_path(path, dirname))) goto error1;
+        if (!(app_name = alloc_app_name())) goto error_out;
+        if (!(base_path = alloc_concat_path(path, app_name))) goto error1;
         if (!(full_path = alloc_append_int_to_path(base_path, i))) goto error2;
 
         while (true) {
@@ -69,7 +69,7 @@ static char *create_logs_dir_at_path(const char *path) {
         // Finally, create dir at full_path.
         if (mkdir(full_path, 0777)) goto error4;
 
-        free(dirname);
+        free(app_name);
         free(base_path);
         return full_path;
 error4:
@@ -82,7 +82,7 @@ error3:
 error2:
         free(base_path);
 error1:
-        free(dirname);
+        free(app_name);
 error_out:
         LOG_FUNC_ERROR;
         return NULL;
@@ -153,7 +153,7 @@ static void log_options(void) {
 
 static void init_logs(void) {
         char *log_file_path;
-        if (!(log_file_path = alloc_concat_path(logs_dir_path, MAIN_LOG_FILE)))
+        if (!(log_file_path = alloc_concat_path(logs_dir_path, "logs.txt")))
                 goto error;
         logger_init(log_file_path, conf_opt_l, conf_opt_f);
         free(log_file_path);

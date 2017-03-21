@@ -374,7 +374,6 @@ struct SockEventNode {
 
 typedef struct {
         // To be freed
-        char *directory;      // Directory for all logging purpose.
         SockEventNode *head;  // Head for list of events.
         SockEventNode *tail;  // Tail for list of events.
         // Others

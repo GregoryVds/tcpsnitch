@@ -104,8 +104,8 @@ describe "libc overrides" do
       run_c_program(prog)
       dir0 = process_dirs[0]
       dir1 = process_dirs[1]
-      assert dir_exists?(dir0+"/0")
-      assert dir_exists?(dir1+"/0")
+      assert file_exists?(dir0+"/0.json")
+      assert file_exists?(dir1+"/0.json")
     end
 
     it "#{prog} should log no ERROR for both processes" do
@@ -118,8 +118,8 @@ describe "libc overrides" do
 
     it "socket() should be in JSON for both processes" do 
       run_c_program(prog)
-      trace1 = File.read(process_dirs[0]+"/0/"+JSON_FILE)
-      trace2 = File.read(process_dirs[1]+"/0/"+JSON_FILE)
+      trace1 = File.read(process_dirs[0]+"/0.json")
+      trace2 = File.read(process_dirs[1]+"/0.json")
       assert_event_present("socket", true, wrap_as_array(trace1))
       assert_event_present("socket", true, wrap_as_array(trace2))
     end

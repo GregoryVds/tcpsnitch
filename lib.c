@@ -282,31 +282,6 @@ error:
         return ret;
 }
 
-char *create_numbered_dir_in_path(const char *path, int dir_number) {
-        char *dirname, *dir_path;
-        int n;
-        if (!path) goto error1;
-
-        // Build string "[path]/[dir_number] in dir_path"
-        if (!(n = get_int_len(dir_number) + 2)) goto error_out;  // +"/" & "\0"
-        dirname = (char *)my_malloc(sizeof(char) * n);
-        snprintf(dirname, n, "%d", dir_number);
-        if (!(dir_path = alloc_concat_path(path, dirname))) goto error3;
-
-        if (mkdir(dir_path, 0777)) goto error2;
-        return dir_path;
-error1:
-        LOG(ERROR, "path is NULL.");
-        goto error_out;
-error2:
-        LOG(ERROR, "mkdir() failed. %s.", strerror(errno));
-error3:
-        free(dirname);
-error_out:
-        LOG_FUNC_ERROR;
-        return NULL;
-}
-
 bool is_dir_writable(const char *path) {
         if (!path) return false;
         DIR *dir;

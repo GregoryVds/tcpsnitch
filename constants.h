@@ -4,12 +4,6 @@
 #define STDOUT_FD 3
 #define STDERR_FD 4
 
-#define JSON_FILE "dump.json"
-#define PCAP_FILE "dump.pcap"
-
-#define INIT_LOG_FILE "init.log"
-#define MAIN_LOG_FILE "main.log"
-
 #ifdef __ANDROID__
 #define OPT_B "be.ucl.tcpsnitch.opt_b"
 #define OPT_C "be.ucl.tcpsnitch.opt_c"

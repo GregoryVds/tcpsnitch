@@ -41,14 +41,12 @@ bool alloc_name_str(const struct sockaddr *addr, socklen_t len, char **name,
 char *alloc_concat_path(const char *path1, const char *path2);
 char *alloc_append_int_to_path(const char *path1, int i);
 
-char *alloc_dirname_str(void);
 char *alloc_android_opt_d(void);
 char *alloc_pcap_path_str(Socket *con);
 char *alloc_json_path_str(Socket *con);
 
 char *alloc_cmdline_str(void);
 char *alloc_app_name(void);
-char *alloc_kernel_str(void);
 
 char *alloc_error_str(int err);
 
