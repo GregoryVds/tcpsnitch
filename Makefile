@@ -12,12 +12,17 @@ I386=i386
 INSTALL_PATH=/usr/local
 BIN_PATH=$(INSTALL_PATH)/bin
 LIB_PATH=$(INSTALL_PATH)/lib
+DEPS_PATH=$(BIN_PATH)/tcpsnitch_deps
 
 # Multi-arch
 LIB_AMD64_PATH=$(LIB_PATH)/$(AMD64)-linux-gnu
 LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
-LIB_AMD64=$(REAL_NAME)-$(AMD64)
-LIB_I386=$(REAL_NAME)-$(I386)
+
+LIB_AMD64=./bin/$(REAL_NAME)-$(AMD64)
+LIB_I386=./bin/$(REAL_NAME)-$(I386)
+LIB_ANDROID=./bin/android-$(LINKER_NAME)
+
+TCPSNITCH_DEPS=./bin/tcpsnitch $(LIB_ANDROID) ./bin/get_package ./bin/pull_traces ./bin/kill_package
 
 CC_ANDROID=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
 CC=gcc
@@ -54,7 +59,7 @@ define check_lib
 	(ldconfig -p | grep $(1) > /dev/null) || (echo "$(2)" && false)
 endef
 
-default: tcpsnitch
+default: linux android
 
 checkdeps:
 	@echo "[-] Checking presence of library dependencies..."
@@ -66,15 +71,16 @@ checkdeps:
 	@$(call check_version,libpcap,$(AMD64))
 	@$(call check_version,libpcap,$(I386))
 
-tcpsnitch: checkdeps $(HEADERS) $(SOURCES)
+linux: checkdeps $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling 64 bits version..."
 	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_AMD64) $(SOURCES) $(DEPS) 
 	@echo "[-] Compiling 32 bits version..."
 	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o $(LIB_I386) $(SOURCES) $(DEPS) 
-	@echo "[-] Done!"
 
 android:
-	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./android/$(LINKER_NAME) $(SOURCES) $(DEPS_ANDROID)
+	@echo "[-] Compiling Android version..."
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o $(LIB_ANDROID) $(SOURCES) $(DEPS_ANDROID)
+
 install:
 	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
 	@test -d $(LIB_AMD64_PATH) || mkdir $(LIB_AMD64_PATH) 
@@ -84,8 +90,12 @@ install:
 	@echo "[-] Move 32 bits lib version to $(LIB_I386_PATH)..." 
 	@install -m 0644 $(LIB_I386) $(LIB_I386_PATH)/$(REAL_NAME)
 	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
-	@echo "[-] Move executable to $(BIN_PATH)..."
-	@install -m 0755 $(EXECUTABLE) $(BIN_PATH) 
+	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)/tcpsnitch_deps
+	@echo "[-] Move dependencies to $(DEPS_PATH)..."
+	@test -d $(DEPS_PATH) || mkdir $(DEPS_PATH)
+	@install -m 0755 $(TCPSNITCH_DEPS) $(DEPS_PATH)
+	@echo "[-] Add symlink to executable in $(BIN_PATH)..."
+	@ln -fs $(DEPS_PATH)/tcpsnitch $(BIN_PATH)/tcpsnitch
 	@echo "[-] Done!"
 
 uninstall:
@@ -97,11 +107,11 @@ uninstall:
 clean:
 	rm -f *.o .*.s* *.so* tests/.*.s*
 
-tests: tcpsnitch install
+tests: linux install
 	cd tests && rake
 
 index: 
 	ctags -R .
 
-.PHONY: tcpsnitch tests clean index android
+.PHONY: tests clean index android
 

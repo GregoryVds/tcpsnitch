@@ -23,7 +23,6 @@ char *conf_opt_d;
 long conf_opt_f;
 char *conf_opt_i;
 long conf_opt_l;
-long conf_opt_p;
 long conf_opt_u;
 long conf_opt_t;
 long conf_opt_v;
@@ -132,7 +131,6 @@ static void get_options(void) {
         conf_opt_i = get_str_env(OPT_I);
 #endif
         conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
-        conf_opt_p = get_long_opt_or_defaultval(OPT_P, 0);
         conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
         conf_opt_t = get_long_opt_or_defaultval(OPT_T, 1000);
         conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
@@ -145,7 +143,6 @@ static void log_options(void) {
         LOG(INFO, "Option f: %lu.", conf_opt_f);
         LOG(INFO, "Option i: %s.", conf_opt_i);
         LOG(INFO, "Option l: %lu.", conf_opt_l);
-        LOG(INFO, "Option p: %lu.", conf_opt_p);
         LOG(INFO, "Option u: %lu.", conf_opt_u);
         LOG(INFO, "Option t: %lu.", conf_opt_t);
         LOG(INFO, "Option v: %lu.", conf_opt_v);

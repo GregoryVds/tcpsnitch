@@ -8,7 +8,9 @@ if [[ $# -ne 1 ]]; then
         exit 1
 fi
 
-package=$(./get_package $1)
+# Get package name
+exec 3>&2
+package=$(./get_package $1 2>&3)
 echo "$0: fetching traces for '${package}'..."
 
 tracesdir="/data/data/${package}/tcpsnitch"
@@ -18,11 +20,16 @@ if [ ! $(adb shell su -c ls ${tracesdir}) ]; then
         exit 0
 fi
 
+TEMPDIR=$(mktemp -d)
+chmod 777 "$TEMPDIR"
+
 adb shell su -c ls ${tracesdir} | while read -r line; do
         trace=$(echo $line | tr -d '\r')
-        adb shell su -c mv ${tracesdir}/${trace} /data/${trace} 
-        adb shell su busybox chmod -R 777 /data/${trace}
-        adb pull /data/${trace} ./traces/${trace}
+        adb shell su -c mv "$tracesdir/$trace" "/data/$trace" 
+        adb shell su busybox chmod -R 777 "/data/$trace"
+        adb pull "/data/${trace}" "$TEMPDIR/$trace"
         echo "$0: ${trace} pulled."
-        adb shell su -c rm -rf /data/${trace}
+        adb shell su -c rm -rf "/data/${trace}"
 done
+
+echo "tcpsnitch data saved in $TEMPDIR"

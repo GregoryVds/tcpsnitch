@@ -853,8 +853,7 @@ static json_t *build_sock_ev(const SockEvent *ev) {
 char *alloc_sock_ev_json(const SockEvent *ev) {
         json_t *json_ev = build_sock_ev(ev);
         if (!json_ev) goto error;
-        size_t flags = conf_opt_p ? JSON_INDENT(2) : 0;
-        char *json_string = json_dumps(json_ev, flags);
+        char *json_string = json_dumps(json_ev, 0);
         json_decref(json_ev);
         return json_string;
 error:

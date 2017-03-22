@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o nounset
-set -o errexit
 # set -o xtrace
+set -e
 
 # Verify number of arguments
 if [[ $# -ne 1 ]]; then
@@ -9,7 +9,9 @@ if [[ $# -ne 1 ]]; then
         exit 1
 fi
 
-package=$(./get_package $1)
+# Get package name
+exec 3>&2
+package=$(./get_package $1 2>&3)
 echo "$0: killing '${package}'."
 
-adb shell am force-stop ${package}
+adb shell su -c am force-stop ${package}

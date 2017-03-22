@@ -99,24 +99,6 @@ describe "tcpsnitch" do
     end
   end
 
-  describe "option -p" do
-    it "should not crash with -p" do
-      assert tcpsnitch("-p", cmd)
-    end
-
-    it "should pretty print the JSON with -p" do
-      reset_dir(TEST_DIR)
-      tcpsnitch("-d #{TEST_DIR} -p", cmd)
-      assert system("test $(wc -l < #{json_file_str}) -gt 2") 
-    end
-
-    it "should not pretty print the JSON without -p" do
-      reset_dir(TEST_DIR)
-      tcpsnitch("-d #{TEST_DIR}", cmd)
-      assert system("test $(wc -l < #{json_file_str}) -eq 1") 
-    end
-  end
-
   describe "when -v is set" do
     it "should show verbose output" do
       assert_match(/[pid \d*] [a-z]*()/, tcpsnitch_output("-v", cmd))
