@@ -72,17 +72,6 @@ describe "tcpsnitch" do
     end
   end
 
-  describe "option -i" do
-    it "should not crash with valid iface" do
-      assert tcpsnitch("-i lo", cmd)
-    end
-
-    it "should report 'invalid argument' with invalid iface" do
-      assert_match(/invalid -i argument/, tcpsnitch_output("-i abc", cmd))
-      assert_match(/invalid -i argument/, tcpsnitch_output("-i 123", cmd))
-    end
-  end
-
   describe "when -l is set" do
     it "should show logs at 3" do
       assert_match(/#{LOG_LABEL_INFO}/, tcpsnitch_output("-l 3", cmd))

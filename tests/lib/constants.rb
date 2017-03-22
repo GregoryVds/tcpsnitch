@@ -1,4 +1,4 @@
-EXECUTABLE="../tcpsnitch"
+EXECUTABLE="../bin/tcpsnitch"
 LD_PRELOAD="LD_PRELOAD=../libtcpsnitch.so.1.0"
 TEST_DIR="/tmp/netspy"
 
