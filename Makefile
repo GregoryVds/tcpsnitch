@@ -105,7 +105,7 @@ install:
 	fi
 	@install -m 0755 ./bin/$(EXECUTABLE) $(DEPS_PATH)
 	@echo "[-] Moved executable to \"$(DEPS_PATH)\""
-	@ln -fs $(DEPS_PATH)/$(EXECUTABLE) $(BIN_PATH)/$(EXECUTABLE)
+	@ln -fs ./tcpsnitch_deps/$(EXECUTABLE) $(BIN_PATH)/$(EXECUTABLE)
 	@echo "[-] Added symlink to executable in \"$(BIN_PATH)\""
 	@echo "[-] Done!"
 

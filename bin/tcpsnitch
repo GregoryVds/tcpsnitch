@@ -208,6 +208,8 @@ parse_options() {
 # Start of script #
 ###################
 
+cd $(dirname $(realpath $0))
+
 parse_options $@
 
 # Consume option args
@@ -224,7 +226,6 @@ if [ $OPT_A -eq "1" ]; then
 
     # Test if Android lib was compiled
     LIB="android-lib${NAME}.so"
-    cd $(dirname $(realpath $0))
     if [[ ! -f $LIB ]]; then
         error "Android lib missing! Reinstall ${NAME} for Android (see README)"
     fi
@@ -328,5 +329,5 @@ else
     #       - 1>/devnull: discard stdout of process.
     #   - 3>&1 1>&2 2>&3: swap back stderr/stdout.
 
-    echo "tcpsnitch data saved in $OPT_D"
+    info "Trace saved in $OPT_D"
 fi
