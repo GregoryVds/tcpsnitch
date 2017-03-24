@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -o nounset
-# set -o xtrace
-
-adb logcat -s tcpsnitch:$1

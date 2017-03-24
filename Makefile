@@ -24,8 +24,7 @@ LIB_AMD64_PATH=$(LIB_PATH)/$(AMD64)-linux-gnu
 LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
 
 # Installation dependencies (not sure where to place those... Merge in one script?)
-BIN_DEPS=./bin/$(EXECUTABLE) ./bin/$(LIB_ANDROID) ./bin/get_package\
-	 ./bin/pull_traces ./bin/kill_package
+BIN_DEPS=./bin/$(EXECUTABLE) ./bin/$(LIB_ANDROID)
 
 # Compiler & linker flags
 CC_ANDROID?=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
