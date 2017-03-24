@@ -7,24 +7,17 @@ VERSION=$(MAJOR_VERSION).$(MINOR_VERSION)
 EXECUTABLE=tcpsnitch
 
 # Libraries names
-LINKER_NAME=libtcpsnitch.so
-SONAME=$(LINKER_NAME).$(MAJOR_VERSION)
-REAL_NAME=$(SONAME).$(MINOR_VERSION)
+BASE_NAME=lib$(EXECUTABLE).so.$(VERSION)
 AMD64=x86_64
 I386=i386
-LIB_AMD64=$(REAL_NAME)-$(AMD64)
-LIB_I386=$(REAL_NAME)-$(I386)
-LIB_ANDROID=android-$(LINKER_NAME)
+ARM=arm
+LIB_AMD64=$(BASE_NAME)-$(AMD64)
+LIB_I386=$(BASE_NAME)-$(I386)
+LIB_ARM=$(BASE_NAME)-$(ARM)
 
 # Installation paths
 BIN_PATH=$(DESTDIR)/usr/local/bin
 DEPS_PATH=$(BIN_PATH)/tcpsnitch_deps
-LIB_PATH=$(DESTDIR)/usr/local/lib
-LIB_AMD64_PATH=$(LIB_PATH)/$(AMD64)-linux-gnu
-LIB_I386_PATH=$(LIB_PATH)/$(I386)-linux-gnu
-
-# Installation dependencies (not sure where to place those... Merge in one script?)
-BIN_DEPS=./bin/$(EXECUTABLE) ./bin/$(LIB_ANDROID)
 
 # Compiler & linker flags
 CC_ANDROID?=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
@@ -33,7 +26,6 @@ C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
 	-Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual \
 	-Wunreachable-code
-L_FLAGS=-Wl,-soname,$(SONAME)
 
 # Dependencies
 DEPS=-ljansson -ldl -lpthread -lpcap 
@@ -87,20 +79,17 @@ linux: $(HEADERS) $(SOURCES)
 
 android: $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling Android lib version..."
-	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ANDROID) $(SOURCES) $(DEPS_ANDROID)
+	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(DEPS_ANDROID)
 
 install:
-	@test -d $(LIB_PATH) || mkdir $(LIB_PATH)
-	@test -d $(LIB_AMD64_PATH) || mkdir $(LIB_AMD64_PATH)
-	@test -d $(LIB_I386_PATH) || mkdir $(LIB_I386_PATH)
-	@install -m 0444 ./bin/$(LIB_AMD64) $(LIB_AMD64_PATH)/$(REAL_NAME)
-	@echo "[-] Moved Linux 64 bits lib version to \"$(LIB_AMD64_PATH)\""
-	@install -m 0444 ./bin/$(LIB_I386) $(LIB_I386_PATH)/$(REAL_NAME)
-	@echo "[-] Moved Linux 32 bits lib version to \"$(LIB_I386_PATH)\""
 	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
 	@test -d $(DEPS_PATH) || mkdir $(DEPS_PATH)
-	@if [ -f ./bin/$(LIB_ANDROID) ]; then\
-		install -m 0755 ./bin/$(LIB_ANDROID) $(DEPS_PATH);\
+	@install -m 0444 ./bin/$(LIB_AMD64) $(DEPS_PATH)
+	@echo "[-] Moved Linux 64 bits lib version to \"$(DEPS_PATH)\""
+	@install -m 0444 ./bin/$(LIB_I386) $(DEPS_PATH)
+	@echo "[-] Moved Linux 32 bits lib version to \"$(DEPS_PATH)\""
+	@if [ -f ./bin/$(LIB_ARM) ]; then\
+		install -m 0444 ./bin/$(LIB_ARM) $(DEPS_PATH);\
 		echo "[-] Moved Android lib to \"$(DEPS_PATH)\"";\
 	fi
 	@install -m 0755 ./bin/$(EXECUTABLE) $(DEPS_PATH)
@@ -110,8 +99,6 @@ install:
 	@echo "[-] Done!"
 
 uninstall:
-	@rm $(LIB_AMD64_PATH)/$(REAL_NAME)
-	@rm $(LIB_I386_PATH)/$(REAL_NAME)
 	@rm -rf $(DEPS_PATH)
 	@rm $(BIN_PATH)/$(EXECUTABLE)
 
