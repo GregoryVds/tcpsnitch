@@ -221,7 +221,13 @@ if [ $OPT_A -eq "1" ]; then
     ###########
     # Android #
     ###########
+
+    # Test if Android lib was compiled
+    LIB="android-lib${NAME}.so"
     cd $(dirname $(realpath $0))
+    if [[ ! -f $LIB ]]; then
+        error "Android lib missing! Reinstall ${NAME} for Android (see README)"
+    fi
 
     # Validate package
     get_android_package $command
@@ -250,12 +256,11 @@ if [ $OPT_A -eq "1" ]; then
 
     # Upload lib
     BASE_PROP="be.ucl.${NAME}"
-    LIB="android-lib${NAME}.so"
     LIBPATH="/data"
     adb shell su -c chmod 777 /data
     adb shell rm -f "${LIBPATH}/${LIB}"
     info "Uploading ${NAME} library to ${LIBPATH}/${LIB}"
-    adb push ${LIB} ${LIBPATH} 2>/dev/null
+    adb push ./${LIB} ${LIBPATH} 2>/dev/null
 
     # Properties are limited to 32 chars includind the NULL byte.
     # With "wrap." being 5 chars, we have 26 chars left the app name.

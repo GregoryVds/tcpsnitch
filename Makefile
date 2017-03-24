@@ -99,10 +99,13 @@ install:
 	@echo "[-] Moved Linux 32 bits lib version to \"$(LIB_I386_PATH)\""
 	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
 	@test -d $(DEPS_PATH) || mkdir $(DEPS_PATH)
+	@if [ -f ./bin/$(LIB_ANDROID) ]; then\
+		install -m 0755 ./bin/$(LIB_ANDROID) $(DEPS_PATH);\
+		echo "[-] Moved Android lib to \"$(DEPS_PATH)\"";\
+	fi
 	@install -m 0755 ./bin/$(EXECUTABLE) $(DEPS_PATH)
-	@(test -f ./bin/$(LIB_ANDROID) && install -m 0755 ./bin/$(LIB_ANDROID) $(DEPS_PATH)) || true
+	@echo "[-] Moved executable to \"$(DEPS_PATH)\""
 	@ln -fs $(DEPS_PATH)/$(EXECUTABLE) $(BIN_PATH)/$(EXECUTABLE)
-	@echo "[-] Moved executable & dependencies to \"$(DEPS_PATH)\""
 	@echo "[-] Added symlink to executable in \"$(BIN_PATH)\""
 	@echo "[-] Done!"
 
