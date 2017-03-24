@@ -1,18 +1,15 @@
 # Tcpsnitch
 
-WORK IN PROGRESS, (most probably) not ready for use.
-
 ## Overview
 
 Tcpsnitch is a program that helps investigate the interactions between an application, the TCP stack and the network. It runs the specified command until it exits and records useful information for each TCP connection:
 - The system calls made along with their arguments and return value.
 - The value of the TCP\_INFO socket option at user-defined intervals to provide information about the state of a TCP connection in the kernel.
 - A pcap trace of all the packets sent/received.
-- Aggregate information about the TCP connection such as the number of syscalls made or bytes sent/received.
 
 ## Compatibility
 
-Comptabible with Linux only (tested on Ubuntu & Elementary only).
+Comptabible with Linux & Android (tested on Ubuntu & Elementary only).
 
 The following applications have been tested and are compatible: Firefox, Epiphany, VLC, Steam, Transmission, QbitTorrent, Spotify, Dropbox, x2goclient..
 
@@ -69,24 +66,26 @@ make
 sudo make install
 ```
 
+### Android
+
+tcpsnitch has been sucessfully compiled with the NDK for Android API 23.
+
+You must set the `CC_ANDROID`, pointing the the Android NDK compiler, before issuing make.
+
+a single argument which should match a package installed on the Android device via a simple `grep`. In case of multiple matches, the first matched package will be used.
+
+For instance, run `setup_app air` would match the `com.airbnb.android` package.
+
+You need to install `busybox` on the device.
 ## Usage
 
-To run tcpsnitch with curl and defaults options: `sudo tcpsnitch curl google.com`. 
-
-To see verbose output and choose the log directory: `sudo tcpsnitch -v -d <path> curl google.com`.
+To run tcpsnitch with curl and defaults options: `tcpsnitch curl google.com`.
 
 See `tcpsnitch -h` for more information about the options.
 
 ## How it works?
 
 ## FAQ
-
-### What are these ELF errors that get thrown?
-
-When running tcpsnitch, you will get the following errors:
-`ERROR: ld.so: object '/usr/local/lib/i386-linux-gnu/libtcpsnitch.so.1.0' from `LD\_PRELOAD` cannot be preloaded (wrong ELF class: ELFCLASS32): ignored.`
-
-On a x64 machine, tcpsnitch must support both 32 bits and 64 bits executables. For instance, a 32 bits application such as Steam might fork and execute 64 bits applications. We thus always add both versions of the library in the `LD\_PRELOAD` variable to support both cases. This means that for any process running with tcpsnitch, there will always be one library which is not supported, and one which is supported.
 
 ## Contact
 
