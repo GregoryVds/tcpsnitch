@@ -17,6 +17,12 @@ The following applications are NOT compatible: Chrome, any Chromium based app su
 
 ## Intallation
 
+For users that only want to trace Linux applications, you may skip the "Setup for Android" part.
+In order to trace Android applications, tcpsnitch must be compiled with the Android Native Development Kit (NDK). The setup involves the following steps:
+- Download the Android NDK (see https://developer.android.com/ndk/downloads)
+- Generate a standalone toolchain for the processor architecture & Android API of your device (see https://developer.android.com/ndk/guides/standalone_toolchain.html)
+- Compile libjansson and libpcap with the NDK and install their header files in the sysroot of your standalone toolchain.
+
 ### Dependencies
 
 #### Debian based Linux
@@ -24,7 +30,7 @@ The following applications are NOT compatible: Chrome, any Chromium based app su
 Tested on Ubuntu 16.04.2 Xenial
 
 ```
-sudo apt install libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
+sudo apt install gcc make libc6-dev libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
 ```
 
 #### RPM based Linux
