@@ -44,8 +44,8 @@ usage() {
     echo "                 [ -k <pkg> ] [ -l <lvl> ] [ -t <msec> ]"
     echo "                 [ -u <usec> ] [ --version ] app <args>"
     echo ""
-    echo "app         command/package to spy on."
-    echo "<args>      args to command."
+    echo "app         cmd/package to spy on."
+    echo "<args>      args to cmd."
     echo "-a          instrument & launch app on connected android device."
     echo "-b <bytes>  dump tcp_info every <bytes> (0 means NO dump, def 0)."
     echo "-c          activate capture of pcap traces."
@@ -74,19 +74,6 @@ assert_int() {
 validate_args_number() {
     if [[ $# -lt 1 ]]; then
         error "too few arguments"
-    fi
-}
-
-validate_executable() {
-    cmd=$1
-    if [ ${cmd:0:2} = "./" -o ${cmd:0:1} = "/" ]; then # $cmd is a path
-        if ! [[ -x "$cmd" ]]; then
-            error "invalid cmd: '$cmd' is not executable" 
-        fi
-    else
-        if ! which $cmd > /dev/null; then
-            error "invalid argument: '$cmd' is not in \$PATH"
-        fi
     fi
 }
 
@@ -232,8 +219,6 @@ parse_options() {
 # Start of script #
 ###################
 
-cd $(dirname $(realpath $0))
-
 parse_options $@
 
 # Consume option args
@@ -241,20 +226,21 @@ shift $((OPTIND - 1))
 
 validate_args_number $@
 
-command=$1
+cmd=$1
 
 if [ $OPT_A -eq "1" ]; then
     ###########
     # Android #
     ###########
 
-    # Test if Android lib was compiled
+    # Test if Android is present
+    cd $(dirname $(realpath $0))
     if [[ ! -f ${ARM_LIB} ]]; then
-        error "Android lib missing! Reinstall ${NAME} for Android (see README)"
+        error "${ARM_LIB} missing! Reinstall ${NAME} for Android (see README)"
     fi
 
     # Validate package
-    get_android_package $command
+    get_android_package $cmd
 
     # Kill package if running
     kill_android_package
@@ -299,12 +285,33 @@ if [ $OPT_A -eq "1" ]; then
     adb shell setprop "$BASE_PROP.opt_v" "$OPT_V"
 
     start_android_package
-    info "Execute './${NAME} -k ${command}' to terminate the capture"
+    info "Execute './${NAME} -k ${cmd}' to terminate the capture"
 else
     #########
     # Linux #
     #########
-    validate_executable $command
+    if [ -f "$cmd" ]; then
+        # Resolve absolute path for $1 & update positional parameter accordingly
+        cmd=$(realpath "$cmd")
+        set -- "$cmd" "${@:2}"
+
+        if ! [[ -x "$cmd" ]]; then
+            error "invalid cmd: '$cmd' is not executable"
+        fi
+    else
+        if ! which "$cmd" > /dev/null; then
+            error "invalid argument: '$cmd' is not in \$PATH"
+        fi
+    fi
+
+    # Test if libs are present
+    cd $(dirname $(realpath $0))
+    if [[ ! -f ${I386_LIB} ]]; then
+        error "${I386_LIB} missing! Reinstall ${NAME}"
+    fi
+    if [[ ! -f ${AMD64_LIB} ]]; then
+        error "${AMD64_LIB} missing! Reinstall ${NAME}"
+    fi
 
     # Create logs dir if option -d not used
     if [[ -z "$OPT_D" ]]; then
