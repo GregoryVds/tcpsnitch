@@ -28,8 +28,14 @@ W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
 	-Wunreachable-code
 
 # Dependencies
-DEPS=-ljansson -ldl -lpthread -lpcap 
-DEPS_ANDROID=-ldl -llog -ljansson -lpcap
+# Note: The Debian packages "libpcap0.8-dev" and "libpcap0.8-dev:i386" are
+# incompatible. The header files contained in both packages are the same, the
+# packages are incompatible only because of a helper script used to generate
+# compiler flags, which we dont use anyway. We thus only need to install for a
+# single architecture and we must specify the library name explicitly since we
+# will miss the linker name symlink for the other architecture.
+DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
+DEPS_ANDROID=-ldl -llog -ljansson -l:libpcap.so.0.8
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
