@@ -20,7 +20,6 @@ BIN_PATH=$(DESTDIR)/usr/local/bin
 DEPS_PATH=$(BIN_PATH)/tcpsnitch_deps
 
 # Compiler & linker flags
-CC_ANDROID?=~/android_toolchain_23/bin/arm-linux-androideabi-gcc
 CC=gcc
 C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
@@ -35,7 +34,7 @@ W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wundef -Wshadow -Wpointer-arith \
 # single architecture and we must specify the library name explicitly since we
 # will miss the linker name symlink for the other architecture.
 DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
-DEPS_ANDROID=-ldl -llog -ljansson -l:libpcap.so.0.8
+DEPS_ANDROID=-ldl -llog -ljansson -lpcap
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
