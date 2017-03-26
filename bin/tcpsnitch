@@ -6,7 +6,7 @@ set -o nounset
 NAME="tcpsnitch"
 VERSION=0.1
 VERSION_STR="${NAME} version ${VERSION}"
-
+WEBSERVER="192.168.99.101:3000"
 I386_LIB="./lib${NAME}.so.${VERSION}-i386"
 AMD64_LIB="./lib${NAME}.so.${VERSION}-x86_64"
 ARM_LIB="./lib${NAME}.so.${VERSION}-arm"
@@ -18,6 +18,7 @@ OPT_C=0
 OPT_D=""
 OPT_F=2
 OPT_L=2
+OPT_N=0
 OPT_P=0
 OPT_T=1000
 OPT_U=0
@@ -40,7 +41,7 @@ info() {
 }
 
 usage() {
-    echo "Usage: ${NAME} [-achv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+    echo "Usage: ${NAME} [-achnv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
     echo "                 [ -k <pkg> ] [ -l <lvl> ] [ -t <msec> ]"
     echo "                 [ -u <usec> ] [ --version ] app <args>"
     echo ""
@@ -54,6 +55,7 @@ usage() {
     echo "-h          show this help text."
     echo "-k <pkg>    kill instrumented android <pkg> and pull traces."
     echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 2)."
+    echo "-n          desactivate upload of traces (no upload)."
     echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
     echo "-u <usec>   dump tcp_info every <usec> (0 means NO dump, def 0)."
     echo "-v          activate verbose output."
@@ -144,9 +146,21 @@ pull_trace_for_android_package() {
     info "Trace saved in $tmpdir"
 }
 
+upload_trace() {
+    if [ $OPT_N -eq "1" ]; then exit; fi
+    cd $OPT_D
+    tar -czf archive.tar.gz ./*
+    info "Uploading trace..."
+    if curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${WEBSERVER}/app_traces" >/dev/null; then
+        info "Trace uploaded to ${WEBSERVER}"
+    else
+        info "Failed to upload trace"
+    fi
+}
+
 parse_options() {
     # Parse options
-    while getopts ":achpvb:d:f:k:l:u:t:-:" opt; do
+    while getopts ":achnpvb:d:f:k:l:u:t:-:" opt; do
         case $opt in
             -) # Trick to parse long options with getopts.
                 case "$OPTARG" in
@@ -185,6 +199,9 @@ parse_options() {
                 kill_android_package
                 pull_trace_for_android_package
                 exit 0
+                ;;
+            n)
+                OPT_N=1;
                 ;;
             l)
                 assert_int "$OPTARG" "invalid -l argument: '$OPTARG'" 
@@ -332,3 +349,5 @@ else
 
     info "Trace saved in $OPT_D"
 fi
+
+upload_trace
