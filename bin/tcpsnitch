@@ -30,7 +30,7 @@ export TOP_PID=$$
 error() {
     msg=$1
     echo "${NAME}: ${msg}."
-    echo "Try '$0 -h' for more information."
+    echo "Try '${NAME} -h' for more information."
     kill -s TERM $TOP_PID
 }
 
