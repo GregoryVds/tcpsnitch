@@ -33,8 +33,11 @@ W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wshadow -Wpointer-arith \
 # compiler flags, which we dont use anyway. We thus only need to install for a
 # single architecture and we must specify the library name explicitly since we
 # will miss the linker name symlink for the other architecture.
-DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
-DEPS_ANDROID=-ldl -llog -ljansson -lpcap
+DEBIAN_BASED_DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
+RPM_BASED_DEPS=-ljansson -ldl -lpthread -lpcap
+LINUX_DEPS=$(shell if which rpm >/dev/null; then echo $(RPM_BASED_DEPS); else echo $(DEBIAN_BASED_DEPS); fi)
+
+ANDROID_DEPS=-ljansson -ldl -llog -lpcap
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
@@ -78,13 +81,13 @@ configure:
 
 linux: $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling Linux 64 bits lib version..."
-	@$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(DEPS)
+	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
 	@echo "[-] Compiling Linux 32 bits lib version..."
-	@$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(DEPS) 
+	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
 
 android: $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling Android lib version..."
-	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(DEPS_ANDROID)
+	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(ANDROID_DEPS)
 
 install:
 	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
