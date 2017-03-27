@@ -92,8 +92,7 @@ android: $(HEADERS) $(SOURCES)
 	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(ANDROID_DEPS)
 
 install:
-	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
-	@test -d $(DEPS_PATH) || mkdir $(DEPS_PATH)
+	@mkdir -p $(DEPS_PATH)
 	@install -m 0444 ./bin/$(LIB_AMD64) $(DEPS_PATH)
 	@echo "[-] Moved Linux 64 bits lib version to \"$(DEPS_PATH)\""
 	@install -m 0444 ./bin/$(LIB_I386) $(DEPS_PATH)
