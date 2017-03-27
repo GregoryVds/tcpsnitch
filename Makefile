@@ -86,7 +86,9 @@ linux: $(HEADERS) $(SOURCES)
 	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
 
 android: $(HEADERS) $(SOURCES)
-	@test -z $(CC_ANDROID) && $(error CC_ANDROID variable not set. See README for compilation instructions)
+ifndef CC_ANDROID
+	$(error CC_ANDROID variable not set. See README for compilation instructions)
+endif
 	@echo "[-] Compiling Android lib version..."
 	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
 
