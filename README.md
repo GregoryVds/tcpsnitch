@@ -125,9 +125,15 @@ export CC_ANDROID=$TOOLCHAIN/bin/arm-linux-androideabi-gcc
 make android && sudo make install
 ```
 
-TODO:
-- Upload compiled librairies on the Device.
-- Install `busybox` on the Device.
+Prepare the Android device:
+
+- Install [Android Debug Bridge](https://developer.android.com/studio/command-line/adb.html) (ADB) on your machine: `sudo apt-get install android-tools-adb`.
+- Enable USB Debugging on your phone: Go to Settings > About Phone > Tap on Build number 7 times > Return to Settings > Developer Options > USB Debugging.
+- Plug your phone to your machine with a USB cable.
+- Accept the connection on the phone.
+- Install `BusyBox` from the Google Play Store on the Device.
+- Isssue `adb devices` and make sure that your phone is visible (your should see `device` in the second column).
+- You are ready to go! See Android usage section.
 
 ## FAQ
 

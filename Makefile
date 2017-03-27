@@ -39,8 +39,6 @@ DEBIAN_BASED_DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
 RPM_BASED_DEPS=-l:libjansson.so.4 -ldl -lpthread -lpcap
 LINUX_DEPS=$(shell if which rpm >/dev/null; then echo $(RPM_BASED_DEPS); else echo $(DEBIAN_BASED_DEPS); fi)
 
-ANDROID_DEPS=-ljansson -ldl -llog -lpcap
-
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
 	logger.h init.h resizable_array.h verbose_mode.h
@@ -88,8 +86,9 @@ linux: $(HEADERS) $(SOURCES)
 	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
 
 android: $(HEADERS) $(SOURCES)
+	@test -z $(CC_ANDROID) && $(error CC_ANDROID variable not set. See README for compilation instructions)
 	@echo "[-] Compiling Android lib version..."
-	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(ANDROID_DEPS)
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
 
 install:
 	@mkdir -p $(DEPS_PATH)
