@@ -129,13 +129,13 @@ TODO:
 - Upload compiled librairies on the Device.
 - Install `busybox` on the Device.
 
-## How it works?
-
-An interesting feature of the Linux dynamic linker (`ld.so`) is the ability to link user-specified shared librairies before the librairies specified in the list of dependencies of a program. This feature can be controlled with the `LD_PRELOAD` environment variable which contains a (possibly empty) list of additional user-specified librairies. In particular, this `LD_PRELOAD` variable may force the dynamic linker to link a user-specified shared library before the `libc` library. As a result, any function defined in this user-specified library would take precedence over a function with the same signature defined in `libc`.
-
-The implication here is that it allows to intercept calls to system call wrapper functions: we merely have to add to the `LD_PRELOAD` environment variable a custom shared library that redefines these system call wrappers functions. Such a shim library would transparently intercept the `libc` function calls and perform some processing before calling the original `libc` wrapper functions.
-
 ## FAQ
+
+### How does it works?
+
+An interesting feature of the Linux dynamic linker (`ld.so`) is the ability to link user-specified shared librairies before the librairies specified in the list of dependencies of a program. This feature can be controlled with the `LD_PRELOAD` environment variable which contains a (possibly empty) list of additional user-specified librairies. In particular, this `LD_PRELOAD` variable may force the dynamic linker to link a user-specified shared library before the `libc` library. As a result, any function defined in this user-specified library take precedence over a function with the same signature defined in `libc`.
+
+The implication here is that it allows to intercept calls to system call wrapper functions. We merely have to add a custom shared library that redefines these system call wrappers functions to `LD_PRELOAD`. Such a shim library then transparently intercept the `libc` function calls and perform some processing before calling the original `libc` wrapper functions.
 
 ## Contact
 
