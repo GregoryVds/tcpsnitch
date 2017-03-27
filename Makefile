@@ -34,7 +34,9 @@ W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wshadow -Wpointer-arith \
 # single architecture and we must specify the library name explicitly since we
 # will miss the linker name symlink for the other architecture.
 DEBIAN_BASED_DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
-RPM_BASED_DEPS=-ljansson -ldl -lpthread -lpcap
+# Note: On Centos, there is no "jansson.devel" pacakge available. Thus for ease
+# of installation, we specify the library name.
+RPM_BASED_DEPS=-l:libjansson.so.4 -ldl -lpthread -lpcap
 LINUX_DEPS=$(shell if which rpm >/dev/null; then echo $(RPM_BASED_DEPS); else echo $(DEBIAN_BASED_DEPS); fi)
 
 ANDROID_DEPS=-ljansson -ldl -llog -lpcap
