@@ -154,7 +154,7 @@ override(recvmsg, ssize_t, 3, struct msghdr *a, int b);
 override(sendmmsg, int, 4, const struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          const struct timespec *d);
-#elif LIBC_VERSION > 217 // Absolutely not sure this is the right boundary!
+#elif LIBC_VERSION > 219 // Absolutely not sure this is the right boundary!
 override(sendmmsg, int, 4, struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          struct timespec *d);
