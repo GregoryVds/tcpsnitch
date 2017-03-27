@@ -28,6 +28,8 @@
 #include "sock_events.h"
 #include "string_builders.h"
 
+#define LIBC_VERSION (__GLIBC__ * 100 + __GLIBC_MINOR__)
+
 #define arg2 a
 #define arg3 arg2, b
 #define arg4 arg3, c
@@ -148,13 +150,16 @@ override(sendmsg, ssize_t, 3, const struct msghdr *a, int b);
 override(recvmsg, ssize_t, 3, struct msghdr *a, int b);
 #endif
 
-#if !defined(__ANDROID__)
+#if defined(__ANDROID__) && __ANDROID_API__ >= 21
+override(sendmmsg, int, 4, const struct mmsghdr *a, unsigned int b, int c);
+override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
+         const struct timespec *d);
+#elif LIBC_VERSION > 217 // Absolutely not sure this is the right boundary!
 override(sendmmsg, int, 4, struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          struct timespec *d);
-
-#elif __ANDROID_API__ >= 21
-override(sendmmsg, int, 4, const struct mmsghdr *a, unsigned int b, int c);
+#else
+override(sendmmsg, int, 4, struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          const struct timespec *d);
 #endif

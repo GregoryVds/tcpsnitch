@@ -706,13 +706,8 @@ void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 
-#if !defined(__ANDROID__)
-void sock_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                      unsigned int vlen, int flags) {
-#elif __ANDROID_API__ >= 21
 void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                       unsigned int vlen, int flags) {
-#endif
         // Inst. local vars Socket *sock& SockEvSendmmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDMMSG, SockEvSendmmsg);
 
@@ -726,14 +721,9 @@ void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
 }
 
-#if !defined(__ANDROID__)
-void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                      unsigned int vlen, int flags, struct timespec *tmo) {
-#elif __ANDROID_API__ >= 21
-void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
+void sock_ev_recvmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                       unsigned int vlen, int flags,
                       const struct timespec *tmo) {
-#endif
         // Inst. local vars Socket *sock& SockEvRecvmmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVMMSG, SockEvRecvmmsg);
 
@@ -897,7 +887,7 @@ void sock_ev_sendfile(int fd, int ret, int err, int in_fd, off_t *offset,
         SOCK_EV_PRELUDE(SOCK_EV_SENDFILE, SockEvSendfile);
         UNUSED(in_fd);
         UNUSED(offset);
-        
+
         ev->bytes = bytes;
         sock->bytes_received += ev->bytes;
 
@@ -1005,7 +995,7 @@ void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
                 case F_GETLK64:
                 case F_SETLK64:
                 case F_SETLKW64:
-#else
+#elif LIBC_VERSION > 217 // Absolutely not sure this is the right boundary!
                 case F_OFD_SETLK:
                 case F_OFD_SETLKW:
                 case F_OFD_GETLK:

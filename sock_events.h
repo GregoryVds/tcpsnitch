@@ -442,19 +442,12 @@ void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
 
 void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
                      int flags);
-#if !defined(__ANDROID__)
-void sock_ev_sendmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                      unsigned int vlen, int flags);
-#elif __ANDROID_API__ >= 21
+
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                       unsigned int vlen, int flags);
-#endif
 
-#if !defined(__ANDROID__)
-void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
-                      unsigned int vlen, int flags, struct timespec *tmo);
-#elif __ANDROID_API__ >= 21
-void sock_ev_recvmmsg(int fd, int ret, int err, struct mmsghdr *vmessages,
+void sock_ev_recvmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
                       unsigned int vlen, int flags, const struct timespec *tmo);
 #endif
 
