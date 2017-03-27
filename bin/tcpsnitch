@@ -2,41 +2,42 @@
 set -o nounset
 # set -o xtrace
 
-# Name & version
-NAME="tcpsnitch"
-VERSION=0.1
-VERSION_STR="${NAME} version ${VERSION}"
-SERVER="192.168.99.101:3000"
-I386_LIB="./lib${NAME}.so.${VERSION}-i386"
-AMD64_LIB="./lib${NAME}.so.${VERSION}-x86_64"
-ARM_LIB="./lib${NAME}.so.${VERSION}-arm"
+# Modify this to change name, version & libs path
+readonly NAME="tcpsnitch"
+readonly VERSION=0.1
+readonly VERSION_STR="${NAME} version ${VERSION}"
+readonly SERVER="192.168.99.101:3000"
+readonly I386_LIB="./lib${NAME}.so.${VERSION}-i386"
+readonly AMD64_LIB="./lib${NAME}.so.${VERSION}-x86_64"
+readonly ARM_LIB="./lib${NAME}.so.${VERSION}-arm"
+readonly TOP_PID=$$
+readonly SCRIPT_DIR=$(dirname "$(realpath "$0")")
+readonly PROP_PREFIX="be.ucl.${NAME}"
+readonly HIDDEN_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
 
-# Option default values
+# Modify this this change Option default values
 OPT_A=0
 OPT_B=0
 OPT_C=0
 OPT_D=""
 OPT_F=2
 OPT_L=2
-OPT_P=0
 OPT_T=1000
 OPT_U=0
 OPT_V=0
 
 # Exit on TERM signal
 trap "exit 1" TERM
-export TOP_PID=$$
 
 error() {
-    msg=$1
+    declare msg="$1"
     echo "${NAME}: ${msg}."
     echo "Try '${NAME} -h' for more information."
     kill -s TERM $TOP_PID
 }
 
 info() {
-    msg=$1
-    echo "${msg}."
+    echo "${1}."
 }
 
 usage() {
@@ -65,8 +66,9 @@ is_integer() {
 }
 
 assert_int() {
-    error_msg=$2
-    if ! is_integer "$1"; then
+    declare int="$1"
+    declare error_msg="$2"
+    if ! is_integer "$int"; then
         error "$error_msg"
     fi
 }
@@ -78,70 +80,72 @@ validate_args_number() {
 }
 
 get_android_package() {
+    declare package_name="$1"
+
     if [[ $# -ne 1 ]]; then
         error "missing package argument"
     fi
 
-    package_name=$1
     # Check that adb sees exactly 1 device
     if [ $(adb devices | wc -l) -ne 3 ]; then
         error "adb must see exactly 1 device"
     fi
 
-    prefix="package:"
-    match=$(echo $(adb shell pm list packages | grep -m 1 -s "$package_name") | tr -d '\r')
+    declare prefix="package:"
+    declare match=$(adb shell pm list packages | grep -m 1 -s "${package_name}" | tr -d '\r')
 
     # Check that package exists
-    if [ -z "$match" ]; then
-        error "invalid argument: package '$package_name' not found"
+    if [ -z "${match}" ]; then
+        error "invalid argument: package '${package_name}' not found"
     fi
 
-    __PACKAGE=${match#${prefix}}
-    info "Found Android package: '${__PACKAGE}'"
+    PACKAGE=${match#${prefix}}
+    info "Found Android package: '${PACKAGE}'"
 }
 
 start_android_package() {
-    adb shell "monkey -p ${__PACKAGE} -c android.intent.category.LAUNCHER 1 >/dev/null"
-    info "Start package '${__PACKAGE}'"
+    adb shell "monkey -p ${PACKAGE} -c android.intent.category.LAUNCHER 1 >/dev/null"
+    info "Start package '${PACKAGE}'"
 }
 
 kill_android_package() {
-    adb shell su -c am force-stop ${__PACKAGE}
+    adb shell su -c am force-stop "${PACKAGE}"
 }
 
 pull_trace_for_android_package() {
-    tracesdir="/data/data/${__PACKAGE}/${NAME}"
+    declare tracesdir="/data/data/${PACKAGE}/${NAME}"
 
-    if [[ ! $(adb shell su -c ls ${tracesdir}) ]]; then
-        error "no traces for '${__PACKAGE}'"
+    if [[ ! $(adb shell su -c ls "${tracesdir}") ]]; then
+        error "no traces for '${PACKAGE}'"
     fi
 
     info "Pulling trace from Android device..."
 
-    tmpdir=$(mktemp -d)
+    declare tmpdir=$(mktemp -d)
     chmod 777 "$tmpdir"
-    adb shell su -c ls ${tracesdir} | while read -r line; do
-        trace=$(echo $line | tr -d '\r')
+    adb shell su -c ls "${tracesdir}" | while read -r line; do
+        trace=$(echo "${line}" | tr -d '\r')
         adb shell su -c mv "${tracesdir}/${trace}" "/data/${trace}"
         adb shell su busybox chmod -R 777 "/data/${trace}"
         adb pull "/data/${trace}" "${tmpdir}/${trace}" 2>/dev/null
         adb shell su -c rm -rf "/data/${trace}"
     done
 
-    info "Trace saved in $tmpdir"
+    info "Trace saved in ${tmpdir}"
+    upload_trace
 }
 
 upload_trace() {
     while true; do
         read -p "Do you wish to upload this trace to ${SERVER}? (y/n): " yn
-        case $yn in
+        case "${yn}" in
             [Yy]* ) break;;
             [Nn]* ) exit;;
             * ) echo "Please answer yes or no.";;
         esac
     done
 
-    cd $OPT_D
+    cd "${OPT_D}" || error "Could not cd to ${OPT_D}"
     tar -czf archive.tar.gz ./*
     info "Uploading trace..."
     if curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${SERVER}/app_traces" >/dev/null; then
@@ -154,11 +158,11 @@ upload_trace() {
 parse_options() {
     # Parse options
     while getopts ":achnpvb:d:f:k:l:u:t:-:" opt; do
-        case $opt in
+        case "${opt}" in
             -) # Trick to parse long options with getopts.
-                case "$OPTARG" in
+                case "${OPTARG}" in
                     version)
-                        info $VERSION_STR
+                        info "${VERSION_STR}"
                         exit 0
                         ;;
                 esac
@@ -167,43 +171,43 @@ parse_options() {
                 OPT_A=1
                 ;;
             b)
-                assert_int "$OPTARG" "invalid -b argument: '$OPTARG'" 
-                OPT_B=$OPTARG
+                assert_int "${OPTARG}" "invalid -b argument: '${OPTARG}'" 
+                OPT_B=${OPTARG}
                 ;;
             c)
                 OPT_C=1;
                 ;;
             d)
-                if [[ ! -d "$OPTARG" ]] ; then
-                    error "invalid -d argument: '$OPTARG'"
+                if [[ ! -d "${OPTARG}" ]] ; then
+                    error "invalid -d argument: '${OPTARG}'"
                 fi
-                OPT_D=$OPTARG
+                OPT_D=${OPTARG}
                 ;;
             f)
-                assert_int "$OPTARG" "invalid -f argument: '$OPTARG'" 
-                OPT_F=$OPTARG
+                assert_int "${OPTARG}" "invalid -f argument: '${OPTARG}'" 
+                OPT_F=${OPTARG}
                 ;;
             h)
                 usage
                 exit 0
                 ;;
             k)
-                get_android_package $2
+                get_android_package "${2}"
                 kill_android_package
                 pull_trace_for_android_package
                 exit 0
                 ;;
             l)
-                assert_int "$OPTARG" "invalid -l argument: '$OPTARG'" 
-                OPT_L=$OPTARG
+                assert_int "${OPTARG}" "invalid -l argument: '${OPTARG}'" 
+                OPT_L=${OPTARG}
                 ;;
             u)
-                assert_int "$OPTARG" "invalid -u argument: '$OPTARG'" 
-                OPT_U=$OPTARG
+                assert_int "${OPTARG}" "invalid -u argument: '${OPTARG}'" 
+                OPT_U=${OPTARG}
                 ;;
             t)
-                assert_int "$OPTARG" "invalid -t argument: '$OPTARG'"
-                OPT_T=$OPTARG
+                assert_int "${OPTARG}" "invalid -t argument: '${OPTARG}'"
+                OPT_T=${OPTARG}
                 ;;
             v)
                 OPT_V=$((OPT_V+1))
@@ -219,28 +223,27 @@ parse_options() {
 # Start of script #
 ###################
 
-parse_options $@
+parse_options "$@"
 
 # Consume option args
 shift $((OPTIND - 1))
 
-validate_args_number $@
+validate_args_number "$@"
 
-cmd=$1
+cmd="$1"
 
 if [ $OPT_A -eq "1" ]; then
     ###########
     # Android #
     ###########
-
-    # Test if Android is present
-    cd $(dirname $(realpath $0))
+    # Test if Android lib is present
+    cd "$SCRIPT_DIR" || exit "Could not cd to ${SCRIPT_DIR}"
     if [[ ! -f ${ARM_LIB} ]]; then
         error "${ARM_LIB} missing! Reinstall ${NAME} for Android (see README)"
     fi
 
     # Validate package
-    get_android_package $cmd
+    get_android_package "$cmd"
 
     # Kill package if running
     kill_android_package
@@ -249,15 +252,15 @@ if [ $OPT_A -eq "1" ]; then
     adb shell su -c setenforce 0
 
     # Create logs dir
-    OPT_D="/data/data/${__PACKAGE}/${NAME}"
-    adb shell su -c rm -rf ${OPT_D}
-    adb shell su -c mkdir -m 777 -p ${OPT_D}
+    OPT_D="/data/data/${PACKAGE}/${NAME}"
+    adb shell su -c rm -rf "$OPT_D"
+    adb shell su -c mkdir -m 777 -p "$OPT_D"
 
     # Write meta data
     meta_dir="$OPT_D/meta"
-    adb shell mkdir $meta_dir
-    adb shell "echo ${__PACKAGE} > ${meta_dir}/app"
-    adb shell "echo ${__PACKAGE} > ${meta_dir}/cmd"
+    adb shell mkdir "$meta_dir"
+    adb shell "echo ${PACKAGE} > ${meta_dir}/app"
+    adb shell "echo ${PACKAGE} > ${meta_dir}/cmd"
     adb shell "uname -r > ${meta_dir}/kernel"
     adb shell "uname -m > ${meta_dir}/machine"
     adb shell "sysctl net > ${meta_dir}/net 2>/dev/null"
@@ -265,7 +268,6 @@ if [ $OPT_A -eq "1" ]; then
     adb shell "echo ${VERSION} > ${meta_dir}/version"
 
     # Upload lib
-    BASE_PROP="be.ucl.${NAME}"
     LIBPATH="/data"
     adb shell su -c chmod 777 /data
     adb shell rm -f "${LIBPATH}/${ARM_LIB}"
@@ -274,15 +276,15 @@ if [ $OPT_A -eq "1" ]; then
 
     # Properties are limited to 32 chars includind the NULL byte.
     # With "wrap." being 5 chars, we have 26 chars left the app name.
-    adb shell setprop wrap.${__PACKAGE:0:26} LD_PRELOAD="${LIBPATH}/${ARM_LIB}"
-    adb shell setprop "$BASE_PROP.opt_b" "$OPT_B"
-    adb shell setprop "$BASE_PROP.opt_c" "$OPT_C"
-    adb shell setprop "$BASE_PROP.opt_d" "$OPT_D"
-    adb shell setprop "$BASE_PROP.opt_f" "$OPT_F"
-    adb shell setprop "$BASE_PROP.opt_l" "$OPT_L"
-    adb shell setprop "$BASE_PROP.opt_t" "$OPT_T"
-    adb shell setprop "$BASE_PROP.opt_u" "$OPT_U"
-    adb shell setprop "$BASE_PROP.opt_v" "$OPT_V"
+    adb shell setprop wrap."${PACKAGE:0:26}" LD_PRELOAD="${LIBPATH}/${ARM_LIB}"
+    adb shell setprop "${PROP_PREFIX}.opt_b" "$OPT_B"
+    adb shell setprop "${PROP_PREFIX}.opt_c" "$OPT_C"
+    adb shell setprop "${PROP_PREFIX}.opt_d" "$OPT_D"
+    adb shell setprop "${PROP_PREFIX}.opt_f" "$OPT_F"
+    adb shell setprop "${PROP_PREFIX}.opt_l" "$OPT_L"
+    adb shell setprop "${PROP_PREFIX}.opt_t" "$OPT_T"
+    adb shell setprop "${PROP_PREFIX}.opt_u" "$OPT_U"
+    adb shell setprop "${PROP_PREFIX}.opt_v" "$OPT_V"
 
     start_android_package
     info "Execute './${NAME} -k ${cmd}' to terminate the capture"
@@ -290,6 +292,7 @@ else
     #########
     # Linux #
     #########
+    # Validate cmd
     if [ -f "$cmd" ]; then
         # Resolve absolute path for $1 & update positional parameter accordingly
         cmd=$(realpath "$cmd")
@@ -305,7 +308,7 @@ else
     fi
 
     # Test if libs are present
-    cd $(dirname $(realpath $0))
+    cd "$SCRIPT_DIR" || error "Could not cd to ${SCRIPT_DIR}"
     if [[ ! -f ${I386_LIB} ]]; then
         error "${I386_LIB} missing! Reinstall ${NAME}"
     fi
@@ -321,16 +324,14 @@ else
 
     # Write meta data
     meta_dir="$OPT_D/meta"
-    mkdir $meta_dir
-    echo "$1" > "$meta_dir/app"
-    echo "$@" > "$meta_dir/cmd"
-    uname -r > "$meta_dir/kernel"
-    uname -m > "$meta_dir/machine"
-    sysctl net > "$meta_dir/net" 2>/dev/null
-    uname -s > "$meta_dir/os"
-    echo "$VERSION" > "$meta_dir/version"
-
-    UNWANTED_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
+    mkdir "$meta_dir"
+    echo "$1" > "${meta_dir}/app"
+    echo "$@" > "${meta_dir}/cmd"
+    uname -r > "${meta_dir}/kernel"
+    uname -m > "${meta_dir}/machine"
+    sysctl net > "${meta_dir}/net" 2>/dev/null
+    uname -s > "${meta_dir}/os"
+    echo "$VERSION" > "${meta_dir}/version"
 
     ( \
     TCPSNITCH_OPT_B=$OPT_B \
@@ -341,8 +342,8 @@ else
     TCPSNITCH_OPT_T=$OPT_T \
     TCPSNITCH_OPT_U=$OPT_U \
     TCPSNITCH_OPT_V=$OPT_V \
-    LD_PRELOAD="${I386_LIB} ${AMD64_LIB}" $@ 4>&1 2>&1 3>&2 1>/dev/null | \
-    grep -E -v "$UNWANTED_ERRORS" \
+    LD_PRELOAD="${I386_LIB} ${AMD64_LIB}" "$@" 4>&1 2>&1 3>&2 1>/dev/null | \
+    grep -E -v "$HIDDEN_ERRORS" \
     ) 3>&1 1>&2 2>&3
 
     # What just happened?
@@ -357,7 +358,7 @@ else
     #       - 1>/devnull: discard stdout of process.
     #   - 3>&1 1>&2 2>&3: swap back stderr/stdout.
 
-    info "Trace saved in $OPT_D"
+    info "Trace saved in ${OPT_D}"
+    upload_trace
 fi
 
-upload_trace
