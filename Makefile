@@ -89,7 +89,7 @@ linux: $(HEADERS) $(SOURCES)
 
 android: $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling Android lib version..."
-	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(ANDROID_DEPS)
+	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) $(ANDROID_DEPS)
 
 install:
 	@test -d $(BIN_PATH) || mkdir $(BIN_PATH)
