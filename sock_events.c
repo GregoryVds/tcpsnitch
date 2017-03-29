@@ -193,12 +193,14 @@ static void fill_sock_info(SockInfo *si, int domain, int type, int protocol) {
 }
 
 static void fill_sock_info_from_fd(SockInfo *si, int fd) {
-        socklen_t optlen;
         int type;
+        socklen_t optlen = sizeof(int);
         my_getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &si->domain, &optlen);
+        optlen = sizeof(int);
+        my_getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &si->protocol, &optlen);
+        optlen = sizeof(int);
         my_getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &optlen);
         si->type = type & SOCK_TYPE_MASK;
-        my_getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &si->protocol, &optlen);
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
         si->sock_cloexec = type & SOCK_CLOEXEC;
         si->sock_nonblock = type & SOCK_NONBLOCK;
@@ -207,6 +209,7 @@ static void fill_sock_info_from_fd(SockInfo *si, int fd) {
         si->sock_nonblock = false;
 #endif
         si->filled = true;
+        return;
 }
 
 static void fill_addr(Addr *a, const struct sockaddr *addr, socklen_t len) {
@@ -526,7 +529,7 @@ const char *string_from_sock_event_type(SockEventType type) {
 
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
-        if (ra_is_present(fd)) LOG(WARN, "Unclosed socket");
+        if (ra_is_present(fd)) LOG(INFO, "Unclosed socket");
 
         Socket *sock = alloc_socket(fd);
         SockEvSocket *ev =
@@ -560,11 +563,9 @@ void sock_ev_ghost_socket(int fd) {
         Socket *ghost_sock = alloc_socket(fd);
         SockEvGhostSocket *ev =
             (SockEvGhostSocket *)alloc_event(SOCK_EV_GHOST_SOCKET, 0, 0, 0);
-
         fill_sock_info_from_fd(&ev->sock_info, fd);
         memcpy(&ghost_sock->sock_info, &ev->sock_info, sizeof(SockInfo));
         log_event(SOCK_EV_GHOST_SOCKET, fd, ghost_sock->id);
-        LOG(WARN, "Ghost socket fd %d & con_id %id", fd, ghost_sock->id);
         push_event(ghost_sock, (SockEvent *)ev);
         ra_put_elem(fd, ghost_sock);
 }

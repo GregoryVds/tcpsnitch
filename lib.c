@@ -31,7 +31,13 @@ int my_getsockopt(int sockfd, int level, int optname, void *optval,
         if (!orig_getsockopt)
                 orig_getsockopt =
                     (orig_getsockopt_type)dlsym(RTLD_NEXT, "getsockopt");
-        return orig_getsockopt(sockfd, level, optname, optval, optlen);
+        int ret = orig_getsockopt(sockfd, level, optname, optval, optlen);
+        if (ret) goto error;
+        return ret;
+error:
+        LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
+        LOG_FUNC_ERROR;
+        return ret;
 }
 
 typedef int (*orig_fcntl_type)(int fd, int cmd, ...);
@@ -63,8 +69,6 @@ bool is_inet_socket(int fd) {
                 goto error;
         return (optval == AF_INET || optval == AF_INET6);
 error:
-        LOG(ERROR, "getsockopt() failed. %s.", strerror(errno));
-        LOG_FUNC_ERROR;
         LOG(ERROR, "Assume socket is not a INET socket.");
         return false;
 }
