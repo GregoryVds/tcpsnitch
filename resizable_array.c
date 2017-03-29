@@ -168,12 +168,3 @@ void ra_free() {
         pthread_rwlock_unlock(&rwlock);
         pthread_rwlock_destroy(&rwlock);
 }
-
-void ra_reset(void) {
-        if (pthread_rwlock_init(&rwlock, NULL)) {
-                LOG(ERROR, "pthread_rwlock_init() failed. %s.",
-                    strerror(errno));
-        }
-        array = NULL;
-        size = 0;
-}

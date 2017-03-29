@@ -104,8 +104,8 @@ describe "libc overrides" do
       run_c_program(prog)
       dir0 = process_dirs[0]
       dir1 = process_dirs[1]
-      assert file_exists?(dir0+"/1.json")
-      assert file_exists?(dir1+"/1.json")
+      assert file_exists?(dir0+"/0.json")
+      assert file_exists?(dir1+"/0.json")
     end
 
     it "#{prog} should log no ERROR for both processes" do
@@ -118,8 +118,8 @@ describe "libc overrides" do
 
     it "socket() should be in JSON for both processes" do 
       run_c_program(prog)
-      trace1 = File.read(process_dirs[0]+"/1.json")
-      trace2 = File.read(process_dirs[1]+"/1.json")
+      trace1 = File.read(process_dirs[0]+"/0.json")
+      trace2 = File.read(process_dirs[1]+"/0.json")
       assert_event_present("socket", true, wrap_as_array(trace1))
       assert_event_present("socket", true, wrap_as_array(trace2))
     end
@@ -130,8 +130,8 @@ describe "libc overrides" do
       it "#{syscall} should have the correct JSON fields" do
         run_c_program(syscall)
         pattern = [{ type: syscall }.ignore_extra_keys!].ignore_extra_values!
+        assert_json_match(pattern, read_json_as_array(0))
         assert_json_match(pattern, read_json_as_array(1))
-        assert_json_match(pattern, read_json_as_array(2))
       end
     end
   end

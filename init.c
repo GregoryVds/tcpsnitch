@@ -218,8 +218,7 @@ void reset_tcpsnitch(void) {
         logger_init(NULL, WARN, WARN);
         initialized = false;
         mutex_init(&init_mutex);
-        tcp_free();
-        tcp_reset();
+        sock_ev_reset();
 }
 
 void init_tcpsnitch(void) {

@@ -336,6 +336,12 @@ static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
         return json_ev;
 }
 
+static json_t *build_sock_ev_forked_socket(const SockEvForkedSocket *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
+        return json_ev;
+}
+
 static json_t *build_sock_ev_bind(const SockEvBind *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "addr", build_addr(&ev->addr));
@@ -622,7 +628,8 @@ static json_t *build_sock_ev_fcntl(const SockEvFcntl *ev) {
                         add(d, "arg", json_integer(ev->arg));
                         break;
         }
-
+        if (ev->cmd == F_DUPFD || ev->cmd == F_DUPFD_CLOEXEC)
+                add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
@@ -725,6 +732,10 @@ static json_t *build_sock_ev(const SockEvent *ev) {
         switch (ev->type) {
                 case SOCK_EV_SOCKET:
                         r = build_sock_ev_socket((const SockEvSocket *)ev);
+                        break;
+                case SOCK_EV_FORKED_SOCKET:
+                        r = build_sock_ev_forked_socket(
+                            (const SockEvForkedSocket *)ev);
                         break;
                 case SOCK_EV_BIND:
                         r = build_sock_ev_bind((const SockEvBind *)ev);

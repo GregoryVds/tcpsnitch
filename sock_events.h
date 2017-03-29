@@ -12,6 +12,7 @@
 
 typedef enum SockEventType {
         SOCK_EV_SOCKET,
+        SOCK_EV_FORKED_SOCKET,
         SOCK_EV_BIND,
         SOCK_EV_CONNECT,
         SOCK_EV_SHUTDOWN,
@@ -88,6 +89,11 @@ typedef struct {
         SockEvent super;
         SockInfo sock_info;
 } SockEvSocket;
+
+typedef struct {
+        SockEvent super;
+        SockInfo sock_info;
+} SockEvForkedSocket;
 
 typedef struct {
         struct sockaddr_storage sockaddr_sto;
@@ -345,6 +351,7 @@ typedef struct {
 
 typedef struct {
         SockEvent super;
+        SockInfo sock_info;
         int cmd;
         int arg;
 } SockEvFcntl;
@@ -404,7 +411,7 @@ typedef struct {
 
 const char *string_from_sock_event_type(SockEventType type);
 
-void free_socket_state(Socket *con);
+void free_socket(Socket *con);
 
 // Packet capture
 
@@ -531,8 +538,8 @@ void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info);
 
 void dump_all_sock_events(void);
 
-void tcp_free(void);  // Free state.
+void sock_ev_free(void);  // Free state.
 // Free state and restore to default state (called after fork()).
-void tcp_reset(void);
+void sock_ev_reset(void);
 
 #endif

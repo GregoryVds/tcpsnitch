@@ -55,15 +55,15 @@ def log_file_str
   dir_str+"/"+LOG_FILE
 end
 
-def json_file_str(con_id=1)
+def json_file_str(con_id=0)
   dir_str+"/#{con_id}.json"
 end
 
-def pcap_file_str(con_id=1)
+def pcap_file_str(con_id=0)
   dir_str+"/#{con_id}.pcap"
 end
 
-def read_json_trace(con_id=1)
+def read_json_trace(con_id=0)
   File.read(json_file_str(con_id))
 end
 
@@ -72,7 +72,7 @@ def wrap_as_array(json_trace)
 end
 
 # This builds a valid JSON array from the JSON object in the file
-def read_json_as_array(con_id=1)
+def read_json_as_array(con_id=0)
   wrap_as_array(read_json_trace(con_id))
 end
 

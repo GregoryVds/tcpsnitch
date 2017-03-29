@@ -5,7 +5,7 @@
 
 #define ELEM_TYPE Socket*  // Elements stored in the array.
 #define FREE_ELEM(elem) \
-        free_socket_state(elem)  // Routine for freeing an element.
+        free_socket(elem)  // Routine for freeing an element.
 #define MIN_INIT_SIZE 16         // Starting size of array.
 #define GROWTH_FACTOR 2  // Minimum growth factor when the array is expanded.
 
@@ -18,6 +18,5 @@ bool ra_is_present(int index);
 int ra_get_size(void);
 
 void ra_free(void);  // Free state.
-void ra_reset(void);
 
 #endif

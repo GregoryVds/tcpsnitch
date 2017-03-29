@@ -25,8 +25,8 @@ describe 'tcp_spy' do
         { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
         { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json_as_array(1))
-      assert_json_match(pattern1, read_json_as_array(2))
+      assert_json_match(pattern0, read_json_as_array(0))
+      assert_json_match(pattern1, read_json_as_array(1))
     end
 
     it 'should properly handle 2 concurrent connections' do
@@ -39,8 +39,8 @@ describe 'tcp_spy' do
         { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
         { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json_as_array(1))
-      assert_json_match(pattern1, read_json_as_array(2))
+      assert_json_match(pattern0, read_json_as_array(0))
+      assert_json_match(pattern1, read_json_as_array(1))
     end
   end
 

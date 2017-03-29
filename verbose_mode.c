@@ -40,6 +40,10 @@ static void output_ev_socket(const SockEvSocket *ev) {
         OUTPUT_EV("socket()=%d", ev->super.return_value);
 }
 
+static void output_ev_forked_socket(const SockEvForkedSocket *ev) {
+        OUTPUT_EV("forked_socket()=%d", ev->super.return_value);
+}
+
 static void output_ev_bind(const SockEvBind *ev) {
         OUTPUT_EV("bind()=%d", ev->super.return_value);
 }
@@ -211,6 +215,9 @@ void output_event(const SockEvent *ev) {
         switch (ev->type) {
                 case SOCK_EV_SOCKET:
                         output_ev_socket((const SockEvSocket *)ev);
+                        break;
+                case SOCK_EV_FORKED_SOCKET:
+                        output_ev_forked_socket((const SockEvForkedSocket *)ev);
                         break;
                 case SOCK_EV_BIND:
                         output_ev_bind((const SockEvBind *)ev);
