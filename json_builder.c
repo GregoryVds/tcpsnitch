@@ -34,6 +34,24 @@ static json_t *my_json_array(void) {
 typedef int (*add_type)(json_t *o, const char *k, json_t *v);
 static add_type add = &json_object_set_new;
 
+static json_t *build_sock_info(const SockInfo *sock_info) {
+        json_t *json_si = my_json_object();
+
+        char *domain = alloc_sock_domain_str(sock_info->domain);
+        add(json_si, "domain", json_string(domain));
+        free(domain);
+
+        char *type = alloc_sock_type_str(sock_info->type);
+        add(json_si, "type", json_string(type));
+        free(type);
+
+        add(json_si, "protocol", json_integer(sock_info->protocol));
+        add(json_si, "SOCK_CLOEXEC", json_boolean(sock_info->sock_cloexec));
+        add(json_si, "SOCK_NONBLOCK", json_boolean(sock_info->sock_nonblock));
+
+        return json_si;
+}
+
 static json_t *build_addr(const Addr *addr) {
         if (!addr->len) return NULL;
 
@@ -314,19 +332,7 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
 
 static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
-
-        char *domain = alloc_sock_domain_str(ev->domain);
-        add(json_details, "domain", json_string(domain));
-        free(domain);
-
-        char *type = alloc_sock_type_str(ev->type);
-        add(json_details, "type", json_string(type));
-        free(type);
-
-        add(json_details, "protocol", json_integer(ev->protocol));
-        add(json_details, "SOCK_CLOEXEC", json_boolean(ev->sock_cloexec));
-        add(json_details, "SOCK_NONBLOCK", json_boolean(ev->sock_nonblock));
-
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
@@ -358,6 +364,7 @@ static json_t *build_sock_ev_listen(const SockEvListen *ev) {
 static json_t *build_sock_ev_accept(const SockEvAccept *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "addr", build_addr(&ev->addr));
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
@@ -365,6 +372,7 @@ static json_t *build_sock_ev_accept4(const SockEvAccept4 *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         add(json_details, "flags", json_integer(ev->flags));
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
@@ -491,12 +499,14 @@ static json_t *build_sock_ev_close(const SockEvClose *ev) {
 
 static json_t *build_sock_ev_dup(const SockEvDup *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_dup2(const SockEvDup2 *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "newfd", json_integer(ev->newfd));
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
@@ -504,6 +514,7 @@ static json_t *build_sock_ev_dup3(const SockEvDup3 *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "newfd", json_integer(ev->newfd));
         add(json_details, "O_CLOEXEC", json_boolean(ev->o_cloexec));
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 

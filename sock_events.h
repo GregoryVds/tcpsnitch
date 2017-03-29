@@ -77,12 +77,16 @@ typedef struct {
 } SockEvent;
 
 typedef struct {
-        SockEvent super;
         int domain;
         int type;
         int protocol;
         bool sock_cloexec;
         bool sock_nonblock;
+} SockInfo;
+
+typedef struct {
+        SockEvent super;
+        SockInfo sock_info;
 } SockEvSocket;
 
 typedef struct {
@@ -113,11 +117,13 @@ typedef struct {
 
 typedef struct {
         SockEvent super;
+        SockInfo sock_info;
         Addr addr;
 } SockEvAccept;
 
 typedef struct {
         SockEvent super;
+        SockInfo sock_info;
         Addr addr;
         int flags;
 } SockEvAccept4;
@@ -249,15 +255,20 @@ typedef struct {
 
 typedef struct { SockEvent super; } SockEvClose;
 
-typedef struct { SockEvent super; } SockEvDup;
+typedef struct {
+        SockEvent super;
+        SockInfo sock_info;
+} SockEvDup;
 
 typedef struct {
         SockEvent super;
+        SockInfo sock_info;
         int newfd;
 } SockEvDup2;
 
 typedef struct {
         SockEvent super;
+        SockInfo sock_info;
         int newfd;
         bool o_cloexec;
 } SockEvDup3;
@@ -379,6 +390,7 @@ typedef struct {
         // Others
         int id;
         int fd;
+        SockInfo sock_info;
         long events_count;
         unsigned long bytes_sent;      // Total bytes sent.
         unsigned long bytes_received;  // Total bytes received.
