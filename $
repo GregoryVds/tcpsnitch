@@ -36,7 +36,7 @@
 #endif
 
 void sock_ev_forked_socket(int fd, SockInfo *sock_info);
-void sock_ev_ghost_socket(int fd);
+void sock_ev_ghost_socket(int fd)
 
 static pthread_mutex_t connections_count_mutex = MUTEX_ERRORCHECK;
 static int connections_count = 0;
@@ -423,8 +423,13 @@ error_out:
 
 #define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                             \
         init_tcpsnitch();                                                  \
-        if (!ra_is_present(fd)) sock_ev_ghost_socket(fd);                  \
-        Socket *sock = ra_get_and_lock_elem(fd);                           \
+        Socket *sock = NULL;                                               \
+        if (ev_type_cons == SOCK_EV_SOCKET) {                              \
+                sock = alloc_socket(fd);                                   \
+                ra_put_elem(fd, sock);                                     \
+        } else if (!ra_is_present(fd))                                     \
+                sock_ev_ghost_socket(fd);                                  \
+        sock = ra_get_and_lock_elem(fd);                                   \
         const char *ev_name = string_from_sock_event_type(ev_type_cons);   \
         LOG(DEBUG, "%s on connection %d (fd %d).", ev_name, sock->id, fd); \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err,       \
@@ -491,38 +496,31 @@ const char *string_from_sock_event_type(SockEventType type) {
 }
 
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
-        init_tcpsnitch();
-        if (ra_is_present(fd)) LOG(ERROR, "Socket was already opened");
+        /* Check if connection already exits and was not properly closed. */
+        if (ra_is_present(fd)) sock_ev_close(fd, 0, 0);
+        int err = 0;
+        int ret = fd;
 
-        Socket *sock = alloc_socket(fd);
-        SockEvSocket *ev =
-            (SockEvSocket *)alloc_event(SOCK_EV_SOCKET, fd, 0, 0);
+        // Inst. local vars Socket *sock & SockEvSocket *ev
+        SOCK_EV_PRELUDE(SOCK_EV_SOCKET, SockEvSocket);
 
         fill_sock_info(&ev->sock_info, domain, type, protocol);
         fill_sock_info(&sock->sock_info, domain, type, protocol);
 
-        push_event(sock, (SockEvent *)ev);
-        ra_put_elem(fd, sock);
+        SOCK_EV_POSTLUDE(SOCK_EV_SOCKET);
 }
 
 void sock_ev_forked_socket(int fd, SockInfo *sock_info) {
         Socket *forked_sock = alloc_socket(fd);
+        memcpy(&forked_sock->sock_info, sock_info, sizeof(SockInfo));
         SockEvForkedSocket *ev =
             (SockEvForkedSocket *)alloc_event(SOCK_EV_FORKED_SOCKET, 0, 0, 0);
-        memcpy(&forked_sock->sock_info, sock_info, sizeof(SockInfo));
         memcpy(&ev->sock_info, sock_info, sizeof(SockInfo));
         push_event(forked_sock, (SockEvent *)ev);
         ra_put_elem(fd, forked_sock);
 }
 
-void sock_ev_ghost_socket(int fd) {
-        Socket *ghost_sock = alloc_socket(fd);
-        SockEvGhostSocket *ev =
-            (SockEvGhostSocket *)alloc_event(SOCK_EV_GHOST_SOCKET, 0, 0, 0);
-        // TODO: fill sock_info on both socket & event
-        push_event(ghost_sock, (SockEvent *)ev);
-        ra_put_elem(fd, ghost_sock);
-}
+void sock_ev_ghost_socket(int fd) {}
 
 void sock_ev_bind(int fd, int ret, int err, const struct sockaddr *addr,
                   socklen_t len) {

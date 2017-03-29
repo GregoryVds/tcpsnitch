@@ -13,6 +13,7 @@
 typedef enum SockEventType {
         SOCK_EV_SOCKET,
         SOCK_EV_FORKED_SOCKET,
+        SOCK_EV_GHOST_SOCKET,
         SOCK_EV_BIND,
         SOCK_EV_CONNECT,
         SOCK_EV_SHUTDOWN,
@@ -94,6 +95,11 @@ typedef struct {
         SockEvent super;
         SockInfo sock_info;
 } SockEvForkedSocket;
+
+typedef struct {
+        SockEvent super;
+        SockInfo sock_info;
+} SockEvGhostSocket;
 
 typedef struct {
         struct sockaddr_storage sockaddr_sto;
