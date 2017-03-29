@@ -35,6 +35,8 @@ typedef int (*add_type)(json_t *o, const char *k, json_t *v);
 static add_type add = &json_object_set_new;
 
 static json_t *build_sock_info(const SockInfo *sock_info) {
+        // We only fill it when the event is the first of the trace.
+        if (!sock_info->filled) return NULL;
         json_t *json_si = my_json_object();
 
         char *domain = alloc_sock_domain_str(sock_info->domain);
@@ -202,15 +204,14 @@ static json_t *build_msghdr(const Msghdr *msg) {
 }
 
 static json_t *build_mmsghdr_vec(const Mmsghdr *mmsghdr_vec,
-                                     int mmsghdr_count) {
+                                 int mmsghdr_count) {
         json_t *json_mmsghdr_vec = my_json_array();
         for (int i = 0; i < mmsghdr_count; i++) {
                 json_t *json_mmsghdr = my_json_object();
                 const Mmsghdr *mmsghder = (mmsghdr_vec + i);
                 add(json_mmsghdr, "transmitted_bytes",
                     json_integer(mmsghder->bytes_transmitted));
-                add(json_mmsghdr, "msghdr",
-                    build_msghdr(&mmsghder->msghdr));
+                add(json_mmsghdr, "msghdr", build_msghdr(&mmsghder->msghdr));
                 json_array_append_new(json_mmsghdr_vec, json_mmsghdr);
         }
         return json_mmsghdr_vec;
@@ -337,6 +338,12 @@ static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
 }
 
 static json_t *build_sock_ev_forked_socket(const SockEvForkedSocket *ev) {
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_details, "sock_info", build_sock_info(&ev->sock_info));
+        return json_ev;
+}
+
+static json_t *build_sock_ev_ghost_socket(const SockEvGhostSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
@@ -736,6 +743,9 @@ static json_t *build_sock_ev(const SockEvent *ev) {
                 case SOCK_EV_FORKED_SOCKET:
                         r = build_sock_ev_forked_socket(
                             (const SockEvForkedSocket *)ev);
+                        break;
+                case SOCK_EV_GHOST_SOCKET:
+                        r = build_sock_ev_ghost_socket((const SockEvGhostSocket *)ev);
                         break;
                 case SOCK_EV_BIND:
                         r = build_sock_ev_bind((const SockEvBind *)ev);

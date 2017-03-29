@@ -44,6 +44,10 @@ static void output_ev_forked_socket(const SockEvForkedSocket *ev) {
         OUTPUT_EV("forked_socket()=%d", ev->super.return_value);
 }
 
+static void output_ev_ghost_socket(const SockEvGhostSocket *ev) {
+        OUTPUT_EV("ghost_socket()=%d", ev->super.return_value);
+}
+
 static void output_ev_bind(const SockEvBind *ev) {
         OUTPUT_EV("bind()=%d", ev->super.return_value);
 }
@@ -218,6 +222,9 @@ void output_event(const SockEvent *ev) {
                         break;
                 case SOCK_EV_FORKED_SOCKET:
                         output_ev_forked_socket((const SockEvForkedSocket *)ev);
+                        break;
+                case SOCK_EV_GHOST_SOCKET:
+                        output_ev_ghost_socket((const SockEvGhostSocket *)ev);
                         break;
                 case SOCK_EV_BIND:
                         output_ev_bind((const SockEvBind *)ev);

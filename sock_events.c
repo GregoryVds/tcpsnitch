@@ -178,17 +178,35 @@ static void push_event(Socket *sock, SockEvent *ev) {
 }
 
 #define SOCK_TYPE_MASK 0b1111
-static void fill_sock_info(SockInfo *so, int domain, int type, int protocol) {
-        so->domain = domain;
-        so->type = type & SOCK_TYPE_MASK;
-        so->protocol = protocol;
+static void fill_sock_info(SockInfo *si, int domain, int type, int protocol) {
+        si->domain = domain;
+        si->type = type & SOCK_TYPE_MASK;
+        si->protocol = protocol;
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
-        so->sock_cloexec = type & SOCK_CLOEXEC;
-        so->sock_nonblock = type & SOCK_NONBLOCK;
+        si->sock_cloexec = type & SOCK_CLOEXEC;
+        si->sock_nonblock = type & SOCK_NONBLOCK;
 #else
-        so->sock_cloexec = false;
-        so->sock_nonblock = false;
+        si->sock_cloexec = false;
+        si->sock_nonblock = false;
 #endif
+        si->filled = true;
+}
+
+static void fill_sock_info_from_fd(SockInfo *si, int fd) {
+        socklen_t optlen;
+        int type;
+        my_getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &si->domain, &optlen);
+        my_getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &optlen);
+        si->type = type & SOCK_TYPE_MASK;
+        my_getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &si->protocol, &optlen);
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 21
+        si->sock_cloexec = type & SOCK_CLOEXEC;
+        si->sock_nonblock = type & SOCK_NONBLOCK;
+#else
+        si->sock_cloexec = false;
+        si->sock_nonblock = false;
+#endif
+        si->filled = true;
 }
 
 static void fill_addr(Addr *a, const struct sockaddr *addr, socklen_t len) {
@@ -243,15 +261,14 @@ static socklen_t fill_msghdr(Msghdr *m1, const struct msghdr *m2) {
 }
 
 static unsigned int fill_mmsghdr_vec(Mmsghdr *mmsghdr_vec1,
-                                         const struct mmsghdr *mmsghdr_vec2,
-                                         unsigned int vlen) {
+                                     const struct mmsghdr *mmsghdr_vec2,
+                                     unsigned int vlen) {
         unsigned int bytes = 0;
         for (unsigned int i = 0; i < vlen; i++) {
                 const struct mmsghdr *mmsghdr2 = (mmsghdr_vec2 + i);
                 Mmsghdr *mmsghdr1 = (mmsghdr_vec1 + i);
                 mmsghdr1->bytes_transmitted = mmsghdr2->msg_len;
-                bytes += fill_msghdr(&mmsghdr1->msghdr,
-                                         &mmsghdr2->msg_hdr);
+                bytes += fill_msghdr(&mmsghdr1->msghdr, &mmsghdr2->msg_hdr);
         }
         return bytes;
 }
@@ -413,6 +430,11 @@ error_out:
         return;
 }
 
+void log_event(int ev_type_cons, int fd, int con_id) {
+        const char *ev_name = string_from_sock_event_type(ev_type_cons);
+        LOG(DEBUG, "%s on connection %d (fd %d).", ev_name, con_id, fd);
+}
+
 // Used for any event that duplicates a socket, such as dup() or accept().
 // We don't have a regular socket() call but we still need to know about the
 // type of socket we are dealing with in the trace. To this purpose, we copy
@@ -422,21 +444,22 @@ error_out:
                 Socket *new_sock = alloc_socket(ret);                  \
                 memcpy(&new_sock->sock_info, &sock->sock_info,         \
                        sizeof(SockInfo));                              \
+                log_event(ev_type_cons, ret, new_sock->id);            \
                 ev_type *new_ev =                                      \
                     (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
                 memcpy(new_ev, ev, sizeof(ev_type));                   \
-                ra_unlock_elem(fd);                                    \
                 push_event(new_sock, (SockEvent *)new_ev);             \
+                ra_unlock_elem(fd);                                    \
+                ra_put_elem(ret, new_sock);                            \
                 sock = ra_get_and_lock_elem(fd);                       \
         }
 
-#define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                             \
-        init_tcpsnitch();                                                  \
-        if (!ra_is_present(fd)) sock_ev_ghost_socket(fd);                  \
-        Socket *sock = ra_get_and_lock_elem(fd);                           \
-        const char *ev_name = string_from_sock_event_type(ev_type_cons);   \
-        LOG(DEBUG, "%s on connection %d (fd %d).", ev_name, sock->id, fd); \
-        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err,       \
+#define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                       \
+        init_tcpsnitch();                                            \
+        if (!ra_is_present(fd)) sock_ev_ghost_socket(fd);            \
+        Socket *sock = ra_get_and_lock_elem(fd);                     \
+        log_event(ev_type_cons, fd, sock->id);                       \
+        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err, \
                                              sock->events_count);
 
 #define SOCK_EV_POSTLUDE(ev_type_cons)                                      \
@@ -501,7 +524,7 @@ const char *string_from_sock_event_type(SockEventType type) {
 
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
-        if (ra_is_present(fd)) LOG(ERROR, "Unclosed socket");
+        if (ra_is_present(fd)) LOG(WARN, "Unclosed socket");
 
         Socket *sock = alloc_socket(fd);
         SockEvSocket *ev =
@@ -512,6 +535,7 @@ void sock_ev_socket(int fd, int domain, int type, int protocol) {
         // on the Socket itself is thus convenient to keep track of it.
         fill_sock_info(&ev->sock_info, domain, type, protocol);
         fill_sock_info(&sock->sock_info, domain, type, protocol);
+        log_event(SOCK_EV_SOCKET, fd, sock->id);
 
         push_event(sock, (SockEvent *)ev);
         ra_put_elem(fd, sock);
@@ -521,8 +545,11 @@ void sock_ev_forked_socket(int fd, SockInfo *sock_info) {
         Socket *forked_sock = alloc_socket(fd);
         SockEvForkedSocket *ev =
             (SockEvForkedSocket *)alloc_event(SOCK_EV_FORKED_SOCKET, 0, 0, 0);
+
         memcpy(&forked_sock->sock_info, sock_info, sizeof(SockInfo));
         memcpy(&ev->sock_info, sock_info, sizeof(SockInfo));
+        log_event(SOCK_EV_FORKED_SOCKET, fd, forked_sock->id);
+
         push_event(forked_sock, (SockEvent *)ev);
         ra_put_elem(fd, forked_sock);
 }
@@ -531,7 +558,11 @@ void sock_ev_ghost_socket(int fd) {
         Socket *ghost_sock = alloc_socket(fd);
         SockEvGhostSocket *ev =
             (SockEvGhostSocket *)alloc_event(SOCK_EV_GHOST_SOCKET, 0, 0, 0);
-        // TODO: fill sock_info on both socket & event
+
+        fill_sock_info_from_fd(&ev->sock_info, fd);
+        memcpy(&ghost_sock->sock_info, &ev->sock_info, sizeof(SockInfo));
+        log_event(SOCK_EV_GHOST_SOCKET, fd, ghost_sock->id);
+
         push_event(ghost_sock, (SockEvent *)ev);
         ra_put_elem(fd, ghost_sock);
 }
@@ -1077,7 +1108,8 @@ void sock_ev_tcp_info(int fd, int ret, int err, struct tcp_info *info) {
 
 void dump_all_sock_events(void) {
         LOG_FUNC_INFO;
-        for (long i = 0; i < ra_get_size() && ra_is_present(i); i++) {
+        for (long i = 0; i < ra_get_size(); i++) {
+                if (!ra_is_present(i)) continue;
                 Socket *socket = ra_get_and_lock_elem(i);
                 if (socket) dump_events_as_json(socket);
                 ra_unlock_elem(i);
@@ -1092,7 +1124,8 @@ void sock_ev_free(void) {
 void sock_ev_reset(void) {
         mutex_init(&connections_count_mutex);
         connections_count = 0;
-        for (long i = 0; i < ra_get_size() && ra_is_present(i); i++) {
+        for (long i = 0; i < ra_get_size(); i++) {
+                if (!ra_is_present(i)) continue;
                 Socket *sock = ra_remove_elem(i);
                 sock_ev_forked_socket(i, &sock->sock_info);
                 free_socket(sock);

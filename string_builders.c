@@ -278,8 +278,8 @@ bool alloc_string_from_cons(int cons, const IntStrPair *map, int map_size,
         }
 
         // No match found, just write the constant digit.
-        LOG_FUNC_ERROR;
-        LOG(ERROR, "No match found for %d.", cons);
+        LOG_FUNC_WARN;
+        LOG(WARN, "No match found for %d.", cons);
         snprintf(*str_ptr, str_size, "%d", cons);
         return false;
 }

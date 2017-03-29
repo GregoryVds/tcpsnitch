@@ -84,6 +84,7 @@ typedef struct {
         int protocol;
         bool sock_cloexec;
         bool sock_nonblock;
+        bool filled;
 } SockInfo;
 
 typedef struct {
@@ -96,6 +97,10 @@ typedef struct {
         SockInfo sock_info;
 } SockEvForkedSocket;
 
+/* A ghost socket represents a socket for which we never saw its creation.
+ * Maybe it was passed from another process using sendmsg, maybe it was created
+ * using a direct syscall. To verify if we don't forget any source of new
+ * socket. */
 typedef struct {
         SockEvent super;
         SockInfo sock_info;

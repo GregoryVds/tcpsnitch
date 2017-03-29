@@ -120,8 +120,10 @@ describe "libc overrides" do
       run_c_program(prog)
       trace1 = File.read(process_dirs[0]+"/0.json")
       trace2 = File.read(process_dirs[1]+"/0.json")
+      trace3 = File.read(process_dirs[1]+"/1.json")
       assert_event_present("socket", true, wrap_as_array(trace1))
-      assert_event_present("socket", true, wrap_as_array(trace2))
+      assert_event_present("forked_socket", true, wrap_as_array(trace2))
+      assert_event_present("socket", true, wrap_as_array(trace3))
     end
   end
 

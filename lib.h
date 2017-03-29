@@ -12,6 +12,9 @@
 
 #define UNUSED(x) (void)(x)
 
+int my_getsockopt(int sockfd, int level, int optname, void *optval,
+                  socklen_t *optlen);
+
 bool is_fd(int fd);
 bool is_socket(int fd);
 bool is_inet_socket(int fd);

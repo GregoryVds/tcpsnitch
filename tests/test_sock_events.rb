@@ -237,15 +237,11 @@ describe 'tcp_spy' do
       fdtype: Integer
     },
     SOCK_EV_CLOSE => {},
-    SOCK_EV_DUP => {
-      sock_info: sock_info
-    },
+    SOCK_EV_DUP => {},
     SOCK_EV_DUP2 => {
-      sock_info: sock_info,
       newfd: Integer
     },
     SOCK_EV_DUP3 => {
-      sock_info: sock_info,
       newfd: Integer,
       O_CLOEXEC: Boolean
     },
