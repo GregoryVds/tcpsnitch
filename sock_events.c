@@ -400,7 +400,7 @@ void free_socket(Socket *sock) {
         free(sock);
 }
 
-void tcp_start_capture(int fd, const struct sockaddr *addr_to) {
+void sock_start_capture(int fd, const struct sockaddr *addr_to) {
         LOG(INFO, "Starting packet capture.");
         LOG_FUNC_INFO;
         Socket *sock = ra_get_and_lock_elem(fd);

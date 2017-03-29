@@ -16,14 +16,14 @@ def get_packet(pcap, pkt_id)
 end
 
 describe "packet_sniffer.c" do
-	before do WebServer.start end
+  before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
-	
+
   it "should create a PCAP file on CONNECT" do
     run_c_program(SOCK_EV_CONNECT, "-c")
-    assert contains?(TEST_DIR, "0.pcap") 
+    assert contains?(dir_str, "0.pcap") 
   end
-  
+
   # Need to capture on a single interface to use packetfu
   # Otherwises issues with layer 2 header.
   it "should capture the 3-way handshake on CONNECT" do

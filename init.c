@@ -21,7 +21,6 @@ long conf_opt_b;
 long conf_opt_c;
 char *conf_opt_d;
 long conf_opt_f;
-char *conf_opt_i;
 long conf_opt_l;
 long conf_opt_u;
 long conf_opt_t;
@@ -125,11 +124,6 @@ static void get_options(void) {
         conf_opt_d = alloc_str_opt(OPT_D);
 #endif
         conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
-#ifdef __ANDROID__
-        conf_opt_i = NULL;
-#else
-        conf_opt_i = get_str_env(OPT_I);
-#endif
         conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
         conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
         conf_opt_t = get_long_opt_or_defaultval(OPT_T, 1000);
@@ -141,7 +135,6 @@ static void log_options(void) {
         LOG(INFO, "Option c: %lu.", conf_opt_c);
         LOG(INFO, "Option d: %s", conf_opt_d);
         LOG(INFO, "Option f: %lu.", conf_opt_f);
-        LOG(INFO, "Option i: %s.", conf_opt_i);
         LOG(INFO, "Option l: %lu.", conf_opt_l);
         LOG(INFO, "Option u: %lu.", conf_opt_u);
         LOG(INFO, "Option t: %lu.", conf_opt_t);

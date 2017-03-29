@@ -31,7 +31,7 @@ typedef struct {
 static pcap_t *get_capture_handle(void) {
         char err_buf[PCAP_ERRBUF_SIZE];
         err_buf[0] = 0;
-        pcap_t *handle = pcap_open_live(conf_opt_i, BUFSIZ, 0, 0, err_buf);
+        pcap_t *handle = pcap_open_live("any", BUFSIZ, 0, 0, err_buf);
         if (err_buf[0] != 0) LOG(WARN, "pcap_open_live() warn. %s.", err_buf);
         if (!handle) goto error;
 

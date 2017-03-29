@@ -426,9 +426,7 @@ void free_socket(Socket *con);
 
 // Packet capture
 
-void tcp_start_capture(int fd, const struct sockaddr *connect_addr);
-
-void tcp_stop_capture(Socket *con);
+void sock_start_capture(int fd, const struct sockaddr *connect_addr);
 
 // Events hooks
 

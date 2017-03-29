@@ -184,7 +184,6 @@ describe 'tcp_spy' do
     SOCK_EV_RECVFROM => {
       bytes: Integer,
       flags: recv_flags,
-      addr: addr
     },
     SOCK_EV_SENDMSG => {
       bytes: Integer,

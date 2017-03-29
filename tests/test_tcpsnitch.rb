@@ -45,12 +45,12 @@ describe "tcpsnitch" do
 
     it "should capture with -c" do
       run_c_program(SOCK_EV_SEND, "-c")
-      assert contains?(TEST_DIR, "0.pcap")
+      assert contains?(dir_str, "0.pcap")
     end
 
     it "should not capture without -c" do
       assert run_c_program(SOCK_EV_SEND)
-      assert !contains?(TEST_DIR, "0.pcap")
+      assert !contains?(dir_str, "0.pcap")
     end
     # Rest is tested in test_packet_sniffer.rb
   end

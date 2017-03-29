@@ -43,11 +43,11 @@ end
 ###########################
 
 def process_dirs
-  Dir[TEST_DIR+"/"+PROCESS_DIR_REGEX]
+  Dir[TEST_DIR+"/"+PROCESS_DIR_REGEX].sort
 end
 
 # Assumes the TEST_DIR was cleared before running the prog.
-def dir_str 
+def dir_str
   process_dirs.last
 end
 

@@ -105,7 +105,7 @@ int connect(int fd, const struct sockaddr *addr, socklen_t len) {
         if (!orig_connect)
                 orig_connect = (connect_type)dlsym(RTLD_NEXT, "connect");
 
-        if (is_inet_socket(fd) && conf_opt_c) tcp_start_capture(fd, addr);
+        if (is_inet_socket(fd) && conf_opt_c) sock_start_capture(fd, addr);
         int ret = orig_connect(fd, addr, len);
         int err = errno;
         if (is_inet_socket(fd)) sock_ev_connect(fd, ret, err, addr, len);

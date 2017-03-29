@@ -127,7 +127,7 @@ describe "libc overrides" do
     end
   end
 
-  [SOCK_EV_DUP, SOCK_EV_DUP2, SOCK_EV_DUP3, SOCK_EV_ACCEPT, SOCK_EV_ACCEPT4].each do |syscall|
+  [SOCK_EV_DUP, SOCK_EV_DUP2, SOCK_EV_DUP3].each do |syscall|
     describe "a #{syscall} event which creates a new socket" do
       it "#{syscall} should have the correct JSON fields" do
         run_c_program(syscall)

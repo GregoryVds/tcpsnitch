@@ -788,9 +788,18 @@ EOT
 
 SENDFILE = CProg.new(<<-EOT, 'sendfile')
 #{CONNECT}
-  int fd = open("./c_programs/sendfile.c", O_RDONLY);
+  int fd = open("file.txt", O_RDWR|O_CREAT);
+  if (fd == -1) {
+    fprintf(stderr, "open() failed: %s\\n.", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+  write(fd, "Blablabla", 9);
   if (sendfile(sock, fd, NULL, 10) < 0) {
     fprintf(stderr, "sendfile() failed: %s\\n.", strerror(errno));
+    return(EXIT_FAILURE);
+  }
+  if (unlink("file.txt")) {
+    fprintf(stderr, "unlink() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
