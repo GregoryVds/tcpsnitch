@@ -448,6 +448,8 @@ void log_event(int ev_type_cons, int fd, int con_id) {
                 ev_type *new_ev =                                      \
                     (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
                 memcpy(new_ev, ev, sizeof(ev_type));                   \
+                memcpy(&new_ev->sock_info, &sock->sock_info,           \
+                       sizeof(SockInfo));                              \
                 push_event(new_sock, (SockEvent *)new_ev);             \
                 ra_unlock_elem(fd);                                    \
                 ra_put_elem(ret, new_sock);                            \
@@ -562,7 +564,7 @@ void sock_ev_ghost_socket(int fd) {
         fill_sock_info_from_fd(&ev->sock_info, fd);
         memcpy(&ghost_sock->sock_info, &ev->sock_info, sizeof(SockInfo));
         log_event(SOCK_EV_GHOST_SOCKET, fd, ghost_sock->id);
-
+        LOG(WARN, "Ghost socket fd %d & con_id %id", fd, ghost_sock->id);
         push_event(ghost_sock, (SockEvent *)ev);
         ra_put_elem(fd, ghost_sock);
 }
