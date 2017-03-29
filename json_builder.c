@@ -321,6 +321,7 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
         add(json_ev, "success", json_boolean(ev->success));
         add(json_ev, "error_str", json_string(ev->error_str));
         add(json_ev, "thread_id", json_integer(ev->thread_id));
+        add(json_ev, "fake_call", json_boolean(false));
 }
 
 #define DETAILS_FAILURE "json_object() failed. Cannot build event details."
@@ -339,12 +340,14 @@ static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
 
 static json_t *build_sock_ev_forked_socket(const SockEvForkedSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_ev, "fake_call", json_boolean(true));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_ghost_socket(const SockEvGhostSocket *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_ev, "fake_call", json_boolean(true));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
@@ -686,6 +689,8 @@ static json_t *build_sock_ev_fdopen(const SockEvFdopen *ev) {
 
 static json_t *build_sock_ev_tcp_info(const SockEvTcpInfo *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        add(json_ev, "fake_call", json_boolean(true));
+
         struct tcp_info i = ev->info;
 
         add(json_details, "state", json_integer(i.tcpi_state));

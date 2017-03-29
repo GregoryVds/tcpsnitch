@@ -53,6 +53,7 @@ describe 'tcp_spy' do
           return_value: Integer,
           success: Boolean,
           thread_id: Integer,
+          fake_call: Boolean,
           timestamp: {
             sec: Integer,
             usec: Integer
