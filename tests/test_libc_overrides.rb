@@ -118,10 +118,21 @@ describe "libc overrides" do
 
     it "socket() should be in JSON for both processes" do 
       run_c_program(prog)
-      trace1 = File.read(process_dirs[0]+"/0.json")
-      trace2 = File.read(process_dirs[1]+"/0.json")
+      trace1 = File.read(process_dirs[0]+"/1.json")
+      trace2 = File.read(process_dirs[1]+"/1.json")
       assert_event_present("socket", true, wrap_as_array(trace1))
       assert_event_present("socket", true, wrap_as_array(trace2))
+    end
+  end
+
+  [SOCK_EV_DUP, SOCK_EV_DUP2, SOCK_EV_DUP3, SOCK_EV_ACCEPT, SOCK_EV_ACCEPT4].each do |syscall|
+    describe "a #{syscall} event which creates a new socket" do
+      it "#{syscall} should have the correct JSON fields" do
+        run_c_program(syscall)
+        pattern = [{ type: syscall }.ignore_extra_keys!].ignore_extra_values!
+        assert_json_match(pattern, read_json_as_array(1))
+        assert_json_match(pattern, read_json_as_array(2))
+      end
     end
   end
 end
