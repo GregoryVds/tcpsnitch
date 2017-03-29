@@ -41,19 +41,13 @@ static int connections_count = 0;
 /* Private functions */
 
 static Socket *alloc_socket(int fd) {
-        Socket *sock;
-        if (!(sock = (Socket *)my_calloc(sizeof(Socket)))) goto error;
-
-        // Get & increment connections_count
+        Socket *sock = (Socket *)my_calloc(sizeof(Socket));
         mutex_lock(&connections_count_mutex);
-        sock->id = connections_count;
         connections_count++;
+        sock->id = connections_count;
         mutex_unlock(&connections_count_mutex);
         sock->fd = fd;
         return sock;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
 }
 
 #define CASE_EV(ev_type_cons, ev_type, err_val)               \
@@ -111,7 +105,6 @@ static SockEvent *alloc_event(SockEventType type, int return_value, int err,
                 CASE_EV(SOCK_EV_FDOPEN, SockEvFdopen, 0);
                 CASE_EV(SOCK_EV_TCP_INFO, SockEvTcpInfo, -1);
         }
-        if (!ev) goto error;
         fill_timeval(&(ev->timestamp));
         ev->type = type;
         ev->return_value = return_value;
@@ -120,9 +113,6 @@ static SockEvent *alloc_event(SockEventType type, int return_value, int err,
         ev->id = id;
         ev->thread_id = syscall(SYS_gettid);
         return ev;
-error:
-        LOG_FUNC_ERROR;
-        return NULL;
 }
 
 static void free_event(SockEvent *ev) {
@@ -176,6 +166,7 @@ static void push_event(Socket *sock, SockEvent *ev) {
                 sock->head = node;
         else
                 sock->tail->next = node;
+
         sock->tail = node;
         sock->events_count++;
         return;
@@ -403,40 +394,41 @@ error_out:
         return;
 }
 
-#define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                                \
-        init_tcpsnitch();                                                     \
-        Socket *sock = NULL;                                                  \
-        if (ev_type_cons != SOCK_EV_SOCKET && ev_type_cons != SOCK_EV_ACCEPT) \
-                sock = ra_get_and_lock_elem(fd);                              \
-        if (!sock) {                                                          \
-                if (ev_type_cons != SOCK_EV_SOCKET &&                         \
-                    ev_type_cons != SOCK_EV_ACCEPT) {                         \
-                        LOG(WARN,                                             \
-                            "Opening of TCP connection on fd %d was not "     \
-                            "detected.",                                      \
-                            fd);                                              \
-                }                                                             \
-                sock = alloc_socket(fd);                                      \
-                if (!sock || !ra_put_elem(fd, sock)) {                        \
-                        LOG_FUNC_ERROR;                                       \
-                        return;                                               \
-                }                                                             \
-                sock = NULL;                                                  \
-                sock = ra_get_and_lock_elem(fd);                              \
-                if (!sock) {                                                  \
-                        LOG_FUNC_ERROR;                                       \
-                        return;                                               \
-                }                                                             \
-        }                                                                     \
-        const char *ev_name = string_from_sock_event_type(ev_type_cons);      \
-        LOG(INFO, "%s on connection %d (fd %d).", ev_name, sock->id, fd);     \
-        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err,          \
-                                             sock->events_count);             \
-        if (!ev) {                                                            \
-                LOG_FUNC_ERROR;                                               \
-                ra_unlock_elem(fd);                                           \
-                return;                                                       \
-        }
+#define NEW_CON(fd, ev_type_cons, ev_type)                                   \
+        Socket *new_sock = alloc_socket(fd);                                 \
+        ev_type *new_ev = (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
+        memcpy(new_ev, ev, sizeof(ev_type));                                 \
+        push_event(new_sock, (SockEvent *)new_ev);                           \
+        ra_put_elem(fd, new_sock);                                           \
+        output_event((SockEvent *)new_ev);
+
+#define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                               \
+        init_tcpsnitch();                                                    \
+        Socket *sock = NULL;                                                 \
+        if (ev_type_cons != SOCK_EV_SOCKET) sock = ra_get_and_lock_elem(fd); \
+        if (!sock) {                                                         \
+                if (ev_type_cons != SOCK_EV_SOCKET) {                        \
+                        LOG(WARN,                                            \
+                            "Opening of TCP connection on fd %d was not "    \
+                            "detected.",                                     \
+                            fd);                                             \
+                }                                                            \
+                sock = alloc_socket(fd);                                     \
+                if (!ra_put_elem(fd, sock)) {                                \
+                        LOG_FUNC_ERROR;                                      \
+                        return;                                              \
+                }                                                            \
+                sock = NULL;                                                 \
+                sock = ra_get_and_lock_elem(fd);                             \
+                if (!sock) {                                                 \
+                        LOG_FUNC_ERROR;                                      \
+                        return;                                              \
+                }                                                            \
+        }                                                                    \
+        const char *ev_name = string_from_sock_event_type(ev_type_cons);     \
+        LOG(DEBUG, "%s on connection %d (fd %d).", ev_name, sock->id, fd);   \
+        ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err,         \
+                                             sock->events_count);
 
 #define SOCK_EV_POSTLUDE(ev_type_cons)                                      \
         push_event(sock, (SockEvent *)ev);                                  \
@@ -564,32 +556,15 @@ void sock_ev_listen(int fd, int ret, int err, int backlog) {
         SOCK_EV_POSTLUDE(SOCK_EV_LISTEN);
 }
 
-#define ACCEPT_NEW_CON                                                \
-        Socket *new_sock = alloc_socket(fd);                          \
-        if (!new_sock) goto error;                                    \
-        if (!ra_put_elem(ret, new_sock)) goto error;                  \
-        new_sock = NULL;                                              \
-        new_sock = ra_get_and_lock_elem(fd);                          \
-        if (!new_sock) goto error;                                    \
-        SockEvAccept *new_ev =                                        \
-            (SockEvAccept *)alloc_event(SOCK_EV_ACCEPT, ret, err, 0); \
-        memcpy(&new_ev, &ev, sizeof(SockEvAccept));                   \
-        push_event(new_sock, (SockEvent *)new_ev);                    \
-        output_event((SockEvent *)new_ev);                            \
-        if (!ra_put_elem(ret, new_sock)) goto error;
-
 void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
                     socklen_t *addr_len) {
         // Inst. local vars Socket *sock& SockEvAccept *ev
         SOCK_EV_PRELUDE(SOCK_EV_ACCEPT, SockEvAccept);
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
-        ACCEPT_NEW_CON;
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT);
-error:
-        LOG_FUNC_ERROR;
-        ra_unlock_elem(fd);
+        NEW_CON(ret, SOCK_EV_ACCEPT, SockEvAccept);
 }
 
 void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
@@ -599,12 +574,9 @@ void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
 
         if (ret != -1 && addr) fill_addr(&(ev->addr), addr, *addr_len);
         ev->flags = flags;
-        ACCEPT_NEW_CON;
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT4);
-error:
-        LOG_FUNC_ERROR;
-        ra_unlock_elem(fd);
+        NEW_CON(ret, SOCK_EV_ACCEPT4, SockEvAccept4);
 }
 
 void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
@@ -805,7 +777,6 @@ void sock_ev_close(int fd, int ret, int err) {
         LOG(INFO, "close on connection %d.", sock->id);
         SockEvClose *ev = (SockEvClose *)alloc_event(SOCK_EV_CLOSE, ret, err,
                                                      sock->events_count);
-        if (!ev) goto error;
 
         if (sock->capture_switch != NULL)
                 stop_capture(sock->capture_switch, sock->rtt * 2);
@@ -825,6 +796,7 @@ void sock_ev_dup(int fd, int ret, int err) {
         // Inst. local vars Socket *sock& SockEvDup *ev
         SOCK_EV_PRELUDE(SOCK_EV_DUP, SockEvDup);
         SOCK_EV_POSTLUDE(SOCK_EV_DUP);
+        NEW_CON(ret, SOCK_EV_DUP, SockEvDup);
 }
 
 void sock_ev_dup2(int fd, int ret, int err, int newfd) {
@@ -834,6 +806,7 @@ void sock_ev_dup2(int fd, int ret, int err, int newfd) {
         ev->newfd = newfd;
 
         SOCK_EV_POSTLUDE(SOCK_EV_DUP2);
+        NEW_CON(ret, SOCK_EV_DUP2, SockEvDup2);
 }
 
 void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
@@ -844,6 +817,7 @@ void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
         ev->o_cloexec = (flags == O_CLOEXEC);
 
         SOCK_EV_POSTLUDE(SOCK_EV_DUP3);
+        NEW_CON(ret, SOCK_EV_DUP3, SockEvDup3);
 }
 
 void sock_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
@@ -995,7 +969,7 @@ void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
                 case F_GETLK64:
                 case F_SETLK64:
                 case F_SETLKW64:
-#elif LIBC_VERSION > 217 // Absolutely not sure this is the right boundary!
+#elif LIBC_VERSION > 217  // Absolutely not sure this is the right boundary!
                 case F_OFD_SETLK:
                 case F_OFD_SETLKW:
                 case F_OFD_GETLK:

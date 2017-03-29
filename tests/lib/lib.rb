@@ -55,15 +55,15 @@ def log_file_str
   dir_str+"/"+LOG_FILE
 end
 
-def json_file_str(con_id=0)
+def json_file_str(con_id=1)
   dir_str+"/#{con_id}.json"
 end
 
-def pcap_file_str(con_id=0)
+def pcap_file_str(con_id=1)
   dir_str+"/#{con_id}.pcap"
 end
 
-def read_json_trace(con_id=0)
+def read_json_trace(con_id=1)
   File.read(json_file_str(con_id))
 end
 
@@ -72,7 +72,7 @@ def wrap_as_array(json_trace)
 end
 
 # This builds a valid JSON array from the JSON object in the file
-def read_json_as_array(con_id=0)
+def read_json_as_array(con_id=1)
   wrap_as_array(read_json_trace(con_id))
 end
 
@@ -85,15 +85,15 @@ def run_exec(exec, env='')
 end
 
 def tcpsnitch(options='', cmd='')
-  system("#{EXECUTABLE} #{options} #{cmd} >/dev/null 2>&1")
+  system("#{EXECUTABLE} -n #{options} #{cmd} >/dev/null 2>&1")
 end
 
 def tcpsnitch_output(options='', cmd='')
-  `#{EXECUTABLE} #{options} #{cmd} 2>&1`
+  `#{EXECUTABLE} -n #{options} #{cmd} 2>&1`
 end
 
 def run_c_program(name, opts='')
-  reset_dir(TEST_DIR) 
+  reset_dir(TEST_DIR)
   tcpsnitch("-d #{TEST_DIR} #{opts}", "./c_programs/#{name}.out")
 end
 

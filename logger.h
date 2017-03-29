@@ -33,6 +33,6 @@ void print_trace(void);
 #define LOG_FUNC_WARN LOG(WARN, "%s", __func__)
 #define LOG_FUNC_INFO LOG(INFO, "%s", __func__)
 
-#define D(format, args...) LOG(DEBUG, format, ##args)
+#define D(format, args...) LOG(ALWAYS, format, ##args)
 
 #endif

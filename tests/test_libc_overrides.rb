@@ -22,7 +22,7 @@ def assert_event_present(type, success=true,json= read_json_as_array)
 end
 
 describe "libc overrides" do
-	before do WebServer.start end
+  before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
 
   SOCKET_SYSCALLS.each do |syscall|
@@ -104,8 +104,8 @@ describe "libc overrides" do
       run_c_program(prog)
       dir0 = process_dirs[0]
       dir1 = process_dirs[1]
-      assert file_exists?(dir0+"/0.json")
-      assert file_exists?(dir1+"/0.json")
+      assert file_exists?(dir0+"/1.json")
+      assert file_exists?(dir1+"/1.json")
     end
 
     it "#{prog} should log no ERROR for both processes" do

@@ -38,9 +38,9 @@ typedef struct {
         int usec;
 } Timestamp;
 
-static const char *colors[] = {ANSI_COLOR_WHITE, ANSI_COLOR_RED,
+static const char *colors[] = {ANSI_COLOR_GREEN, ANSI_COLOR_RED,
                                ANSI_COLOR_YELLOW, ANSI_COLOR_WHITE,
-                               ANSI_COLOR_GREEN};
+                               ANSI_COLOR_WHITE};
 
 #ifdef __ANDROID__
 static const int android_log_priorities_map[] = {

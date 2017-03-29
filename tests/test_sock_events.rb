@@ -25,8 +25,8 @@ describe 'tcp_spy' do
         { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
         { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json_as_array(0))
-      assert_json_match(pattern1, read_json_as_array(1))
+      assert_json_match(pattern0, read_json_as_array(1))
+      assert_json_match(pattern1, read_json_as_array(2))
     end
 
     it 'should properly handle 2 concurrent connections' do
@@ -39,8 +39,8 @@ describe 'tcp_spy' do
         { type: SOCK_EV_SOCKET }.ignore_extra_keys!,
         { type: SOCK_EV_CLOSE }.ignore_extra_keys!
       ].ignore_extra_values!
-      assert_json_match(pattern0, read_json_as_array(0))
-      assert_json_match(pattern1, read_json_as_array(1))
+      assert_json_match(pattern0, read_json_as_array(1))
+      assert_json_match(pattern1, read_json_as_array(2))
     end
   end
 
@@ -72,77 +72,77 @@ describe 'tcp_spy' do
   #  service: String
   }
 
-	sock_opt = {
-		level: String,
-   	optname: String,
-		optlen: Integer,
+  sock_opt = {
+    level: String,
+    optname: String,
+    optlen: Integer,
     optval: Object
-	}
+  }
 
   send_flags = {
-		MSG_CONFIRM: Boolean,
-		MSG_DONTROUTE: Boolean,
-		MSG_DONTWAIT: Boolean,
-		MSG_EOR: Boolean,
-		MSG_MORE: Boolean,
-		MSG_NOSIGNAL: Boolean,
-		MSG_OOB: Boolean
-	}
-	
-	recv_flags = {
-		MSG_CMSG_CLOEXEC: Boolean,
-		MSG_DONTWAIT: Boolean,
-		MSG_ERRQUEUE: Boolean,
-		MSG_OOB: Boolean,
-		MSG_PEEK: Boolean,
-		MSG_TRUNC: Boolean,
-		MSG_WAITALL: Boolean	
-	}
+    MSG_CONFIRM: Boolean,
+    MSG_DONTROUTE: Boolean,
+    MSG_DONTWAIT: Boolean,
+    MSG_EOR: Boolean,
+    MSG_MORE: Boolean,
+    MSG_NOSIGNAL: Boolean,
+    MSG_OOB: Boolean
+  }
 
-	msghdr = {
-		control_data_len: Integer,
-		control_data: Array,
-		iovec: {
-			iovec_count: Integer,
+  recv_flags = {
+    MSG_CMSG_CLOEXEC: Boolean,
+    MSG_DONTWAIT: Boolean,
+    MSG_ERRQUEUE: Boolean,
+    MSG_OOB: Boolean,
+    MSG_PEEK: Boolean,
+    MSG_TRUNC: Boolean,
+    MSG_WAITALL: Boolean
+  }
+
+  msghdr = {
+    control_data_len: Integer,
+    control_data: Array,
+    iovec: {
+      iovec_count: Integer,
       iovec_sizes: [Integer].ignore_extra_values!
-		}
-	}
+    }
+  }
 
-	poll_events = {
-		POLLIN: Boolean,
-		POLLPRI: Boolean,
-		POLLOUT: Boolean,
-		POLLRDHUP: Boolean,
-		POLLERR: Boolean,
-		POLLHUP: Boolean,
-		POLLNVAL: Boolean
-	}
+  poll_events = {
+    POLLIN: Boolean,
+    POLLPRI: Boolean,
+    POLLOUT: Boolean,
+    POLLRDHUP: Boolean,
+    POLLERR: Boolean,
+    POLLHUP: Boolean,
+    POLLNVAL: Boolean
+  }
 
   timeout = {
     seconds: Integer,
     nanoseconds: Integer
   }
 
-	select_events = {
-		READ: Boolean,
-		WRITE: Boolean,
-		EXCEPT: Boolean
-	}
+  select_events = {
+    READ: Boolean,
+    WRITE: Boolean,
+    EXCEPT: Boolean
+  }
 
-	epoll_events = {
-		EPOLLIN: Boolean,
-		EPOLLOUT: Boolean,
-	  EPOLLRDHUP: Boolean,
-		EPOLLPRI: Boolean,
-		EPOLLERR: Boolean,
-		EPOLLHUP: Boolean,
-		EPOLLET: Boolean,
+  epoll_events = {
+    EPOLLIN: Boolean,
+    EPOLLOUT: Boolean,
+    EPOLLRDHUP: Boolean,
+    EPOLLPRI: Boolean,
+    EPOLLERR: Boolean,
+    EPOLLHUP: Boolean,
+    EPOLLET: Boolean,
     EPOLLONESHOT: Boolean,
     EPOLLWAKEUP: Boolean
-	}
+  }
 
   DETAILS = {
-    SOCK_EV_SOCKET => { 
+    SOCK_EV_SOCKET => {
       domain: String,
       protocol: Integer,
       SOCK_CLOEXEC: Boolean,
@@ -232,9 +232,7 @@ describe 'tcp_spy' do
     SOCK_EV_ISFDTYPE => {
       fdtype: Integer
     },
-    SOCK_EV_CLOSE => {
-      detected: Boolean
-    },
+    SOCK_EV_CLOSE => {},
     SOCK_EV_DUP => {},
     SOCK_EV_DUP2 => {
       newfd: Integer

@@ -7,9 +7,9 @@ require './lib/lib.rb'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 describe "tcpsnitch" do
-	before do WebServer.start end
+  before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
-	
+
   let(:cmd) { "./c_programs/socket.out" } 
 
   describe "when no option is set" do
@@ -24,20 +24,20 @@ describe "tcpsnitch" do
       assert_match(/too few arguments/, tcpsnitch_output('-b 42', ''))
     end
   end
-  
+
   ["-b", "-f", "-l", "-t", "-u"].each do |opt|
     describe "when #{opt} is set" do
       it "should report 'invalid #{opt} argument'" do
-        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd)) 
+        assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} -42", cmd))
         assert_match(/invalid #{opt} argument/, tcpsnitch_output("#{opt} foo", cmd))
       end
-   
+
       it "should not crash with a valid arg" do
         assert tcpsnitch("#{opt} 5", cmd)
       end
     end
   end
-  
+
   describe "option -c" do
     it "should not crash with -c" do
       assert tcpsnitch("-c", cmd)
@@ -77,7 +77,7 @@ describe "tcpsnitch" do
       assert_match(/#{LOG_LABEL_INFO}/, tcpsnitch_output("-l 3", cmd))
     end
   end
- 
+
   describe "when -h is set" do
     it "should not crash" do
       assert tcpsnitch("-h", '')
