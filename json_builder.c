@@ -178,19 +178,19 @@ static json_t *build_control_data(struct msghdr *msgh) {
         }
         //        cmsg = CMSG_NXTHDR(msgh, cmsg);
         //        for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL;
-        //	     cmsg = CMSG_NXTHDR(msgh, cmsg)) {
-        //		json_t *json_cd = my_json_object();
-        //		add(json_cd, "cmsg_level",
+        //           cmsg = CMSG_NXTHDR(msgh, cmsg)) {
+        //              json_t *json_cd = my_json_object();
+        //              add(json_cd, "cmsg_level",
         // json_integer(cmsg->cmsg_level));
-        //		add(json_cd, "cmsg_type",
+        //              add(json_cd, "cmsg_type",
         // json_integer(cmsg->cmsg_type));
-        //		json_array_append_new(json_cd_list, json_cd);
-        //	}
+        //              json_array_append_new(json_cd_list, json_cd);
+        //      }
 
         return json_cd_list;
 }
 
-static json_t *build_tcp_msghdr(const Msghdr *msg) {
+static json_t *build_msghdr(const Msghdr *msg) {
         json_t *json_msghdr = my_json_object();
         // Flags are only for recvmsg()
         if (msg->flags) add(json_msghdr, "flags", build_recv_flags(msg->flags));
@@ -201,16 +201,16 @@ static json_t *build_tcp_msghdr(const Msghdr *msg) {
         return json_msghdr;
 }
 
-static json_t *build_tcp_mmsghdr_vec(const Mmsghdr *tcp_mmsghdr_vec,
+static json_t *build_mmsghdr_vec(const Mmsghdr *mmsghdr_vec,
                                      int mmsghdr_count) {
         json_t *json_mmsghdr_vec = my_json_array();
         for (int i = 0; i < mmsghdr_count; i++) {
                 json_t *json_mmsghdr = my_json_object();
-                const Mmsghdr *tcp_mmsghder = (tcp_mmsghdr_vec + i);
+                const Mmsghdr *mmsghder = (mmsghdr_vec + i);
                 add(json_mmsghdr, "transmitted_bytes",
-                    json_integer(tcp_mmsghder->bytes_transmitted));
+                    json_integer(mmsghder->bytes_transmitted));
                 add(json_mmsghdr, "msghdr",
-                    build_tcp_msghdr(&tcp_mmsghder->tcp_msghdr));
+                    build_msghdr(&mmsghder->msghdr));
                 json_array_append_new(json_mmsghdr_vec, json_mmsghdr);
         }
         return json_mmsghdr_vec;
@@ -428,7 +428,7 @@ static json_t *build_sock_ev_sendmsg(const SockEvSendmsg *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
-        add(json_details, "msghdr", build_tcp_msghdr(&(ev->tcp_msghdr)));
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
         return json_ev;
 }
 
@@ -436,7 +436,7 @@ static json_t *build_sock_ev_recvmsg(const SockEvRecvmsg *ev) {
         BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
-        add(json_details, "msghdr", build_tcp_msghdr(&(ev->tcp_msghdr)));
+        add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
         return json_ev;
 }
 
@@ -447,7 +447,7 @@ static json_t *build_sock_ev_sendmmsg(const SockEvSendmmsg *ev) {
         add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
         add(json_details, "mmsghdr_vec",
-            build_tcp_mmsghdr_vec(ev->mmsghdr_vec, ev->mmsghdr_count));
+            build_mmsghdr_vec(ev->mmsghdr_vec, ev->mmsghdr_count));
         return json_ev;
 }
 
@@ -457,7 +457,7 @@ static json_t *build_sock_ev_recvmmsg(const SockEvRecvmmsg *ev) {
         add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
         add(json_details, "mmsghdr_vec",
-            build_tcp_mmsghdr_vec(ev->mmsghdr_vec, ev->mmsghdr_count));
+            build_mmsghdr_vec(ev->mmsghdr_vec, ev->mmsghdr_count));
         add(json_details, "timeout", build_timeout(&ev->timeout));
         return json_ev;
 }

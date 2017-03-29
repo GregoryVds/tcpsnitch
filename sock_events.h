@@ -199,14 +199,14 @@ typedef struct {
         SockEvent super;
         size_t bytes;
         int flags;
-        Msghdr tcp_msghdr;
+        Msghdr msghdr;
 } SockEvSendmsg;
 
 typedef struct {
         SockEvent super;
         size_t bytes;
         int flags;
-        Msghdr tcp_msghdr;
+        Msghdr msghdr;
 } SockEvRecvmsg;
 
 typedef struct {
@@ -216,7 +216,7 @@ typedef struct {
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 typedef struct {
-        Msghdr tcp_msghdr;
+        Msghdr msghdr;
         unsigned int bytes_transmitted;
 } Mmsghdr;
 

@@ -220,7 +220,7 @@ static socklen_t fill_iovec(Iovec *iov1, const struct iovec *iov2,
         return bytes;
 }
 
-static socklen_t fill_tcp_msghdr(Msghdr *m1, const struct msghdr *m2) {
+static socklen_t fill_msghdr(Msghdr *m1, const struct msghdr *m2) {
         // We copy the msg_control fields of the "struct msghdr" to another
         // such struct, since we must have such a struct available later to
         // use the CMSG macros for extracting the ancillary data.
@@ -242,16 +242,16 @@ static socklen_t fill_tcp_msghdr(Msghdr *m1, const struct msghdr *m2) {
         return fill_iovec(&m1->iovec, m2->msg_iov, m2->msg_iovlen);
 }
 
-static unsigned int fill_tcp_mmsghdr_vec(Mmsghdr *tcp_mmsghdr_vec,
-                                         const struct mmsghdr *mmsghdr_vec,
+static unsigned int fill_mmsghdr_vec(Mmsghdr *mmsghdr_vec1,
+                                         const struct mmsghdr *mmsghdr_vec2,
                                          unsigned int vlen) {
         unsigned int bytes = 0;
         for (unsigned int i = 0; i < vlen; i++) {
-                const struct mmsghdr *mmsghdr = (mmsghdr_vec + i);
-                Mmsghdr *tcp_mmsghdr = (tcp_mmsghdr_vec + i);
-                tcp_mmsghdr->bytes_transmitted = mmsghdr->msg_len;
-                bytes += fill_tcp_msghdr(&tcp_mmsghdr->tcp_msghdr,
-                                         &mmsghdr->msg_hdr);
+                const struct mmsghdr *mmsghdr2 = (mmsghdr_vec2 + i);
+                Mmsghdr *mmsghdr1 = (mmsghdr_vec1 + i);
+                mmsghdr1->bytes_transmitted = mmsghdr2->msg_len;
+                bytes += fill_msghdr(&mmsghdr1->msghdr,
+                                         &mmsghdr2->msg_hdr);
         }
         return bytes;
 }
@@ -413,13 +413,22 @@ error_out:
         return;
 }
 
-#define DUP_SOCKET(ev_type_cons, ev_type)                                    \
-        memcpy(&ev->sock_info, &sock->sock_info, sizeof(SockInfo));          \
-        Socket *new_sock = alloc_socket(ret);                                \
-        memcpy(&new_sock->sock_info, &sock->sock_info, sizeof(SockInfo));    \
-        ev_type *new_ev = (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
-        memcpy(new_ev, ev, sizeof(ev_type));                                 \
-        push_event(new_sock, (SockEvent *)new_ev);
+// Used for any event that duplicates a socket, such as dup() or accept().
+// We don't have a regular socket() call but we still need to know about the
+// type of socket we are dealing with in the trace. To this purpose, we copy
+// the sock_info of the original socket to the new event & socket.
+#define DUP_SOCKET(ev_type_cons, ev_type)                              \
+        {                                                              \
+                Socket *new_sock = alloc_socket(ret);                  \
+                memcpy(&new_sock->sock_info, &sock->sock_info,         \
+                       sizeof(SockInfo));                              \
+                ev_type *new_ev =                                      \
+                    (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
+                memcpy(new_ev, ev, sizeof(ev_type));                   \
+                ra_unlock_elem(fd);                                    \
+                push_event(new_sock, (SockEvent *)new_ev);             \
+                sock = ra_get_and_lock_elem(fd);                       \
+        }
 
 #define SOCK_EV_PRELUDE(ev_type_cons, ev_type)                             \
         init_tcpsnitch();                                                  \
@@ -492,12 +501,15 @@ const char *string_from_sock_event_type(SockEventType type) {
 
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
-        if (ra_is_present(fd)) LOG(ERROR, "Socket was already opened");
+        if (ra_is_present(fd)) LOG(ERROR, "Unclosed socket");
 
         Socket *sock = alloc_socket(fd);
         SockEvSocket *ev =
             (SockEvSocket *)alloc_event(SOCK_EV_SOCKET, fd, 0, 0);
 
+        // We duplicate the sock_info on the Socket itself, as the socket event
+        // will be freed as soon as events are dumped to JSON. Placing a copy
+        // on the Socket itself is thus convenient to keep track of it.
         fill_sock_info(&ev->sock_info, domain, type, protocol);
         fill_sock_info(&sock->sock_info, domain, type, protocol);
 
@@ -577,7 +589,6 @@ void sock_ev_accept(int fd, int ret, int err, struct sockaddr *addr,
         if (ret != -1) DUP_SOCKET(SOCK_EV_ACCEPT, SockEvAccept);
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT);
-        if (ret != -1) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
@@ -590,7 +601,6 @@ void sock_ev_accept4(int fd, int ret, int err, struct sockaddr *addr,
         if (ret != -1) DUP_SOCKET(SOCK_EV_ACCEPT4, SockEvAccept4);
 
         SOCK_EV_POSTLUDE(SOCK_EV_ACCEPT4);
-        if (ret != -1) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
@@ -671,7 +681,7 @@ void sock_ev_sendmsg(int fd, int ret, int err, const struct msghdr *msg,
         // Inst. local vars Socket *sock & SockEvSendmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_SENDMSG, SockEvSendmsg);
 
-        ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
+        ev->bytes = fill_msghdr(&ev->msghdr, msg);
         ev->flags = flags;
         sock->bytes_sent += ev->bytes;
 
@@ -683,7 +693,7 @@ void sock_ev_recvmsg(int fd, int ret, int err, const struct msghdr *msg,
         // Inst. local vars Socket *sock & SockEvRecvmsg *ev
         SOCK_EV_PRELUDE(SOCK_EV_RECVMSG, SockEvRecvmsg);
 
-        ev->bytes = fill_tcp_msghdr(&ev->tcp_msghdr, msg);
+        ev->bytes = fill_msghdr(&ev->msghdr, msg);
         ev->flags = flags;
         sock->bytes_received += ev->bytes;
 
@@ -701,7 +711,7 @@ void sock_ev_sendmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
 
         ev->mmsghdr_count = vlen;
         ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
-        ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
+        ev->bytes = fill_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
         sock->bytes_sent += ev->bytes;
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
@@ -719,7 +729,7 @@ void sock_ev_recvmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
 
         ev->mmsghdr_count = vlen;
         ev->mmsghdr_vec = (Mmsghdr *)my_malloc(vlen * sizeof(Mmsghdr));
-        ev->bytes = fill_tcp_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
+        ev->bytes = fill_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
         sock->bytes_received += ev->bytes;
         SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
@@ -813,7 +823,6 @@ void sock_ev_dup(int fd, int ret, int err) {
         if (ret != -1) DUP_SOCKET(SOCK_EV_DUP, SockEvDup);
 
         SOCK_EV_POSTLUDE(SOCK_EV_DUP);
-        if (ret != -1) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_dup2(int fd, int ret, int err, int newfd) {
@@ -824,7 +833,6 @@ void sock_ev_dup2(int fd, int ret, int err, int newfd) {
         if (ret != -1) DUP_SOCKET(SOCK_EV_DUP2, SockEvDup2);
 
         SOCK_EV_POSTLUDE(SOCK_EV_DUP2);
-        if (ret != -1) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
@@ -836,7 +844,6 @@ void sock_ev_dup3(int fd, int ret, int err, int newfd, int flags) {
         if (ret != -1) DUP_SOCKET(SOCK_EV_DUP3, SockEvDup3);
 
         SOCK_EV_POSTLUDE(SOCK_EV_DUP3);
-        if (ret != -1) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_writev(int fd, int ret, int err, const struct iovec *iovec,
@@ -1005,9 +1012,8 @@ void sock_ev_fcntl(int fd, int ret, int err, int cmd, ...) {
         }
 
         bool dup = (ev->cmd == F_DUPFD || ev->cmd == F_DUPFD_CLOEXEC);
-        if (dup) DUP_SOCKET(SOCK_EV_FCNTL, SockEvFcntl);
+        if (dup && ret != -1) DUP_SOCKET(SOCK_EV_FCNTL, SockEvFcntl);
         SOCK_EV_POSTLUDE(SOCK_EV_FCNTL);
-        if (dup) ra_put_elem(ret, new_sock);
 }
 
 void sock_ev_epoll_ctl(int fd, int ret, int err, int op,
@@ -1080,9 +1086,6 @@ void dump_all_sock_events(void) {
 
 void sock_ev_free(void) {
         ra_free();
-        // We don't check for errors on this one. This is called
-        // after fork() and will logically failed if the mutex
-        // was lock at the time of forking. This is normal.
         pthread_mutex_destroy(&connections_count_mutex);
 }
 
