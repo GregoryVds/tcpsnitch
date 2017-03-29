@@ -110,7 +110,7 @@ static SockEvent *alloc_event(SockEventType type, int return_value, int err,
                 CASE_EV(SOCK_EV_FDOPEN, SockEvFdopen, 0);
                 CASE_EV(SOCK_EV_TCP_INFO, SockEvTcpInfo, -1);
         }
-        fill_timeval(&(ev->timestamp));
+        ev->timestamp_usec = get_time_micros();
         ev->type = type;
         ev->return_value = return_value;
         ev->success = success;

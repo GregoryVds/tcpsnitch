@@ -44,33 +44,30 @@ describe 'tcp_spy' do
     end
   end
 
+  shared_fields = {
+    details: Hash,
+    return_value: Integer,
+    success: Boolean,
+    thread_id: Integer,
+    fake_call: Boolean,
+    timestamp_usec: Integer,
+    type: String
+  }
+
   describe 'an event' do
     it 'should have the correct shared fields' do
       run_c_program('socket')
-      pattern = [
-        {
-          details: Hash,
-          return_value: Integer,
-          success: Boolean,
-          thread_id: Integer,
-          fake_call: Boolean,
-          timestamp: {
-            sec: Integer,
-            usec: Integer
-          },
-          type: String
-        }.ignore_extra_keys!
-      ].ignore_extra_values!
+      pattern = [shared_fields].ignore_extra_values!
       assert_json_match(pattern, read_json_as_array)
     end
   end
 
   sock_info = {
-      domain: String,
-      protocol: Integer,
-      SOCK_CLOEXEC: Boolean,
-      SOCK_NONBLOCK: Boolean,
-      type: String
+    domain: String,
+    protocol: Integer,
+    SOCK_CLOEXEC: Boolean,
+    SOCK_NONBLOCK: Boolean,
+    type: String
   }
 
   addr = {
@@ -344,17 +341,7 @@ describe 'tcp_spy' do
       it "#{syscall} should have the correct JSON fields" do
         run_c_program(syscall)
         pattern = [
-          {
-            type: syscall,
-            return_value: Integer,
-            success: Boolean,
-            thread_id: Integer,
-            timestamp: {
-              sec: Integer,
-              usec: Integer
-            },
-            details: DETAILS[syscall]
-          }.ignore_extra_keys!
+          shared_fields.merge({details: DETAILS[syscall]})
         ].ignore_extra_values!
         assert_json_match(pattern, read_json_as_array)
       end

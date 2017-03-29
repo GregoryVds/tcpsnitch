@@ -311,12 +311,7 @@ static void add_fl_flags(json_t *details, int flags) {
 static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
         const char *type_str = string_from_sock_event_type(ev->type);
         add(json_ev, "type", json_string(type_str));
-
-        json_t *timestamp_json = my_json_object();
-        add(timestamp_json, "sec", json_integer(ev->timestamp.tv_sec));
-        add(timestamp_json, "usec", json_integer(ev->timestamp.tv_usec));
-        add(json_ev, "timestamp", timestamp_json);
-
+        add(json_ev, "timestamp_usec", json_integer(ev->timestamp_usec));
         add(json_ev, "return_value", json_integer(ev->return_value));
         add(json_ev, "success", json_boolean(ev->success));
         add(json_ev, "error_str", json_string(ev->error_str));

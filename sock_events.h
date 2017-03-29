@@ -70,7 +70,7 @@ typedef enum SockEventType {
 
 typedef struct {
         SockEventType type;
-        struct timeval timestamp;
+        unsigned long timestamp_usec;
         int return_value;
         bool success;
         char *error_str;
