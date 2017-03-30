@@ -337,10 +337,15 @@ else
         chmod 777 "$OPT_D"
     fi
 
+    # Extract app (split on '/' and take last)
+    # Global replace (//) in $1 of / (escaped) by ' ' & interpret as array
+    array=(${1//\// });
+    app=${array[-1]}
+
     # Write meta data
     meta_dir="$OPT_D/meta"
     mkdir "$meta_dir"
-    echo "$1" > "${meta_dir}/app"
+    echo "$app" > "${meta_dir}/app"
     echo "$@" > "${meta_dir}/cmd"
     uname -r > "${meta_dir}/kernel"
     uname -m > "${meta_dir}/machine"
