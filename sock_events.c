@@ -529,7 +529,15 @@ const char *string_from_sock_event_type(SockEventType type) {
 
 void sock_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
-        if (ra_is_present(fd)) LOG(INFO, "Unclosed socket");
+        if (ra_is_present(fd)) {
+                LOG(WARN, "Unclosed socket");
+                Socket *sock = ra_remove_elem(fd);
+                if (sock->capture_switch != NULL)
+                        stop_capture(sock->capture_switch, sock->rtt * 2);
+
+                dump_events_as_json(sock);
+                free_socket(sock);
+        }
 
         Socket *sock = alloc_socket(fd);
         SockEvSocket *ev =
