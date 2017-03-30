@@ -6,7 +6,7 @@ set -o nounset
 readonly NAME="tcpsnitch"
 readonly VERSION=0.1
 readonly VERSION_STR="${NAME} version ${VERSION}"
-readonly SERVER="192.168.99.101:3000"
+readonly SERVER="ns328523.ip-37-187-114.eu"
 readonly I386_LIB="lib${NAME}.so.${VERSION}-i386"
 readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86_64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
