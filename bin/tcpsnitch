@@ -27,7 +27,7 @@ OPT_T=1000
 OPT_U=0
 OPT_V=0
 
-OPTIONS_NAMES=(OPT_A OPT_B OPT_C OPT_D OPT_F OPT_L OPT_N OPT_T OPT_U OPT_V)
+OPTIONS_NAMES=(opt_a opt_b opt_c opt_d opt_f opt_l opt_n opt_t opt_u opt_v)
 OPTIONS_COUNT=${#OPTIONS_NAMES[@]}
 
 # Exit on TERM signal
@@ -59,7 +59,7 @@ usage() {
     echo "-h          show this help text."
     echo "-k <pkg>    kill instrumented android <pkg> and pull traces."
     echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 2)."
-    echo "-n          do Not send traces to web server."
+    echo "-n          do (n)ot send traces to web server."
     echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
     echo "-u <usec>   dump tcp_info every <usec> (0 means NO dump, def 0)."
     echo "-v          activate verbose output."
@@ -139,6 +139,11 @@ pull_trace_for_android_package() {
     info "Trace saved in ${tmpdir}"
 }
 
+zip_trace() {
+    cd "${OPT_D}" || error "Could not cd to ${OPT_D}"
+    tar -czf archive.tar.gz ./*
+}
+
 upload_trace() {
     if [[ $OPT_N -eq "1" ]]; then exit; fi
 
@@ -151,13 +156,9 @@ upload_trace() {
         esac
     done
 
-    cd "${OPT_D}" || error "Could not cd to ${OPT_D}"
-    tar -czf archive.tar.gz ./*
     info "Uploading trace..."
-    if curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${SERVER}/app_traces" >/dev/null; then
-        info "Trace uploaded to ${SERVER}"
-    else
-        info "Failed to upload trace"
+    if ! curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${SERVER}/app_traces"; then
+        info "Failed to connect to ${SERVER}"
     fi
 }
 
@@ -201,6 +202,7 @@ parse_options() {
                 get_android_package "${2}"
                 kill_android_package
                 pull_trace_for_android_package
+                zip_trace
                 upload_trace
                 exit 0
                 ;;
@@ -375,6 +377,7 @@ else
     # distinguish stdout/stderr of tcpsnitch & of the traced process.
 
     info "Trace saved in ${OPT_D}"
+    zip_trace
     upload_trace
 fi
 
