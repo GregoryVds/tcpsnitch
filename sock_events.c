@@ -656,6 +656,7 @@ void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
 
         SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
+
 void sock_ev_send(int fd, int ret, int err, const void *buf, size_t bytes,
                   int flags) {
         // Inst. local vars Socket *sock & SockEvSend *ev
