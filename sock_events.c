@@ -433,9 +433,9 @@ error_out:
         return;
 }
 
-void log_event(int ev_type_cons, int fd, int con_id) {
+void log_event(LogLevel lvl, int ev_type_cons, int fd, int con_id) {
         const char *ev_name = string_from_sock_event_type(ev_type_cons);
-        LOG(DEBUG, "%s on connection %d (fd %d).", ev_name, con_id, fd);
+        LOG(lvl, "%s on connection %d (fd %d).", ev_name, con_id, fd);
 }
 
 // Used for any event that duplicates a socket, such as dup() or accept().
@@ -447,7 +447,7 @@ void log_event(int ev_type_cons, int fd, int con_id) {
                 Socket *new_sock = alloc_socket(ret);                  \
                 memcpy(&new_sock->sock_info, &sock->sock_info,         \
                        sizeof(SockInfo));                              \
-                log_event(ev_type_cons, ret, new_sock->id);            \
+                log_event(INFO, ev_type_cons, ret, new_sock->id);      \
                 ev_type *new_ev =                                      \
                     (ev_type *)alloc_event(ev_type_cons, ret, err, 0); \
                 memcpy(new_ev, ev, sizeof(ev_type));                   \
@@ -463,7 +463,7 @@ void log_event(int ev_type_cons, int fd, int con_id) {
         init_tcpsnitch();                                            \
         if (!ra_is_present(fd)) sock_ev_ghost_socket(fd);            \
         Socket *sock = ra_get_and_lock_elem(fd);                     \
-        log_event(ev_type_cons, fd, sock->id);                       \
+        log_event(INFO, ev_type_cons, fd, sock->id);                 \
         ev_type *ev = (ev_type *)alloc_event(ev_type_cons, ret, err, \
                                              sock->events_count);
 
@@ -548,7 +548,7 @@ void sock_ev_socket(int fd, int domain, int type, int protocol) {
         // on the Socket itself is thus convenient to keep track of it.
         fill_sock_info(&ev->sock_info, domain, type, protocol);
         fill_sock_info(&sock->sock_info, domain, type, protocol);
-        log_event(SOCK_EV_SOCKET, fd, sock->id);
+        log_event(INFO, SOCK_EV_SOCKET, fd, sock->id);
 
         push_event(sock, (SockEvent *)ev);
         ra_put_elem(fd, sock);
@@ -561,7 +561,7 @@ void sock_ev_forked_socket(int fd, SockInfo *sock_info) {
 
         memcpy(&forked_sock->sock_info, sock_info, sizeof(SockInfo));
         memcpy(&ev->sock_info, sock_info, sizeof(SockInfo));
-        log_event(SOCK_EV_FORKED_SOCKET, fd, forked_sock->id);
+        log_event(INFO, SOCK_EV_FORKED_SOCKET, fd, forked_sock->id);
 
         push_event(forked_sock, (SockEvent *)ev);
         ra_put_elem(fd, forked_sock);
@@ -573,7 +573,7 @@ void sock_ev_ghost_socket(int fd) {
             (SockEvGhostSocket *)alloc_event(SOCK_EV_GHOST_SOCKET, 0, 0, 0);
         fill_sock_info_from_fd(&ev->sock_info, fd);
         memcpy(&ghost_sock->sock_info, &ev->sock_info, sizeof(SockInfo));
-        log_event(SOCK_EV_GHOST_SOCKET, fd, ghost_sock->id);
+        log_event(WARN, SOCK_EV_GHOST_SOCKET, fd, ghost_sock->id);
         push_event(ghost_sock, (SockEvent *)ev);
         ra_put_elem(fd, ghost_sock);
 }
