@@ -10,6 +10,8 @@ readonly SERVER="ns328523.ip-37-187-114.eu"
 readonly I386_LIB="lib${NAME}.so.${VERSION}-i386"
 readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86_64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
+readonly LINUX_GIT_HASH="linux_git_hash"
+readonly ANDROID_GIT_HASH="android_git_hash"
 readonly TOP_PID=$$
 readonly SCRIPT_DIR=$(dirname "$(realpath "$0")")
 readonly PROP_PREFIX="be.ucl.${NAME}"
@@ -126,17 +128,17 @@ pull_trace_for_android_package() {
 
     info "Pulling trace from Android device..."
 
-    declare tmpdir=$(mktemp -d)
-    chmod 777 "$tmpdir"
+    OPT_D=$(mktemp -d)
+    chmod 777 "$OPT_D"
     adb shell su -c ls "${tracesdir}" | while read -r line; do
         trace=$(echo "${line}" | tr -d '\r')
         adb shell su -c mv "${tracesdir}/${trace}" "/data/${trace}"
         adb shell su busybox chmod -R 777 "/data/${trace}"
-        adb pull "/data/${trace}" "${tmpdir}/${trace}" 2>/dev/null
+        adb pull "/data/${trace}" "${OPT_D}/${trace}" 2>/dev/null
         adb shell su -c rm -rf "/data/${trace}"
     done
 
-    info "Trace saved in ${tmpdir}"
+    info "Trace saved in ${OPT_D}"
 }
 
 zip_trace() {
@@ -280,6 +282,8 @@ if [[ $OPT_A -eq "1" ]]; then
     adb shell "echo android > ${meta_dir}/os"
     adb shell "echo ${VERSION} > ${meta_dir}/version"
     adb shell "echo ${PACKAGE} > ${meta_dir}/app"
+#    git_hash=$(cat "$ANDROID_GIT_HASH")
+    adb shell "echo $(cat "$ANDROID_GIT_HASH") > ${meta_dir}/git_hash"
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         adb shell "echo ${OPTIONS_VALS[$i]} > ${meta_dir}/${OPTIONS_NAMES[$i]}"
     done
@@ -354,6 +358,7 @@ else
     sysctl net > "${meta_dir}/net" 2>/dev/null
     uname -s > "${meta_dir}/os"
     echo "$VERSION" > "${meta_dir}/version"
+    cat "$LINUX_GIT_HASH" > "${meta_dir}/git_hash"
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         echo "${OPTIONS_VALS[$i]}" > ${meta_dir}/${OPTIONS_NAMES[$i]}
     done

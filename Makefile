@@ -3,10 +3,9 @@ MAJOR_VERSION=0
 MINOR_VERSION=1
 VERSION=$(MAJOR_VERSION).$(MINOR_VERSION)
 
-# Exexutable name
+# ./bin names
 EXECUTABLE=tcpsnitch
 
-# Libraries names
 BASE_NAME=lib$(EXECUTABLE).so.$(VERSION)
 AMD64=x86_64
 I386=i386
@@ -14,6 +13,9 @@ ARM=arm
 LIB_AMD64=$(BASE_NAME)-$(AMD64)
 LIB_I386=$(BASE_NAME)-$(I386)
 LIB_ARM=$(BASE_NAME)-$(ARM)
+
+LINUX_GIT_HASH=linux_git_hash
+ANDROID_GIT_HASH=android_git_hash
 
 # Installation paths
 BIN_PATH=$(DESTDIR)/usr/local/bin
@@ -84,6 +86,7 @@ linux: $(HEADERS) $(SOURCES)
 	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
 	@echo "[-] Compiling Linux 32 bits lib version..."
 	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
+	@git rev-parse HEAD > ./bin/$(LINUX_GIT_HASH)
 
 android: $(HEADERS) $(SOURCES)
 ifndef CC_ANDROID
@@ -91,29 +94,20 @@ ifndef CC_ANDROID
 endif
 	@echo "[-] Compiling Android lib version..."
 	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
+	@git rev-parse HEAD > ./bin/$(ANDROID_GIT_HASH)
 
 install:
-	@mkdir -p $(DEPS_PATH)
-	@install -m 0444 ./bin/$(LIB_AMD64) $(DEPS_PATH)
-	@echo "[-] Moved Linux 64 bits lib version to \"$(DEPS_PATH)\""
-	@install -m 0444 ./bin/$(LIB_I386) $(DEPS_PATH)
-	@echo "[-] Moved Linux 32 bits lib version to \"$(DEPS_PATH)\""
-	@if [ -f ./bin/$(LIB_ARM) ]; then\
-		install -m 0444 ./bin/$(LIB_ARM) $(DEPS_PATH);\
-		echo "[-] Moved Android lib to \"$(DEPS_PATH)\"";\
-	fi
-	@install -m 0755 ./bin/$(EXECUTABLE) $(DEPS_PATH)
-	@echo "[-] Moved executable to \"$(DEPS_PATH)\""
-	@ln -fs ./tcpsnitch_deps/$(EXECUTABLE) $(BIN_PATH)/$(EXECUTABLE)
-	@echo "[-] Added symlink to executable in \"$(BIN_PATH)\""
-	@echo "[-] Done!"
+	mkdir -p $(DEPS_PATH)
+	install -m 0444 ./bin/* $(DEPS_PATH)
+	chmod 0755 $(DEPS_PATH)/$(EXECUTABLE)
+	ln -fs ./tcpsnitch_deps/$(EXECUTABLE) $(BIN_PATH)/$(EXECUTABLE)
 
 uninstall:
 	@rm -rf $(DEPS_PATH)
 	@rm $(BIN_PATH)/$(EXECUTABLE)
 
 clean:
-	@rm -f ./bin/*.so*
+	@rm -f ./bin/*.so* *hash
 
 tests: linux install
 	cd tests && rake
