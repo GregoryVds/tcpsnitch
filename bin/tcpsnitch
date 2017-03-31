@@ -282,6 +282,7 @@ if [[ $OPT_A -eq "1" ]]; then
 #    git_hash=$(cat "$ANDROID_GIT_HASH")
     adb shell "echo $(cat "$ANDROID_GIT_HASH") > ${meta_dir}/git_hash"
     adb shell "hostid > ${meta_dir}/host_id"
+    adb shell "dumpsys package ${PACKAGE} | grep versionName > ${meta_dir}/app_version"
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         adb shell "echo ${OPTIONS_VALS[$i]} > ${meta_dir}/${OPTIONS_NAMES[$i]}"
     done
@@ -358,6 +359,9 @@ else
     echo "$VERSION" > "${meta_dir}/version"
     cat "$LINUX_GIT_HASH" > "${meta_dir}/git_hash"
     hostid > "${meta_dir}/host_id"
+    if "$1" --version >/dev/null 2>&1; then
+        "$1" --version > "${meta_dir}/app_version"
+    fi
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         echo "${OPTIONS_VALS[$i]}" > ${meta_dir}/${OPTIONS_NAMES[$i]}
     done
