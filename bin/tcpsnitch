@@ -284,6 +284,7 @@ if [[ $OPT_A -eq "1" ]]; then
     adb shell "echo ${PACKAGE} > ${meta_dir}/app"
 #    git_hash=$(cat "$ANDROID_GIT_HASH")
     adb shell "echo $(cat "$ANDROID_GIT_HASH") > ${meta_dir}/git_hash"
+    adb shell "hostid > ${meta_dir}/host_id"
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         adb shell "echo ${OPTIONS_VALS[$i]} > ${meta_dir}/${OPTIONS_NAMES[$i]}"
     done
@@ -359,6 +360,7 @@ else
     uname -s > "${meta_dir}/os"
     echo "$VERSION" > "${meta_dir}/version"
     cat "$LINUX_GIT_HASH" > "${meta_dir}/git_hash"
+    hostid > "${meta_dir}/host_id"
     for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
         echo "${OPTIONS_VALS[$i]}" > ${meta_dir}/${OPTIONS_NAMES[$i]}
     done
