@@ -5,6 +5,7 @@
 
 #include <arpa/inet.h>
 #include <asm-generic/ioctls.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/ax25.h>
 #include <linux/if_eql.h>
@@ -64,6 +65,7 @@ char *alloc_sockoptname(int level, int optname);
 
 char *alloc_fcntl_cmd_str(int cmd);
 char *alloc_ioctl_request_str(int request);
+char *alloc_errno_str(int err);
 
 #define ADD(constant) \
         { constant, #constant }

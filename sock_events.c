@@ -114,14 +114,13 @@ static SockEvent *alloc_event(SockEventType type, int return_value, int err,
         ev->type = type;
         ev->return_value = return_value;
         ev->success = success;
-        ev->error_str = success ? NULL : alloc_error_str(err);
+        ev->err = err;
         ev->id = id;
         ev->thread_id = syscall(SYS_gettid);
         return ev;
 }
 
 static void free_event(SockEvent *ev) {
-        free(ev->error_str);
         switch (ev->type) {
                 case SOCK_EV_GETSOCKOPT:
                         free(((SockEvGetsockopt *)ev)->sockopt.optval);

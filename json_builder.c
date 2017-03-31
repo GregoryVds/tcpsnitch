@@ -314,7 +314,11 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
         add(json_ev, "timestamp_usec", json_integer(ev->timestamp_usec));
         add(json_ev, "return_value", json_integer(ev->return_value));
         add(json_ev, "success", json_boolean(ev->success));
-        add(json_ev, "error_str", json_string(ev->error_str));
+        if (!ev->success) {
+                char *errno_str = alloc_errno_str(ev->err);
+                add(json_ev, "errno", json_string(errno_str));
+                free(errno_str);
+        }
         add(json_ev, "thread_id", json_integer(ev->thread_id));
         add(json_ev, "fake_call", json_boolean(false));
 }

@@ -322,3 +322,5 @@ char *alloc_sockoptname(int level, int optname) {
 char *alloc_fcntl_cmd_str(int cmd) { MAP_GET(FCNTL_CMDS, cmd); }
 
 char *alloc_ioctl_request_str(int request) { MAP_GET(IOCTL_REQUESTS, request); }
+
+char *alloc_errno_str(int err) { MAP_GET(ERRNOS, err); }

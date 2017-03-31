@@ -73,7 +73,7 @@ typedef struct {
         unsigned long timestamp_usec;
         int return_value;
         bool success;
-        char *error_str;
+        int err;
         long id;
         pid_t thread_id;
 } SockEvent;
