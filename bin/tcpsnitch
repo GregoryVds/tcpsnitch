@@ -121,23 +121,16 @@ kill_android_package() {
 
 pull_trace_for_android_package() {
     declare tracesdir="/data/data/${PACKAGE}/${NAME}"
-
-    if [[ ! $(adb shell su -c ls "${tracesdir}") ]]; then
+    exists=$(adb shell "test -d ${tracesdir}; echo \$?" | tr -d '\r')
+    if [[ "$exists" -eq "1" ]] ; then
         error "no traces for '${PACKAGE}'"
     fi
 
-    info "Pulling trace from Android device..."
-
     OPT_D=$(mktemp -d)
-    chmod 777 "$OPT_D"
-    adb shell su -c ls "${tracesdir}" | while read -r line; do
-        trace=$(echo "${line}" | tr -d '\r')
-        adb shell su -c mv "${tracesdir}/${trace}" "/data/${trace}"
-        adb shell su busybox chmod -R 777 "/data/${trace}"
-        adb pull "/data/${trace}" "${OPT_D}/${trace}" 2>/dev/null
-        adb shell su -c rm -rf "/data/${trace}"
-    done
-
+    info "Pulling trace from Android device..."
+    adb shell su -c chown -R shell "$tracesdir"
+    adb pull "$tracesdir" "$OPT_D" 2>/dev/null
+    adb shell su -c rm -rf "$tracesdir"
     info "Trace saved in ${OPT_D}"
 }
 
@@ -162,6 +155,14 @@ upload_trace() {
     if ! curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${SERVER}/app_traces"; then
         info "Failed to connect to ${SERVER}"
     fi
+}
+
+android_stop() {
+    get_android_package "${2}"
+    kill_android_package
+    pull_trace_for_android_package
+    zip_trace
+    upload_trace
 }
 
 parse_options() {
@@ -201,11 +202,7 @@ parse_options() {
                 exit 0
                 ;;
             k)
-                get_android_package "${2}"
-                kill_android_package
-                pull_trace_for_android_package
-                zip_trace
-                upload_trace
+                android_stop $@
                 exit 0
                 ;;
             l)
