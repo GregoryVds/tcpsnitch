@@ -438,6 +438,14 @@ void log_event(LogLevel lvl, int ev_type_cons, int fd, int con_id) {
         LOG(lvl, "%s on connection %d (fd %d).", ev_name, con_id, fd);
 }
 
+void free_and_dump_socket(int fd) {
+        Socket *sock = ra_remove_elem(fd);
+        if (sock->capture_switch != NULL)
+                stop_capture(sock->capture_switch, sock->rtt * 2);
+        dump_events_as_json(sock);
+        free_socket(sock);
+}
+
 // Used for any event that duplicates a socket, such as dup() or accept().
 // We don't have a regular socket() call but we still need to know about the
 // type of socket we are dealing with in the trace. To this purpose, we copy
@@ -531,12 +539,7 @@ void sock_ev_socket(int fd, int domain, int type, int protocol) {
         init_tcpsnitch();
         if (ra_is_present(fd)) {
                 LOG(WARN, "Unclosed socket");
-                Socket *sock = ra_remove_elem(fd);
-                if (sock->capture_switch != NULL)
-                        stop_capture(sock->capture_switch, sock->rtt * 2);
-
-                dump_events_as_json(sock);
-                free_socket(sock);
+                free_and_dump_socket(fd);
         }
 
         Socket *sock = alloc_socket(fd);
@@ -838,25 +841,10 @@ void sock_ev_read(int fd, int ret, int err, void *buf, size_t bytes) {
 }
 
 void sock_ev_close(int fd, int ret, int err) {
-        Socket *sock = ra_remove_elem(fd);
-        if (!sock) goto error;
-
-        LOG(INFO, "close on connection %d.", sock->id);
-        SockEvClose *ev = (SockEvClose *)alloc_event(SOCK_EV_CLOSE, ret, err,
-                                                     sock->events_count);
-
-        if (sock->capture_switch != NULL)
-                stop_capture(sock->capture_switch, sock->rtt * 2);
-
-        push_event(sock, (SockEvent *)ev);
-        output_event((SockEvent *)ev);
-
-        dump_events_as_json(sock);
-        free_socket(sock);
-        return;
-error:
-        LOG_FUNC_ERROR;
-        return;
+        // Inst. local vars Socket *sock & SockEvClose *ev
+        SOCK_EV_PRELUDE(SOCK_EV_CLOSE, SockEvClose);
+        SOCK_EV_POSTLUDE(SOCK_EV_CLOSE);
+        free_and_dump_socket(fd);
 }
 
 void sock_ev_dup(int fd, int ret, int err) {

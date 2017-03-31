@@ -3,3 +3,5 @@
 *.pyc
 *.py
 tags
+linux_git_hash
+android_git_hash
