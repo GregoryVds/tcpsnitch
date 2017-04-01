@@ -141,11 +141,13 @@ error_out:
 
 char *alloc_append_int_to_path(const char *path1, int i) {
         int path1_len = strlen(path1);
-        int i_len = get_int_len(i);
+        int i_len = 10;
         int full_path_length = path1_len + i_len + 2;  // Underscore + null byte
         char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
         strncpy(full_path, path1, path1_len);
-        snprintf(full_path + path1_len, i_len + 2, "_%d", i);
+        snprintf(full_path + path1_len, i_len + 2, "_%03d", i);
+        D("%03d", 1212323);
+        D("%03d", i);
         return full_path;
 }
 
@@ -163,12 +165,12 @@ char *alloc_android_opt_d(void) {
 }
 
 char *alloc_file_name(int file_name, const char *extension) {
-	int n = get_int_len(file_name) + strlen(extension) + 1;
-	char *str = my_malloc(n*sizeof(char));
-	sprintf(str, "%d%s", file_name, extension);
-	char *ret = alloc_concat_path(logs_dir_path, str);
-	free(str);
-	return ret;
+        int n = get_int_len(file_name) + strlen(extension) + 1;
+        char *str = my_malloc(n*sizeof(char));
+        sprintf(str, "%d%s", file_name, extension);
+        char *ret = alloc_concat_path(logs_dir_path, str);
+        free(str);
+        return ret;
 }
 
 char *alloc_json_path_str(Socket *con) {
