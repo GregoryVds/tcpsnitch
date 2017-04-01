@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -o nounset
-#set -o xtrace
+# set -o xtrace
 
 # Modify this to change name, version & libs path
 readonly NAME="tcpsnitch"
 readonly VERSION=0.1
 readonly VERSION_STR="${NAME} version ${VERSION}"
-readonly SERVER="192.168.99.101:3000"
-# readonly SERVER="ns328523.ip-37-187-114.eu"
+#readonly SERVER="192.168.99.101:3000"
+readonly SERVER="ns328523.ip-37-187-114.eu"
 readonly I386_LIB="lib${NAME}.so.${VERSION}-i386"
 readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86_64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
@@ -146,7 +146,7 @@ upload_trace() {
     if [[ $OPT_N -eq "1" ]]; then exit; fi
 
     form="app_trace[archive]=@${OPT_D}/archive.tar.gz"
-    pendantic_form=""
+    pedantic_form=""
 
     if [[ $OPT_P -eq "1" ]]; then
         read -p "Workload decription (e.g. 'Opened app & navigated to google.com'): " workload
