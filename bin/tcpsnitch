@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -o nounset
-# set -o xtrace
+#set -o xtrace
 
 # Modify this to change name, version & libs path
 readonly NAME="tcpsnitch"
 readonly VERSION=0.1
 readonly VERSION_STR="${NAME} version ${VERSION}"
-readonly SERVER="ns328523.ip-37-187-114.eu"
+readonly SERVER="192.168.99.101:3000"
+# readonly SERVER="ns328523.ip-37-187-114.eu"
 readonly I386_LIB="lib${NAME}.so.${VERSION}-i386"
 readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86_64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
@@ -25,12 +26,13 @@ OPT_D="-" # Need non-empty value to fit OPTIONS_VALUES array
 OPT_F=2
 OPT_L=1
 OPT_N=0
+OPT_P=0
 OPT_T=1000
 OPT_U=0
 OPT_V=0
 
-OPTIONS_NAMES=(opt_a opt_b opt_c opt_d opt_f opt_l opt_n opt_t opt_u opt_v)
-OPTIONS_COUNT=${#OPTIONS_NAMES[@]}
+META_OPTIONS_NAMES=(opt_b opt_f opt_u)
+META_OPTIONS_COUNT=${#META_OPTIONS_NAMES[@]}
 
 # Exit on TERM signal
 trap "exit 1" TERM
@@ -47,7 +49,7 @@ info() {
 }
 
 usage() {
-    echo "Usage: ${NAME} [-achv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+    echo "Usage: ${NAME} [-achpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
     echo "                 [ -k <pkg> ] [ -l <lvl> ] [ -t <msec> ]"
     echo "                 [ -u <usec> ] [ --version ] app <args>"
     echo ""
@@ -62,6 +64,7 @@ usage() {
     echo "-k <pkg>    kill instrumented android <pkg> and pull traces."
     echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 2)."
     echo "-n          do (n)ot send traces to web server."
+    echo "-p          pedantic, ask a lot a annoying questions."
     echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
     echo "-u <usec>   dump tcp_info every <usec> (0 means NO dump, def 0)."
     echo "-v          activate verbose output."
@@ -142,17 +145,33 @@ zip_trace() {
 upload_trace() {
     if [[ $OPT_N -eq "1" ]]; then exit; fi
 
-    while true; do
-        read -p "Do you wish to upload this trace to ${SERVER}? (y/n): " yn
-        case "${yn}" in
-            [Yy]* ) break;;
-            [Nn]* ) exit;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
+    form="app_trace[archive]=@${OPT_D}/archive.tar.gz"
+    pendantic_form=""
+
+    if [[ $OPT_P -eq "1" ]]; then
+        read -p "Workload decription (e.g. 'Opened app & navigated to google.com'): " workload
+
+        PS3='Select connectivity type: '
+        options=("wifi" "ethernet" "lte")
+        select connectivity in "${options[@]}"; do
+            case "$connectivity" in
+                "wifi"|"ethernet"|"lte")
+                    break
+                    ;;
+                *)
+                    echo "Invalid option"
+            esac
+        done
+
+        read -p "Comments (optional, anything worth mentioning about your setup): " comments
+
+        pedantic_form+="-F app_trace[workload]=${workload}"
+        pedantic_form+=" -F app_trace[connectivity]=${connectivity}"
+        pedantic_form+=" -F app_trace[comments]=${comments}"
+    fi
 
     info "Uploading trace..."
-    if ! curl --connect-timeout 2 --progress-bar -F "app_trace[archive]=@${OPT_D}/archive.tar.gz" "http://${SERVER}/app_traces"; then
+    if ! curl --connect-timeout 2 --progress-bar -F "$form" $pedantic_form "http://${SERVER}/app_traces"; then
         info "Failed to connect to ${SERVER}"
     fi
 }
@@ -211,6 +230,9 @@ parse_options() {
                 ;;
             n)
                 OPT_N=1
+                ;;
+            p)
+                OPT_P=1
                 ;;
             u)
                 assert_int "${OPTARG}" "invalid -u argument: '${OPTARG}'" 
@@ -283,8 +305,8 @@ if [[ $OPT_A -eq "1" ]]; then
     adb shell "echo $(cat "$ANDROID_GIT_HASH") > ${meta_dir}/git_hash"
     adb shell "hostid > ${meta_dir}/host_id"
     adb shell "dumpsys package ${PACKAGE} | grep versionName > ${meta_dir}/app_version"
-    for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
-        adb shell "echo ${OPTIONS_VALS[$i]} > ${meta_dir}/${OPTIONS_NAMES[$i]}"
+    for i in $(seq 0 $((${META_OPTIONS_COUNT}-1))); do
+        adb shell "echo ${OPTIONS_VALS[$i]} > ${meta_dir}/${META_OPTIONS_NAMES[$i]}"
     done
 
     # Upload lib
@@ -362,8 +384,8 @@ else
     if "$1" --version >/dev/null 2>&1; then
         "$1" --version > "${meta_dir}/app_version"
     fi
-    for i in $(seq 0 $((${OPTIONS_COUNT}-1))); do
-        echo "${OPTIONS_VALS[$i]}" > ${meta_dir}/${OPTIONS_NAMES[$i]}
+    for i in $(seq 0 $((${META_OPTIONS_COUNT}-1))); do
+        echo "${OPTIONS_VALS[$i]}" > ${meta_dir}/${META_OPTIONS_NAMES[$i]}
     done
 
 
