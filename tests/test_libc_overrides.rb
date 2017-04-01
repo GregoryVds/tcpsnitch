@@ -57,7 +57,7 @@ describe "libc overrides" do
         end
       end
 
-      unless [SOCK_EV_POLL, SOCK_EV_PPOLL, SOCK_EV_SOCKATMARK].include?(syscall) 
+      unless [SOCK_EV_POLL, SOCK_EV_PPOLL, SOCK_EV_SOCKATMARK].include?(syscall)
         it "#{failing} should not crash" do
           assert run_c_program(failing)
         end
@@ -65,7 +65,7 @@ describe "libc overrides" do
 
       # SOCKET: No log file if no TCP connection.
       # CLOSE: No log file if no TCP connection. How to fail close() with con?
-      unless [SOCK_EV_SOCKET, SOCK_EV_CLOSE, SOCK_EV_POLL, 
+      unless [SOCK_EV_SOCKET, SOCK_EV_CLOSE, SOCK_EV_POLL,
               SOCK_EV_PPOLL, SOCK_EV_SOCKATMARK].include?(syscall)
         it "#{failing} should log no ERROR" do
           run_c_program(failing)
@@ -74,11 +74,11 @@ describe "libc overrides" do
       end
 
       # SOCKET: No JSON if no TCP connection.
-      # LISTEN: How to fail listen() on valid TCP socket? 
+      # LISTEN: How to fail listen() on valid TCP socket?
       # CLOSE: How to fail close() on valid TCP socket?
-      unless [SOCK_EV_SOCKET, SOCK_EV_LISTEN, SOCK_EV_CLOSE, SOCK_EV_DUP, 
+      unless [SOCK_EV_SOCKET, SOCK_EV_LISTEN, SOCK_EV_CLOSE, SOCK_EV_DUP,
               SOCK_EV_POLL, SOCK_EV_PPOLL, SOCK_EV_FCNTL, SOCK_EV_EPOLL_WAIT,
-              SOCK_EV_EPOLL_PWAIT, SOCK_EV_SOCKATMARK, 
+              SOCK_EV_EPOLL_PWAIT, SOCK_EV_SOCKATMARK,
               SOCK_EV_ISFDTYPE].include?(syscall)
         it "should be in JSON with #{failing}" do
           run_c_program(failing)
@@ -116,7 +116,7 @@ describe "libc overrides" do
       assert no_error_log(dir1+"/"+LOG_FILE)
     end
 
-    it "socket() should be in JSON for both processes" do 
+    it "socket() should be in JSON for both processes" do
       run_c_program(prog)
       trace1 = File.read(process_dirs[0]+"/0.json")
       trace2 = File.read(process_dirs[1]+"/0.json")

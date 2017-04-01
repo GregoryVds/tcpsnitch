@@ -1,16 +1,16 @@
 class CProg
   @@programs_path = "./c_programs/"
   @@count = 0
-  
+
   def initialize(instructions, name)
     @instructions = instructions
     @name = name
     write_to_file
     @@count += 1
   end
-  
+
   def program
-<<-EOT  
+<<-EOT
 #define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
@@ -31,7 +31,7 @@ class CProg
 #include <unistd.h>
 
 int main(void) {
-#{@instructions}          
+#{@instructions}
   return(EXIT_SUCCESS);
 }
 EOT
@@ -46,13 +46,13 @@ EOT
     f.puts program
     f.close
   end
-  
+
   def to_s
     @instructions
   end
 
   def assert_success
-    if !system(exec_path) then puts "#{exec_path} failed!" end 
+    if !system(exec_path) then puts "#{exec_path} failed!" end
   end
 end
 

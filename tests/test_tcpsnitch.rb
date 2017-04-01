@@ -10,7 +10,7 @@ describe "tcpsnitch" do
   before do WebServer.start end
   MiniTest::Unit.after_tests { WebServer.stop }
 
-  let(:cmd) { "./c_programs/socket.out" } 
+  let(:cmd) { "./c_programs/socket.out" }
 
   describe "when no option is set" do
     it "should not crash" do
@@ -20,7 +20,7 @@ describe "tcpsnitch" do
 
   describe "when no command is passed" do
     it "should report 'too few arguments'" do
-      assert_match(/too few arguments/, tcpsnitch_output('', '')) 
+      assert_match(/too few arguments/, tcpsnitch_output('', ''))
       assert_match(/too few arguments/, tcpsnitch_output('-b 42', ''))
     end
   end

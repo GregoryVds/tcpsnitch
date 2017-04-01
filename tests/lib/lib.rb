@@ -81,7 +81,7 @@ end
 ##################
 
 def run_exec(exec, env='')
-  system("#{env} #{LD_PRELOAD} #{exec} >/dev/null 2>&1") 
+  system("#{env} #{LD_PRELOAD} #{exec} >/dev/null 2>&1")
 end
 
 def tcpsnitch(options='', cmd='')
@@ -99,7 +99,7 @@ end
 
 def run_curl
   run_exec("curl -s google.com", "NETSPY_DEV=enp0s3")
-#  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1") 
+#  system("#{LD_PRELOAD} NETSPY_DEV=enp0s3 curl -s google.com > /dev/null 2>&1")
 end
 
 def errors_in_log?(log_file=log_file_str)

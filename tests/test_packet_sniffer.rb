@@ -1,4 +1,4 @@
-# Purpose: test that we properly capture all packets in the PCAP trace. 
+# Purpose: test that we properly capture all packets in the PCAP trace.
 require 'minitest/autorun'
 require 'minitest/spec'
 require 'minitest/reporters'
@@ -21,7 +21,7 @@ describe "packet_sniffer.c" do
 
   it "should create a PCAP file on CONNECT" do
     run_c_program(SOCK_EV_CONNECT, "-c")
-    assert contains?(dir_str, "0.pcap") 
+    assert contains?(dir_str, "0.pcap")
   end
 
   # Need to capture on a single interface to use packetfu

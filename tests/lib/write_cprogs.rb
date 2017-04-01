@@ -70,7 +70,7 @@ CONNECT_DGRAM = CProg.new(<<-EOT, 'connect_dgram')
 #{SOCKET_DGRAM}
 #{sockaddr_in(WebServer::PORT)}
   if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    fprintf(stderr, "connect() failed: %s\\n.", strerror(errno)); 
+    fprintf(stderr, "connect() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
   }
 EOT
@@ -378,7 +378,7 @@ RECVMSG = CProg.new(<<-EOT, 'recvmsg')
 #{CONNECT}
 #{send_http_get}
 #{recv_msghdr}
-  if (recvmsg(sock, &msg, 0) < 0) { 
+  if (recvmsg(sock, &msg, 0) < 0) {
     fprintf(stderr, "recvmsg() failed: %s\\n.", strerror(errno));
     return(EXIT_FAILURE);
    }
