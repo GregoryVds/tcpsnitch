@@ -146,8 +146,6 @@ char *alloc_append_int_to_path(const char *path1, int i) {
         char *full_path = (char *)my_malloc(sizeof(char) * full_path_length);
         strncpy(full_path, path1, path1_len);
         snprintf(full_path + path1_len, i_len + 2, "_%03d", i);
-        D("%03d", 1212323);
-        D("%03d", i);
         return full_path;
 }
 
