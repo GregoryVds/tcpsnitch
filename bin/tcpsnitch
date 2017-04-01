@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -o nounset
-# set -o xtrace
+#set -o xtrace
 
 # Modify this to change name, version & libs path
 readonly NAME="tcpsnitch"
@@ -163,11 +163,8 @@ upload_trace() {
             esac
         done
 
-        read -p "Comments (optional, anything worth mentioning about your setup): " comments
-
         pedantic_form+="-F app_trace[workload]=${workload}"
         pedantic_form+=" -F app_trace[connectivity]=${connectivity}"
-        pedantic_form+=" -F app_trace[comments]=${comments}"
     fi
 
     info "Uploading trace..."
