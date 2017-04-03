@@ -67,7 +67,7 @@ bool is_inet_socket(int fd) {
         socklen_t optlen = sizeof(optval);
         if (my_getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen))
                 goto error;
-        return (optval == AF_INET || optval == AF_INET6);
+        return (optval == AF_INET || optval == AF_INET6 || optval == AF_PACKET);
 error:
         LOG(ERROR, "Assume socket is not a INET socket.");
         return false;

@@ -163,13 +163,15 @@ upload_trace() {
             esac
         done
 
-        pedantic_form+="-F app_trace[workload]=${workload}"
-        pedantic_form+=" -F app_trace[connectivity]=${connectivity}"
-    fi
-
-    info "Uploading trace..."
-    if ! curl --connect-timeout 2 --progress-bar -F "$form" $pedantic_form "http://${SERVER}/app_traces"; then
-        info "Failed to connect to ${SERVER}"
+        info "Uploading trace..."
+        if ! curl --connect-timeout 2 -F "$form" -F "app_trace[workload]=$workload" -F "app_trace[connectivity]=$connectivity" "http://${SERVER}/app_traces"; then
+            info "Failed to connect to ${SERVER}"
+        fi
+    else
+        info "Uploading trace..."
+        if ! curl --connect-timeout 2 --progress-bar -F "$form" "http://${SERVER}/app_traces"; then
+            info "Failed to connect to ${SERVER}"
+        fi
     fi
 }
 

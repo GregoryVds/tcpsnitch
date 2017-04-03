@@ -1,20 +1,75 @@
 # Tcpsnitch
 
+`tcpsnitch` is a tracing tool designed to investigate the interactions between an application, the TCP/IP stack and the network.
+
 ## Overview
 
-Tcpsnitch is a tracing tool that helps investigate the interactions between an application, the TCP stack and the network. It runs the specified command until it exits and records all invokations of functions from the socket API.
+`tcpsnitch` runs the specified command until it exits and intercepts all libc function calls on internet sockets. For instance, one may run the following command to trace the `curl` program:
+```bash
+$ tcpsnitch curl google.com
+```
+
+For each opened socket, `tcpsnitch` builds an ordered list of function calls, where each function invocation is called an **event**. For each event, `tcpsnitch` records the arguments, the return value and various information such as the current timestamp. For instance, a `connect()` event might look like this in a socket trace:
+
+```JSON
+{
+    "type": "connect",
+    "timestamp_usec": 1491043720731853, 
+    "return_value": 0, 
+    "success": true, 
+    "thread_id": 17313, 
+    "details": {
+        "addr": {
+            "sa_family": "AF_INET", 
+            "ip": "127.0.1.1", 
+            "port": "53"
+        }
+    }
+}
+```
+
+Socket traces are written to text files where each line is a JSON object representing a single event. For instance, the head of such a trace could like this:
+
+```JSON
+{"type": "socket", "timestamp_usec": 1491043720731840, "return_value": 6, "success": true, "thread_id": 17313, "details": {"sock_info": {"domain": "AF_INET", "type": "SOCK_DGRAM", "protocol": 0, "SOCK_CLOEXEC": false, "SOCK_NONBLOCK": true}}}
+{"type": "ioctl", "timestamp_usec": 1491043720765019, "return_value": 0, "success": true, "thread_id": 17313, "details": {"request": "FIONREAD"}}
+{"type": "recvfrom", "timestamp_usec": 1491043720765027, "return_value": 44, "success": true, "thread_id": 17313, "details": {"bytes": 2048, "flags": {"MSG_CMSG_CLOEXEC": false, "MSG_DONTWAIT": false, "MSG_ERRQUEUE": false, "MSG_OOB": false, "MSG_PEEK": false, "MSG_TRUNC": false, "MSG_WAITALL": false}, "addr": {"sa_family": "AF_INET", "ip": "127.0.1.1", "port": "53"}}}
+{"type": "ioctl", "timestamp_usec": 1491043720770075, "return_value": 0, "success": true, "thread_id": 17313, "details": {"request": "FIONREAD"}}
+{"type": "recvfrom", "timestamp_usec": 1491043720770094, "return_value": 56, "success": true, "thread_id": 17313, "details": {"bytes": 65536, "flags": {"MSG_CMSG_CLOEXEC": false, "MSG_DONTWAIT": false, "MSG_ERRQUEUE": false, "MSG_OOB": false, "MSG_PEEK": false, "MSG_TRUNC": false, "MSG_WAITALL": false}, "addr": {"sa_family": "AF_INET", "ip": "127.0.1.1", "port": "53"}}}
+```
+
+As a single command may forks multiple processes (and `tcpsnitch` follows forks), all socket traces belonging to a given process are put together in a directory, named after the traced process. Inside such a directory, socket traces are named based on the order they were opened by the process.
+
+By default, traces are saved in a random folder under `/tmp` and uploaded to a [web application]
+(http://ns328523.ip-37-187-114.eu) designed to centralize, visualize and analyze the traces. For each trace, a quantitative analysis is performed to provide various statistics about the trace. Note that all uploaded traces are public and available for anyone to consult and download.
+
+As visible on the next code snippet, `tcpsnitch` gives you the URL at which your trace is available.
+
+```bash
+$ tcpsnitch curl google.com
+Trace saved in /tmp/tmp.4ERKizKyU3.
+Uploading trace....
+Trace successfully uploaded at http://ns328523.ip-37-187-114.eu/app_traces/20.
+Trace archive will be imported shortly. Refresh this page in a few minutes...
+```
+
+Note that several minutes are required to import the trace (i.e. extract the trace archive and insert all the events in the database). Once imported, several more minutes may be needed to compute the quantitative analysis of the trace.
+
+Finally, `tcpsnitch` also allows to extract the `TCP_INFO` socket option at user-defined intervals and to record a `.pcap` trace for each individual socket. See the usage section for more information.
 
 ## Compatibility
 
-Tcpsnitch allows tracing applications on:
+`tcpsnitch` allows tracing applications on:
 - Linux (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25).
 - Android (tested on Android API 23).
 
-Note: On Linux, the following applications are NOT compatible: Chrome and any Chromium based app such as Electron, Opera, etc.
+As `tcpsnitch` works by intercepting calls to libc functions using the `LD_PRELOAD` environment variable, tracing cannot be performed for applications which are statically linked with libc.
+
+Note: On Linux, Chrome (and any Chromium based app such as Electron, Opera, etc...) are known to be NOT compatible.
 
 ## Intallation
 
-For users that want to trace Android applications, go down to the "Setup for Android" section.
+For users that want to trace Android applications, scroll down to the "Compilation for Android" section.
 
 ### Dependencies
 
@@ -43,19 +98,63 @@ make && sudo make install
 
 ## Usage
 
-### Linux
+Usage: `tcpsnitch [<options>] <cmd> [<cmd_args>]`, where `<cmd>` is the command to trace (mandatory), `<options>` are `tcpsnitch` options and `<cmd_args>` are the arguments of `<cmd>`.
 
-To run tcpsnitch with curl and defaults options: `tcpsnitch curl google.com`.
+One may issue `tcpsnitch -h` to get more information about the various options but the most important ones are explained in this section:
 
-See `tcpsnitch -h` for more information about the options.
+- `-b` and `-u` are used for extracting `TCP_INFO` at user-defined intervals. See section "Extracting TCP_INFO".
+- `-c` is used for capture `pcap` traces of the sockets. See section "Packet capture".
+- `-a` and `-k` are used for tracing Android application. See section "Android usage".
+- `-n` deactivate the automatic upload of traces.
+- `-d` sets the directory in which the trace will be written (instead of `/tmp`).
+- `-f` sets the verbosity level of logs saved to file. By default, only WARN and ERROR messages are written to logs. This could be useful for reporting a bug.
+- `-l` is similar to `-f` but sets the log verbosity on STDOUT. This is used for debugging purposes.
+- `-t` controls the frequency at which events are dumped to file. By default, events are written to file every 1000 milliseconds.
+- `-v` is pretty useless at the moment, but supposed to put `tcpsnitch` in verbose mode in the style of `strace`. Still to be implemented (at the moment it only display event names).
 
-### Android
+### Extracting TCP_INFO
+`-b <bytes>` and `-u <usec>` allow to extract the value of the `TCP_INFO` socket option for each socket at user-defined intervals. Note that the `TCP_INFO` value appears as any other event in the JSON trace of the socekt. With `-b <bytes>`, `TCP_INFO` is recorded every `<bytes>` sent+received on the socket. With `-u <usec>`, `TCP_INFO` is recorded every `<usec>` micro-seconds. When both options are set, `TCP_INFO` is recorded when either one of the two conditions is matched. By default this option is turned off. Also note that `tcpsnitch` only checks for these conditions when an overridden function is called.
 
-Accepts a single argument which should match a package installed on the Android device via a simple `grep`. In case of multiple matches, the first matched package will be used.
+### Packet capture
+The `-c` option activates the capture of a `.pcap` trace for each socket. Note that you need to have the appropriate permissions to be able to capture traffic on an interface (see `man pcap` for more information about such permissions). Also note that this feature is not available for Android at the moment, as regular Android packages do not have sufficient permissions.
 
-For instance, run `setup_app air` would match the `com.airbnb.android` package.
+### Android usage
 
-## Compilation & setup for Android
+The usage on Android is slightly different than on Linux, but most options are supported on both platforms. 
+
+In order to trace apps, a few setup steps are required:
+- Enable USB Debugging on your phone: Go to Settings > About Phone > Tap on Build number 7 times > Return to Settings > Developer Options > USB Debugging (this must only be done once).
+- Plug your phone to your machine with a USB cable.
+- Accept the connection on the phone (this must also be done only once).
+- Isssue `adb devices` and make sure that your phone is visible (your should see `device` in the second column).
+
+When the device is accesible via `adb`, the usage is basically the same as on Linux except that it works in two steps:
+
+1. Issue the regular `tcpsnitch` command with the option `-a` to indicate that you want to trace an applicaiton on the connected Android device. Note that `<cmd>` argument must match the name of a package installed on the device via a simple `grep`. For instance, to trace the Firefox app whose package is `org.firefox.com`, one may isssue `tcpsnitch -a firefox`. `tcpsnitch` will then inform you of the matching package found and immediately start the application.
+2. When you are done interacting with the application, issue `tcpsnitch -k <package>` to kill the application and terminate the tracing process. The traces will be pulled from the device and saved on your disk in `/tmp` before being uploaded to the [web application](http://ns328523.ip-37-187-114.eu) as usual
+
+Here is a full example for tracing Firefox:
+```bash
+$ tcpsnitch -a firefox
+Found Android package: 'org.mozilla.firefox'.
+Uploading tcpsnitch library to /data/libtcpsnitch.so.0.1-arm.
+Start package 'org.mozilla.firefox'.
+Execute './tcpsnitch -k firefox' to terminate the capture.
+# INTERACTING WITH APPLICATION
+$ tcpsnitch -k firefox
+Found Android package: 'org.mozilla.firefox'.
+Pulling trace from Android device....
+Trace saved in /tmp/tmp.MidCH9rm3x.
+Uploading trace....
+Trace successfully uploaded at http://ns328523.ip-37-187-114.eu/app_traces/21.
+Trace archive will be imported shortly. Refresh this page in a few minutes...
+```
+
+Note that in case of multiple matches for a package, the first matched package will be used. You might thus need to be more specific to avoid conflicts. You can execute `adb shell pm list packages` to get the name of all packages installed on your device.
+
+Also note that a single device must be visible to `adb`.
+
+## Compilation for Android
 
 In order to trace Android applications, `tcpsnitch` must be compiled with the [Android Native Development Kit](https://developer.android.com/ndk/index.html) (NDK). The compilation is more involved and the setup requires a rooted Android device.
 
@@ -125,15 +224,7 @@ export CC_ANDROID=$TOOLCHAIN/bin/arm-linux-androideabi-gcc
 make android && sudo make install
 ```
 
-Prepare the Android device:
-
-- Install [Android Debug Bridge](https://developer.android.com/studio/command-line/adb.html) (ADB) on your machine: `sudo apt-get install android-tools-adb`.
-- Enable USB Debugging on your phone: Go to Settings > About Phone > Tap on Build number 7 times > Return to Settings > Developer Options > USB Debugging.
-- Plug your phone to your machine with a USB cable.
-- Accept the connection on the phone.
-- Install `BusyBox` from the Google Play Store on the Device.
-- Isssue `adb devices` and make sure that your phone is visible (your should see `device` in the second column).
-- You are ready to go! See Android usage section.
+You are ready to go! See Android usage section for how to start tracing applications.
 
 ## FAQ
 
@@ -142,6 +233,10 @@ Prepare the Android device:
 An interesting feature of the Linux dynamic linker (`ld.so`) is the ability to link user-specified shared librairies before the librairies specified in the list of dependencies of a program. This feature can be controlled with the `LD_PRELOAD` environment variable which contains a (possibly empty) list of additional user-specified librairies. In particular, this `LD_PRELOAD` variable may force the dynamic linker to link a user-specified shared library before the `libc` library. As a result, any function defined in this user-specified library take precedence over a function with the same signature defined in `libc`.
 
 The implication here is that it allows to intercept calls to system call wrapper functions. We merely have to add a custom shared library that redefines these system call wrappers functions to `LD_PRELOAD`. Such a shim library then transparently intercept the `libc` function calls and perform some processing before calling the original `libc` wrapper functions.
+
+### What are these `wrong ELF class` errors?
+
+TODO
 
 ## Contact
 
