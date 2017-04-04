@@ -369,7 +369,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
            struct timeval *timeout) {
         if (!orig_select) orig_select = (select_type)dlsym(RTLD_NEXT, "select");
 
-        short req_ev[nfds - 1];
+        short req_ev[nfds];
         memset(req_ev, 0, sizeof(req_ev));
 
         int fd;
@@ -413,7 +413,7 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
         if (!orig_pselect)
                 orig_pselect = (pselect_type)dlsym(RTLD_NEXT, "pselect");
 
-        short req_ev[nfds - 1];
+        short req_ev[nfds];
         memset(req_ev, 0, sizeof(req_ev));
 
         int fd;
