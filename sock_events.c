@@ -138,7 +138,7 @@ static void free_event(SockEvent *ev) {
                 case SOCK_EV_SENDMMSG:
                         free(((SockEvSendmmsg *)ev)->mmsghdr_vec);
                         break;
-                case SOCK_EV_RECVMSG:
+                case SOCK_EV_RECVMMSG:
                         free(((SockEvRecvmmsg *)ev)->mmsghdr_vec);
                         break;
 #endif
@@ -777,7 +777,7 @@ void sock_ev_recvmmsg(int fd, int ret, int err, const struct mmsghdr *vmessages,
         ev->bytes = fill_mmsghdr_vec(ev->mmsghdr_vec, vmessages, vlen);
 
         sock->bytes_received += ev->bytes;
-        SOCK_EV_POSTLUDE(SOCK_EV_SENDMMSG);
+        SOCK_EV_POSTLUDE(SOCK_EV_RECVMMSG);
 }
 
 #endif  // #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
