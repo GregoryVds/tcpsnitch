@@ -260,4 +260,6 @@ Nothing bad, these can ignored. The `tcpsnitch` shared library is compiled for b
 
 ## Contact
 
+Come discuss about `tcpsnitch` at https://gitter.im/Tcpsnitch.
+
 The author's email is gregory.vanderschueren[at]gmail.com
