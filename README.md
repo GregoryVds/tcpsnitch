@@ -60,7 +60,7 @@ Finally, `tcpsnitch` also allows to extract the `TCP_INFO` socket option at user
 ## Compatibility
 
 `tcpsnitch` allows tracing applications on:
-- Linux (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25).
+- Linux (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary OS 0.4).
 - Android (tested on Android API 23).
 
 As `tcpsnitch` works by intercepting calls to libc functions using the `LD_PRELOAD` environment variable, tracing cannot be performed for applications which are statically linked with libc.
@@ -75,7 +75,7 @@ For users that want to trace Android applications, scroll down to the "Compilati
 
 #### Debian based Linux
 
-Tested on Ubuntu 16 & Debian 8
+Tested on Ubuntu 16, Debian 8, Elementary OS 0.4
 
 ```
 sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt install gcc make libc6-dev libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
@@ -84,7 +84,7 @@ sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt install gcc
 #### RPM based Linux
 
 Tested on Fedora 25 & CentOS 7
-```
+```bash
 sudo yum install make gcc glibc-devel glibc-devel.i686 libgcc libgcc.i686 libpcap-devel.x86_64 libpcap-devel.i686 jansson jansson.i686 && curl -O http://www.digip.org/jansson/releases/jansson-2.10.tar.bz2 && bunzip2 -c jansson-2.10.tar.bz2 | tar xf - && rm -f jansson-2.10.tar.bz2 && cd jansson-2.10 && ./configure && make && sudo make install && cd .. && rm -rf jansson-2.10
 ```
 
@@ -92,46 +92,66 @@ sudo yum install make gcc glibc-devel glibc-devel.i686 libgcc libgcc.i686 libpca
 
 Build & install:
 
-```
+```bash
 make && sudo make install
 ```
 
 ## Usage
 
-Usage: `tcpsnitch [<options>] <cmd> [<cmd_args>]`, where `<cmd>` is the command to trace (mandatory), `<options>` are `tcpsnitch` options and `<cmd_args>` are the arguments of `<cmd>`.
+Usage: `tcpsnitch [<options>] <cmd> [<cmd_args>]` where:
+- `<options>` are `tcpsnitch` options
+- `<cmd>` is the command to trace (mandatory)
+- `<cmd_args>` are the arguments of `<cmd>`.
 
-One may issue `tcpsnitch -h` to get more information about the various options but the most important ones are explained in this section:
+Here is a simple example with `curl` and all default options:
+```bash
+tcpsnitch curl google.com
+```
 
-- `-b` and `-u` are used for extracting `TCP_INFO` at user-defined intervals. See section "Extracting TCP_INFO".
-- `-c` is used for capture `pcap` traces of the sockets. See section "Packet capture".
-- `-a` and `-k` are used for tracing Android application. See section "Android usage".
+One may issue `tcpsnitch -h` to get more information about the supported options. The most important ones are the following:
+
+- `-b` and `-u` are used for extracting `TCP_INFO` at user-defined intervals. See section "Extracting `TCP_INFO`" for more info.
+- `-c` is used for capturing `pcap` traces of the sockets. See section "Packet capture" for more info.
+- `-a` and `-k` are used for tracing Android application. See section "Android usage" for more info.
 - `-n` deactivate the automatic upload of traces.
-- `-d` sets the directory in which the trace will be written (instead of `/tmp`).
-- `-f` sets the verbosity level of logs saved to file. By default, only WARN and ERROR messages are written to logs. This could be useful for reporting a bug.
-- `-l` is similar to `-f` but sets the log verbosity on STDOUT. This is used for debugging purposes.
+- `-d` sets the directory in which the trace will be written (instead of a random directory in `/tmp`).
+- `-f` sets the verbosity level of logs saved to file. By default, only WARN and ERROR messages are written to logs. This is mainly be useful for reporting a bug and debugging.
+- `-l` is similar to `-f` but sets the log verbosity on STDOUT, which by default only shows ERROR messages. This is used for debugging purposes.
 - `-t` controls the frequency at which events are dumped to file. By default, events are written to file every 1000 milliseconds.
-- `-v` is pretty useless at the moment, but supposed to put `tcpsnitch` in verbose mode in the style of `strace`. Still to be implemented (at the moment it only display event names).
+- `-v` is pretty useless at the moment, but it is supposed to put `tcpsnitch` in verbose mode in the style of `strace`. Still to be implemented (at the moment it only display event names).
 
-### Extracting TCP_INFO
-`-b <bytes>` and `-u <usec>` allow to extract the value of the `TCP_INFO` socket option for each socket at user-defined intervals. Note that the `TCP_INFO` value appears as any other event in the JSON trace of the socekt. With `-b <bytes>`, `TCP_INFO` is recorded every `<bytes>` sent+received on the socket. With `-u <usec>`, `TCP_INFO` is recorded every `<usec>` micro-seconds. When both options are set, `TCP_INFO` is recorded when either one of the two conditions is matched. By default this option is turned off. Also note that `tcpsnitch` only checks for these conditions when an overridden function is called.
+### Extracting `TCP_INFO`
+`-b <bytes>` and `-u <usec>` allow to extract the value of the `TCP_INFO` socket option for each socket at user-defined intervals. Note that the `TCP_INFO` values appears as any other event in the JSON trace of the socekt. 
+
+- With `-b <bytes>`, `TCP_INFO` is recorded every `<bytes>` sent+received on the socket.
+- With `-u <usec>`, `TCP_INFO` is recorded every `<usec>` micro-seconds.
+- When both options are set, `TCP_INFO` is recorded when either one of the two conditions is matched. By default this option is turned off. 
+
+Also note that `tcpsnitch` only checks for these conditions when an overridden function is called.
 
 ### Packet capture
-The `-c` option activates the capture of a `.pcap` trace for each socket. Note that you need to have the appropriate permissions to be able to capture traffic on an interface (see `man pcap` for more information about such permissions). Also note that this feature is not available for Android at the moment, as regular Android packages do not have sufficient permissions.
+The `-c` option activates the capture of a `.pcap` trace for each socket. Note that you need to have the appropriate permissions to be able to capture traffic on an interface (see `man pcap` for more information about such permissions).
+
+This feature is not available for Android at the moment.
 
 ### Android usage
 
-The usage on Android is slightly different than on Linux, but most options are supported on both platforms. 
+The usage on Android is a two-steps process, very similar to the usage on Linux. First, `tcpsnitch` setup and launch the application to be traced with the appropriate options, then the traces are pulled from the device and copied to the host machine. 
 
-In order to trace apps, a few setup steps are required:
-- Enable USB Debugging on your phone: Go to Settings > About Phone > Tap on Build number 7 times > Return to Settings > Developer Options > USB Debugging (this must only be done once).
+All options are supported on Android, except the `-c` option for capture `.pcap` traces.
+
+A few preliminary setup steps must be done once on the device:
+- Enable USB Debugging on your phone: Go to Settings > About Phone > Tap on Build number 7 times > Return to Settings > Developer Options > USB Debugging.
 - Plug your phone to your machine with a USB cable.
-- Accept the connection on the phone (this must also be done only once).
+- Accept the connection on the phone.
 - Isssue `adb devices` and make sure that your phone is visible (your should see `device` in the second column).
 
-When the device is accesible via `adb`, the usage is basically the same as on Linux except that it works in two steps:
+When the device is accesible via `adb`, the usage is almost the same as on Linux:
 
-1. Issue the regular `tcpsnitch` command with the option `-a` to indicate that you want to trace an applicaiton on the connected Android device. Note that `<cmd>` argument must match the name of a package installed on the device via a simple `grep`. For instance, to trace the Firefox app whose package is `org.firefox.com`, one may isssue `tcpsnitch -a firefox`. `tcpsnitch` will then inform you of the matching package found and immediately start the application.
-2. When you are done interacting with the application, issue `tcpsnitch -k <package>` to kill the application and terminate the tracing process. The traces will be pulled from the device and saved on your disk in `/tmp` before being uploaded to the [web application](http://ns328523.ip-37-187-114.eu) as usual
+1. Issue the regular `tcpsnitch` command with the option `-a` to indicate that you want to trace an application on the connected Android device. Note that `<cmd>` argument must match the name of a package installed on the device via a simple `grep`. For instance, to trace the Firefox application whose package name is `org.firefox.com`, one may isssue `tcpsnitch -a firefox`. `tcpsnitch` will inform you of the matching package found and immediately start the application.
+2. When you are done interacting with the application, issue `tcpsnitch -k <package>` to kill the application and terminate the tracing process. The traces will be pulled from the device and saved on your disk in `/tmp` before being uploaded to the [web application](http://ns328523.ip-37-187-114.eu).
+
+**Important:** you must restart your Android device to completely deactivate the tracing. As `tcpsnitch` uses Android properties to setup the `LD_PRELOAD` library, and these properties cannot be unset, rebooting the device must be done to remove the properties (maybe someone knows a better solution?).
 
 Here is a full example for tracing Firefox:
 ```bash
