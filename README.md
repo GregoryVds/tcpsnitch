@@ -214,6 +214,7 @@ Lets start with `libjansson`:
 git clone https://github.com/akheron/jansson && cd jansson
 # Configuration file which we don't use, we may leave it empty
 touch src/jansson_private_config.h
+sed -i 's/BUILD_SHARED_LIBRARY/BUILD_STATIC_LIBRARY/g' Android.mk
 $NDK/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk
 cp obj/local/armeabi/libjansson.a $TOOLCHAIN/sysroot/usr/lib/
 cp src/jansson.h android/jansson_config.h $TOOLCHAIN/sysroot/usr/include/
