@@ -60,7 +60,7 @@ Finally, `tcpsnitch` also allows to extract the `TCP_INFO` socket option at user
 ## Compatibility
 
 `tcpsnitch` allows tracing applications on:
-- Linux 64-bit (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary OS 0.4).
+- Linux 64-bit (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary OS 0.4, Mint 18).
 - Android (tested on Android API 23).
 
 As `tcpsnitch` works by intercepting calls to libc functions using the `LD_PRELOAD` environment variable, tracing cannot be performed for applications which are statically linked with libc.
@@ -75,10 +75,10 @@ For users that want to trace Android applications, scroll down to the "Compilati
 
 #### Debian based Linux
 
-Tested on Ubuntu 16, Debian 8, Elementary OS 0.4
+Tested on Ubuntu 16, Debian 8, Elementary OS 0.4, Mint 18
 
 ```
-sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt install gcc make libc6-dev libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
+sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt install make gcc gcc-multilib libc6-dev libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
 ```
 
 #### RPM based Linux
