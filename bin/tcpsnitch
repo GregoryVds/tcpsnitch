@@ -326,7 +326,7 @@ tcpsnitch_linux() {
     uname -s > "${meta_dir}/os"
     echo "$VERSION" > "${meta_dir}/version"
     cat "$LINUX_GIT_HASH" > "${meta_dir}/git_hash"
-    hostid > "${meta_dir}/host_id"
+    ifconfig | grep 'HWaddr' | awk '{print $NF}' | sha256sum | awk '{print $1}' > "${meta_dir}/host_id"
     "$1" --version 2>/dev/null >"${meta_dir}/app_version"
     for i in $(seq 0 $((${META_OPTIONS_COUNT}-1))); do
         echo "${META_OPTIONS_VALS[$i]}" > ${meta_dir}/${META_OPTIONS_NAMES[$i]}
@@ -384,7 +384,7 @@ tcpsnitch_android() {
     adb shell "echo ${VERSION} > ${meta_dir}/version"
     adb shell "echo ${PACKAGE} > ${meta_dir}/app"
     adb shell "echo $(cat "$ANDROID_GIT_HASH") > ${meta_dir}/git_hash"
-    adb shell "hostid > ${meta_dir}/host_id"
+    adb shell "ifconfig | grep 'HWaddr' | awk '{print \$NF}' | sha256sum | awk '{print \$1}' > ${meta_dir}/host_id"
     adb shell "dumpsys package ${PACKAGE} | grep versionName > ${meta_dir}/app_version"
     for i in $(seq 0 $((${META_OPTIONS_COUNT}-1))); do
         adb shell "echo ${META_OPTIONS_VALS[$i]} > ${meta_dir}/${META_OPTIONS_NAMES[$i]}"
