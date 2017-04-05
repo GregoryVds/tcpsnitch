@@ -39,7 +39,7 @@ DEBIAN_BASED_DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
 # Note: On Centos, there is no "jansson.devel" pacakge available. Thus for ease
 # of installation, we specify the library name.
 RPM_BASED_DEPS=-l:libjansson.so.4 -ldl -lpthread -lpcap
-LINUX_DEPS=$(shell if which rpm >/dev/null; then echo $(RPM_BASED_DEPS); else echo $(DEBIAN_BASED_DEPS); fi)
+LINUX_DEPS=$(shell if /usr/bin/rpm -q -f /usr/bin/rpm >/dev/null 2>&1; then echo $(RPM_BASED_DEPS); else echo $(DEBIAN_BASED_DEPS); fi)
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
