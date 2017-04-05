@@ -60,7 +60,7 @@ Finally, `tcpsnitch` also allows to extract the `TCP_INFO` socket option at user
 ## Compatibility
 
 `tcpsnitch` allows tracing applications on:
-- Linux (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary OS 0.4).
+- Linux 64-bit (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary OS 0.4).
 - Android (tested on Android API 23).
 
 As `tcpsnitch` works by intercepting calls to libc functions using the `LD_PRELOAD` environment variable, tracing cannot be performed for applications which are statically linked with libc.
@@ -256,7 +256,7 @@ The implication here is that it allows to intercept calls to system call wrapper
 
 ### What are these `wrong ELF class` errors?
 
-TODO
+Nothing bad, these can ignored. The `tcpsnitch` shared library is compiled for both the 32-bit and 64-bit architectures. When tracing a command, both librairies are loaded in the `LD_PRELOAD`environment variable since there is no easy way to know the architecture of the command binary (often it is a shell script executing another binary). The dynamic linker then takes care of loading the compatible library and ignore the second one (but still throws an error).
 
 ## Contact
 
