@@ -171,12 +171,10 @@ void print_trace(void) {
         size_t i;
 
         size = backtrace(array, 10);
-        strings = backtrace_symbols(array, size);
+        if (!(strings = backtrace_symbols(array, size))) return;
 
         printf("Obtained %zd stack frames.\n", size);
-
         for (i = 0; i < size; i++) fprintf(_stderr, "     %s\n", strings[i]);
-
         free(strings);
 }
 #endif
