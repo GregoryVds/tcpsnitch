@@ -28,6 +28,7 @@
 #include "sock_events.h"
 #include "string_builders.h"
 
+#define EXPORT __attribute__((visibility("default")))
 #define LIBC_VERSION (__GLIBC__ * 100 + __GLIBC_MINOR__)
 
 #define arg2 a
@@ -40,7 +41,7 @@
         typedef RETURN_TYPE (*FUNCTION##_type)(int fd, __VA_ARGS__);       \
         FUNCTION##_type orig_##FUNCTION;                                   \
                                                                            \
-        RETURN_TYPE FUNCTION(int fd, __VA_ARGS__) {                        \
+        EXPORT RETURN_TYPE FUNCTION(int fd, __VA_ARGS__) {                 \
                 if (!orig_##FUNCTION)                                      \
                         orig_##FUNCTION =                                  \
                             (FUNCTION##_type)dlsym(RTLD_NEXT, #FUNCTION);  \
@@ -56,7 +57,7 @@
         typedef RETURN_TYPE (*FUNCTION##_type)(int fd);                   \
         FUNCTION##_type orig_##FUNCTION;                                  \
                                                                           \
-        RETURN_TYPE FUNCTION(int fd) {                                    \
+        EXPORT RETURN_TYPE FUNCTION(int fd) {                             \
                 if (!orig_##FUNCTION)                                     \
                         orig_##FUNCTION =                                 \
                             (FUNCTION##_type)dlsym(RTLD_NEXT, #FUNCTION); \
@@ -91,7 +92,7 @@
 typedef int (*socket_type)(int domain, int type, int protocol);
 socket_type orig_socket;
 
-int socket(int domain, int type, int protocol) {
+EXPORT int socket(int domain, int type, int protocol) {
         if (!orig_socket) orig_socket = (socket_type)dlsym(RTLD_NEXT, "socket");
         int fd = orig_socket(domain, type, protocol);
         if (is_inet_socket(fd)) sock_ev_socket(fd, domain, type, protocol);
@@ -101,7 +102,7 @@ int socket(int domain, int type, int protocol) {
 typedef int (*connect_type)(int fd, const struct sockaddr *addr, socklen_t len);
 connect_type orig_connect;
 
-int connect(int fd, const struct sockaddr *addr, socklen_t len) {
+EXPORT int connect(int fd, const struct sockaddr *addr, socklen_t len) {
         if (!orig_connect)
                 orig_connect = (connect_type)dlsym(RTLD_NEXT, "connect");
 
@@ -154,7 +155,7 @@ override(recvmsg, ssize_t, 3, struct msghdr *a, int b);
 override(sendmmsg, int, 4, const struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          const struct timespec *d);
-#elif LIBC_VERSION > 219 // Absolutely not sure this is the right boundary!
+#elif LIBC_VERSION > 219  // Absolutely not sure this is the right boundary!
 override(sendmmsg, int, 4, struct mmsghdr *a, unsigned int b, int c);
 override(recvmmsg, int, 5, struct mmsghdr *a, unsigned int b, int c,
          struct timespec *d);
@@ -188,7 +189,7 @@ override(read, ssize_t, 3, void *a, size_t b);
 typedef int (*close_type)(int fd);
 close_type orig_close;
 
-int close(int fd) {
+EXPORT int close(int fd) {
         if (!orig_close) orig_close = (close_type)dlsym(RTLD_NEXT, "close");
 
         bool is_inet = is_inet_socket(fd);
@@ -207,7 +208,7 @@ override(dup3, int, 3, int a, int b);
 typedef pid_t (*fork_type)(void);
 fork_type orig_fork;
 
-pid_t fork(void) {
+EXPORT pid_t fork(void) {
         if (!orig_fork) orig_fork = (fork_type)dlsym(RTLD_NEXT, "fork");
         LOG(INFO, "fork() called.");
 
@@ -218,7 +219,6 @@ pid_t fork(void) {
         errno = err;
         return ret;
 }
-
 
 /*
   _   _ _ _____       _    ____ ___
@@ -257,9 +257,9 @@ typedef int (*ioctl_type)(int fd, unsigned long int request, ...);
 ioctl_type orig_ioctl;
 
 #ifdef __ANDROID__
-int ioctl(int fd, int request, ...) {
+EXPORT int ioctl(int fd, int request, ...) {
 #else
-int ioctl(int fd, unsigned long int request, ...) {
+EXPORT int ioctl(int fd, unsigned long int request, ...) {
 #endif
         va_list argp;
         va_start(argp, request);
@@ -305,7 +305,7 @@ override(sendfile, ssize_t, 4, int a, off_t *b, size_t c);
 typedef int (*poll_type)(struct pollfd *fds, nfds_t nfds, int timeout);
 poll_type orig_poll;
 
-int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
+EXPORT int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
         if (!orig_poll) orig_poll = (poll_type)dlsym(RTLD_NEXT, "poll");
 
         int ret = orig_poll(fds, nfds, timeout);
@@ -327,7 +327,7 @@ typedef int (*ppoll_type)(struct pollfd *fds, nfds_t nfds,
                           const sigset_t *sigmask);
 ppoll_type orig_ppoll;
 
-int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
+EXPORT int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
           const sigset_t *sigmask) {
         if (!orig_ppoll) orig_ppoll = (ppoll_type)dlsym(RTLD_NEXT, "ppoll");
 
@@ -365,7 +365,7 @@ select_type orig_select;
 #define WRITE_FLAG 0b10
 #define EXCEPT_FLAG 0b100
 
-int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+EXPORT int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
            struct timeval *timeout) {
         if (!orig_select) orig_select = (select_type)dlsym(RTLD_NEXT, "select");
 
@@ -408,7 +408,7 @@ typedef int (*pselect_type)(int nfds, fd_set *readfds, fd_set *writefds,
                             const sigset_t *sigmask);
 pselect_type orig_pselect;
 
-int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+EXPORT int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
             const struct timespec *timeout, const sigset_t *sigmask) {
         if (!orig_pselect)
                 orig_pselect = (pselect_type)dlsym(RTLD_NEXT, "pselect");
@@ -463,7 +463,7 @@ int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 typedef int (*fcntl_type)(int fd, int cmd, ...);
 fcntl_type orig_fcntl;
 
-int fcntl(int fd, int cmd, ...) {
+EXPORT int fcntl(int fd, int cmd, ...) {
         if (!orig_fcntl) orig_fcntl = (fcntl_type)dlsym(RTLD_NEXT, "fcntl");
 
         va_list argp;
@@ -497,7 +497,7 @@ typedef int (*epoll_ctl_type)(int epfd, int op, int fd,
 
 epoll_ctl_type orig_epoll_ctl;
 
-int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
+EXPORT int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
         if (!orig_epoll_ctl)
                 orig_epoll_ctl = (epoll_ctl_type)dlsym(RTLD_NEXT, "epoll_ctl");
 
@@ -515,7 +515,7 @@ typedef int (*epoll_wait_type)(int epfd, struct epoll_event *events,
 
 epoll_wait_type orig_epoll_wait;
 
-int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
+EXPORT int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
                int timeout) {
         if (!orig_epoll_wait)
                 orig_epoll_wait =
@@ -542,7 +542,7 @@ typedef int (*epoll_pwait_type)(int epfd, struct epoll_event *events,
 
 epoll_pwait_type orig_epoll_pwait;
 
-int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+EXPORT int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
                 int timeout, const sigset_t *sigmask) {
         if (!orig_epoll_pwait)
                 orig_epoll_pwait =
