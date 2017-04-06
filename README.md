@@ -93,7 +93,9 @@ sudo yum install make gcc glibc-devel glibc-devel.i686 libgcc libgcc.i686 libpca
 Build & install:
 
 ```bash
-make && sudo make install
+./configure
+make
+sudo make install
 ```
 
 ## Usage
