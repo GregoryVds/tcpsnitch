@@ -1,2 +1,18 @@
 #!/usr/bin/env bash
+
+echo "supports_i386=false" > .config.in
+# Get gcc base settings
+_cc_text="$(echo | (gcc -E -Wp,-v - > /dev/null) 2>&1)"
+# Extract include path
+_prog="BEGIN { f=0 };
+/include <\.\.\.> search starts here:/ { f=1; next };
+/^End/ { f=0; next };
+f { print}"
+while read -r line; do
+    # Check if 32bits compatibility bits are there
+    if [ -e "$line/gnu/stubs-32.h" ]; then
+        sed -i -E "s/(supports_i386=).*/\1true/" .config.in
+    fi
+done <<< "$(echo "$_cc_text" | awk "$_prog")"
+
 make configure

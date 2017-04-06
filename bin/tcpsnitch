@@ -36,6 +36,7 @@ OPT_P=0
 OPT_T=1000
 OPT_U=0
 OPT_V=0
+ENABLE_I386=false
 
 # Options saved in meta files
 META_OPTIONS_NAMES=(opt_b opt_f opt_u)
@@ -49,9 +50,11 @@ META_OPTIONS_VALS=($OPT_B $OPT_F $OPT_U)
 ##########
 
 usage() {
-    echo "Usage: ${NAME} [-achpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
-    echo "                 [ -k <pkg> ] [ -l <lvl> ] [ -t <msec> ]"
-    echo "                 [ -u <usec> ] [ --version ] <app> [<args>]"
+    local _head="Usage: ${NAME}"
+    local _skip=$(printf "%0.s " $(seq 1 ${#_head}))
+    echo "${_head} [-achpv] [ -b <bytes> ] [ -d <dir>] [ -f <lvl> ]"
+    echo "${_skip} [ -k <pkg> ] [ -l <lvl> ] [ -t <msec> ]"
+    echo "${_skip} [ -u <usec> ] [ --version ] <app> [<args>]"
     echo ""
     echo "<app>       cmd/package to spy on."
     echo "<args>      args to cmd."
@@ -305,7 +308,7 @@ tcpsnitch_linux() {
 
     # Test if libs are present
     cd_script_dir
-    assert_lib_present "$I386_LIB"
+    $ENABLE_I386 && assert_lib_present "$I386_LIB"
     assert_lib_present "$AMD64_LIB"
 
     create_opt_d_dir
@@ -326,7 +329,7 @@ tcpsnitch_linux() {
     uname -s > "${meta_dir}/os"
     echo "$VERSION" > "${meta_dir}/version"
     cat "$LINUX_GIT_HASH" > "${meta_dir}/git_hash"
-    if ! ip link | grep 'link/ether' | awk '{print $0}' | sha256sum | awk '{print $1}' > "${meta_dir}/host_id"; then
+    if ! ip link | grep 'link/ether' | awk '{print $2}' | sha256sum | awk '{print $1}' > "${meta_dir}/host_id"; then
         ifconfig | grep 'HWaddr' | awk '{print $NF}' | sha256sum | awk '{print $1}' > "${meta_dir}/host_id"
     fi
     "$1" --version 2>/dev/null >"${meta_dir}/app_version"
@@ -334,6 +337,9 @@ tcpsnitch_linux() {
         echo "${META_OPTIONS_VALS[$i]}" > ${meta_dir}/${META_OPTIONS_NAMES[$i]}
     done
 
+    local _preload_opt=""
+    $ENABLE_I386 && _preload_opt+="./${I386_LIB} "
+    _preload_opt+="./${AMD64_LIB}"
     TCPSNITCH_OPT_B=$OPT_B \
     TCPSNITCH_OPT_C=$OPT_C \
     TCPSNITCH_OPT_D=$OPT_D \
@@ -342,7 +348,7 @@ tcpsnitch_linux() {
     TCPSNITCH_OPT_T=$OPT_T \
     TCPSNITCH_OPT_U=$OPT_U \
     TCPSNITCH_OPT_V=$OPT_V \
-    LD_PRELOAD="./${I386_LIB} ./${AMD64_LIB}" "$@" 4>&1 3>&2
+    LD_PRELOAD="${_preload_opt}" "$@" 4>&1 3>&2
 
     # Note that tcpsnitch opens 2 streams to file descriptors 3 and 4. These new
     # streams serve as the new stdout/stderr for tcpsnitch. This allows us to

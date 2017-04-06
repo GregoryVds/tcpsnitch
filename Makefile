@@ -69,25 +69,40 @@ define check_lib
 	(ldconfig -p | grep $(1) > /dev/null) || (echo "$(2)" && false)
 endef
 
+CONFIG = .config.in
+SUPPORTS_I386 = $(shell grep supports_i386=true .config.in &> /dev/null && echo true)
+NO_I386 = "[-] 32bit support is disabled"
+
 default: linux
 
-configure:
+configure: 
 	@echo "[-] Checking presence of library dependencies..."
 	@$(call check_lib,libjansson,$(EJANSSON))
 	@$(call check_lib,libpcap,$(EPCAP))
-	@echo "[-] Checking presence of both 32 bits & 64 bits versions..."
+	@echo "[-] Checking presence of 64 bits versions..."
 	@$(call check_version,libjansson,$(AMD64))
-	@$(call check_version,libjansson,$(I386))
 	@$(call check_version,libpcap,$(AMD64))
+ifeq ($(SUPPORTS_I386),true)
+	@echo "[-] Checking presence of 32 bits versions..."
+	@$(call check_version,libjansson,$(I386))
 	@$(call check_version,libpcap,$(I386))
+else
+	@echo $(NO_I386)
+endif
 	@echo "[-] Ok! Dependencies present."
 	@echo "[-] Issue \"make && make install\" to compile & install $(EXECUTABLE)."
 
-linux: $(HEADERS) $(SOURCES)
+linux: $(CONFIG) $(HEADERS) $(SOURCES)
 	@echo "[-] Compiling Linux 64 bits lib version..."
 	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
+ifeq ($(SUPPORTS_I386),true)
 	@echo "[-] Compiling Linux 32 bits lib version..."
 	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
+	@sed -i -E "s/(ENABLE_I386=).*/\1true/" "bin/$(EXECUTABLE)"
+else
+	@echo $(NO_I386)
+	@sed -i -E "s/(ENABLE_I386=).*/\1false/" "bin/$(EXECUTABLE)"
+endif
 	@git rev-parse HEAD > ./bin/$(LINUX_GIT_HASH)
 
 android: $(HEADERS) $(SOURCES)
@@ -98,7 +113,7 @@ endif
 	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
 	@git rev-parse HEAD > ./bin/$(ANDROID_GIT_HASH)
 
-install:
+install: linux
 	mkdir -p $(DEPS_PATH)
 	install -m 0444 ./bin/* $(DEPS_PATH)
 	chmod 0755 $(DEPS_PATH)/$(EXECUTABLE)
@@ -109,7 +124,7 @@ uninstall:
 	@rm $(BIN_PATH)/$(EXECUTABLE)
 
 clean:
-	@rm -f ./bin/*.so* *hash
+	@rm -f ./bin/*.so* *hash $(CONFIG) 
 
 tests: linux install
 	cd tests && rake
@@ -117,5 +132,8 @@ tests: linux install
 index:
 	ctags -R .
 
-.PHONY: configure tests clean index android
+$(CONFIG):
+	./configure
+
+.PHONY: configure tests clean index android $(CONFIG) 
 
