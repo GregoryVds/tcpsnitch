@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 readonly CONFIG=.config.in
 readonly TOP_PID=$$
-readonly AMD64="x86-64"
-readonly I386="i386"
 readonly MISSING_LIB="Error: missing library dependency"
 readonly MISSING_JANSSON="$MISSING_LIB libjansson (see www.digip.org/jansson)"
 readonly MISSING_PCAP="$MISSING_LIB pcap (see www.tcpdump.org)"
@@ -55,7 +53,7 @@ assert_lib_present() {
 assert_lib_version_present() {
     declare lib="$1"
     declare version="$2"
-    if ! /sbin/ldconfig -p | grep "$lib" | grep "$version" >/dev/null 2>&1; then
+    if ! file $(realpath $(/sbin/ldconfig -p | grep "$lib" | awk '{print $NF}')) | grep "$version" >/dev/null; then
         missing_lib_version $lib $version
     fi
 }
@@ -63,15 +61,15 @@ assert_lib_version_present() {
 echo "[-] Checking presence of library dependencies..."
 assert_lib_present "libjansson" "$MISSING_JANSSON"
 assert_lib_present "libpcap" "$MISSING_PCAP"
-echo "[-] Checking presence of 64 bits versions..."
-assert_lib_version_present "libjansson" "$AMD64"
-assert_lib_version_present "libpcap" "$AMD64"
+echo "[-] Checking presence of 64-bit versions..."
+assert_lib_version_present "libjansson" 64-bit
+assert_lib_version_present "libpcap" 64-bit
 if $(supports_i386); then
-    echo "[-] Checking presence of 32 bits versions..."
-    assert_lib_version_present "libjansson" "$I386"
-    assert_lib_version_present "libpcap" "$I386"
+    echo "[-] Checking presence of 32-bit versions..."
+    assert_lib_version_present "libjansson" 32-bit
+    assert_lib_version_present "libpcap" 32-bit
 else
-    echo "[-] 32bit support is disabled."
+    echo "[-] 32-bit support is disabled."
 fi
 echo "[-] Ok! Dependencies present."
 echo "[-] Issue \"make && make install\" to compile & install tcpsnitch."
