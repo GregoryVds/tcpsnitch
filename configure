@@ -1,2 +1,77 @@
 #!/usr/bin/env bash
-make configure
+readonly CONFIG=.config.in
+readonly TOP_PID=$$
+readonly AMD64="x86-64"
+readonly I386="i386"
+readonly MISSING_LIB="Error: missing library dependency"
+readonly MISSING_JANSSON="$MISSING_LIB libjansson (see www.digip.org/jansson)"
+readonly MISSING_PCAP="$MISSING_LIB pcap (see www.tcpdump.org)"
+
+trap "exit 1" TERM
+
+error() {
+    declare msg="$1"
+    echo "$0: ${msg}."
+    kill -s TERM $TOP_PID
+}
+
+supports_i386() {
+    # Get gcc base settings
+    declare cc_text="$(echo | (gcc -E -Wp,-v - > /dev/null) 2>&1)"
+
+    # Extract include path
+    declare prog="BEGIN { f=0 };
+    /include <\.\.\.> search starts here:/ { f=1; next };
+    /^End/ { f=0; next };
+    f { print}"
+
+    declare include_path="$(echo "$cc_text" | awk "$prog")"
+
+    echo "supports_i386=false" > "$CONFIG"
+    while read -r line; do
+        # Check if 32bits compatibility bits are there
+        if [ -e "$line/gnu/stubs-32.h" ]; then
+            sed -i -E "s/(supports_i386=).*/\1true/" "$CONFIG"
+            exit 0
+        fi
+    done <<< "$include_path"
+    exit 1
+}
+
+missing_lib_version() {
+    declare lib="$1"
+    declare version="$2"
+    error "Error: missing library version (${version} version of ${lib})"
+}
+
+assert_lib_present() {
+    declare lib="$1"
+    declare error_msg="$2"
+    if ! ldconfig -p | grep "$lib" >/dev/null 2>&1; then
+        error "$error_msg"
+    fi
+}
+
+assert_lib_version_present() {
+    declare lib="$1"
+    declare version="$2"
+    if ! ldconfig -p | grep "$lib" | grep "$version" >/dev/null 2>&1; then
+        missing_lib_version $lib $version
+    fi
+}
+
+echo "[-] Checking presence of library dependencies..."
+assert_lib_present "libjansson" "$MISSING_JANSSON"
+assert_lib_present "libpcap" "$MISSING_PCAP"
+echo "[-] Checking presence of 64 bits versions..."
+assert_lib_version_present "libjansson" "$AMD64"
+assert_lib_version_present "libpcap" "$AMD64"
+if $(supports_i386); then
+    echo "[-] Checking presence of 32 bits versions..."
+    assert_lib_version_present "libjansson" "$I386"
+    assert_lib_version_present "libpcap" "$I386"
+else
+    echo "[-] 32bit support is disabled."
+fi
+echo "[-] Ok! Dependencies present."
+echo "[-] Issue \"make && make install\" to compile & install tcpsnitch."
