@@ -58,14 +58,14 @@ endef
 default: linux
 
 linux: $(CONFIG) $(HEADERS) $(SOURCES)
-	@echo "[-] Compiling Linux 64bit lib version..."
+	@echo "[-] Compiling Linux 64-bit lib version..."
 	@$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
 	@if grep supports_i386=true .config.in >/dev/null 2>&1; then\
-		echo "[-] Compiling Linux 32bit lib version...";\
+		echo "[-] Compiling Linux 32-bit lib version...";\
 		$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS);\
 		$(call set_file_opt,$(ENABLE_I386),true);\
 	else\
-		echo "[-] 32bit support is disabled.";\
+		echo "[-] 32-bit support is disabled.";\
 		$(call set_file_opt,$(ENABLE_I386),false);\
 	fi
 	@$(call set_file_opt,$(LINUX_GIT_HASH),$(shell git rev-parse HEAD))

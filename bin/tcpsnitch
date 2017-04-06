@@ -19,7 +19,7 @@ readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86-64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
 readonly SCRIPT_DIR=$(dirname "$(realpath "$0")")
 readonly PROP_PREFIX="be.ucl.${NAME}"
-readonly HIDDEN_ERRORS="wrong ELF class: ELFCLASS32|wrong ELF class: ELFCLASS64"
+readonly HIDDEN_ERRORS="wrong ELF class"
 readonly TOP_PID=$$
 
 # Option default values
@@ -344,6 +344,15 @@ tcpsnitch_linux() {
     local _preload_opt=""
     ${ENABLE_I386} && _preload_opt+="./${I386_LIB} "
     _preload_opt+="./${AMD64_LIB}"
+
+    # libtcpsnitch uses fd 3 & 4 as stdout & stderr repectively. This allows to
+    # distinguish the standard outputs of tcpsnitch and of the traced process.
+    # The distinction is however not used at the moment s standard streams of
+    # libtcpsnitch & the traced process are currently sent to the same place.
+    exec 3>&1
+    exec 4>&2
+
+    {\
     TCPSNITCH_OPT_B=$OPT_B \
     TCPSNITCH_OPT_C=$OPT_C \
     TCPSNITCH_OPT_D=$OPT_D \
@@ -352,21 +361,12 @@ tcpsnitch_linux() {
     TCPSNITCH_OPT_T=$OPT_T \
     TCPSNITCH_OPT_U=$OPT_U \
     TCPSNITCH_OPT_V=$OPT_V \
-    LD_PRELOAD="${_preload_opt}" "$@" 3>&1 4>&2
+    LD_PRELOAD="${_preload_opt}" "$@" 1>&3; \
+    # Filter out some errors
+    } 2>&1 | grep -E -v "$HIDDEN_ERRORS" 1>&2
 
-    # Note that tcpsnitch opens 2 streams to file descriptors 3 and 4. These new
-    # streams serve as the new stdout/stderr for tcpsnitch. This allows us to
-    # distinguish stdout/stderr of tcpsnitch & of the traced process.
-    declare cmd_exit_status=$?
-
-    info "Trace saved in ${OPT_D}"
-    if [[ "$cmd_exit_status" == 0 ]]; then
-        zip_trace
-        upload_trace
-    else
-        error "Traced command exited abnormally with error code '$cmd_exit_status'"
-        exit 1
-    fi
+    zip_trace
+    upload_trace
 }
 
 ###############################################################################
