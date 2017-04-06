@@ -102,16 +102,9 @@ static void open_std_streams(void) {
          * some bash redirections (3>&1 4>&2 1>/dev/null 2>&). As a consequence,
          * tcpsnitch stderr/stdout do not have the regular 1 & 2 fd, but are
          * 3 and 4 instead. */
-        if (!(_stdout = fdopen(STDOUT_FD, "w"))) goto error1;
-        if (!(_stderr = fdopen(STDERR_FD, "w"))) goto error2;
+        _stdout = my_fdopen(STDOUT_FD, "w");
+        _stderr = my_fdopen(STDERR_FD, "w");
         return;
-error2:
-        LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
-        goto error_out;
-error1:
-        LOG(ERROR, "fdopen() failed. No buffered I/O for stdout.");
-error_out:
-        LOG_FUNC_ERROR;
 }
 #endif
 

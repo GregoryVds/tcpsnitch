@@ -87,6 +87,16 @@ error:
         return false;
 }
 
+typedef FILE *(*orig_fdopen_type)(int fd, const char *mode);
+
+orig_fdopen_type orig_fdopen;
+
+FILE *my_fdopen(int fd, const char *mode) {
+        if (!orig_fdopen)
+                orig_fdopen = (orig_fdopen_type)dlsym(RTLD_NEXT, "fdopen");
+        return orig_fdopen(fd, mode);
+}
+
 int append_string_to_file(const char *str, const char *path) {
         FILE *fp = fopen(path, "a");
         if (!fp) goto error1;

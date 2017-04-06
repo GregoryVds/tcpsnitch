@@ -20,6 +20,7 @@ bool is_socket(int fd);
 bool is_inet_socket(int fd);
 bool is_tcp_socket(int fd);
 
+FILE *my_fdopen(int fd, const char *mode);
 int append_string_to_file(const char *str, const char *path);
 
 int fill_tcp_info(int fd, struct tcp_info *info);
