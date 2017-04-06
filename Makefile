@@ -23,7 +23,7 @@ DEPS_PATH=$(BIN_PATH)/tcpsnitch_deps
 
 # Compiler & linker flags
 CC=gcc
-C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic
+C_FLAGS=-g -fPIC --shared -Wl,-Bsymbolic -std=c11
 W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wshadow -Wpointer-arith \
 	-Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual \
 	-Wunreachable-code
