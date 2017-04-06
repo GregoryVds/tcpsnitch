@@ -3,19 +3,20 @@ MAJOR_VERSION=0
 MINOR_VERSION=1
 VERSION=$(MAJOR_VERSION).$(MINOR_VERSION)
 
+CONFIG=.config.in
+
 # ./bin names
 EXECUTABLE=tcpsnitch
-
 BASE_NAME=lib$(EXECUTABLE).so.$(VERSION)
 AMD64=x86-64
 I386=i386
 ARM=arm
-LIB_AMD64=$(BASE_NAME)-$(subst -,_,$(AMD64))
+LIB_AMD64=$(BASE_NAME)-$(AMD64)
 LIB_I386=$(BASE_NAME)-$(I386)
 LIB_ARM=$(BASE_NAME)-$(ARM)
-
 LINUX_GIT_HASH=linux_git_hash
 ANDROID_GIT_HASH=android_git_hash
+ENABLE_I386=enable_i386
 
 # Installation paths
 BIN_PATH=$(DESTDIR)/usr/local/bin
@@ -35,13 +36,13 @@ W_FLAGS=-Wall -Wextra -Werror -Wfloat-equal -Wshadow -Wpointer-arith \
 # compiler flags, which we dont use anyway. We thus only need to install for a
 # single architecture and we must specify the library name explicitly since we
 # will miss the linker name symlink for the other architecture.
-DEBIAN_BASED_DEPS=-ljansson -ldl -lpthread -l:libpcap.so.0.8
+DEBIAN_BASED_DEPS=-lpthread -ldl -ljansson -l:libpcap.so.0.8
 # Note: On Centos, there is no "jansson.devel" pacakge available. Thus for ease
 # of installation, we specify the library name.
-RPM_BASED_DEPS=-l:libjansson.so.4 -ldl -lpthread -lpcap
+RPM_BASED_DEPS=-lpthread -ldl -l:libjansson.so.4 -lpcap
 # Fallback to standard names for other distributions
 OTHER_DEPS=-lpthread -ldl -lpcap -ljansson
-LINUX_DEPS=$(shell if type rpm &>/dev/null; then echo $(RPM_BASED_DEPS); elif type apt-get &> /dev/null; then echo $(DEBIAN_BASED_DEPS); else echo $(OTHER_DEPS); fi)
+LINUX_DEPS=$(shell if rpm -q -f /usr/bin/rpm >/dev/null 2>&1; then echo $(RPM_BASED_DEPS); elif type apt-get >/dev/null 2>&1; then echo $(DEBIAN_BASED_DEPS); else echo $(OTHER_DEPS); fi)
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
@@ -49,71 +50,35 @@ HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
 SOURCES=libc_overrides.c lib.c sock_events.c string_builders.c json_builder.c \
 	packet_sniffer.c logger.c init.c resizable_array.c verbose_mode.c \
 
-# Error messages
-M_LIB=Error: missing library dependency
-EJANSSON=$(M_LIB) libjansson (see www.digip.org/jansson)
-EPCAP=$(M_LIB) pcap (see www.tcpdump.org)
-M_LIB_V=Error: missing library version
-
-# $(1) is lib name, $(2) is version
-define missing_version
-	(echo "$(M_LIB_V): $(2) version of $(1)." && false)
+# $(1) is file name, $(2) is config value
+define set_file_opt
+	echo $(2) > bin/$(1)
 endef
-
-define check_version
-	(ldconfig -p | grep $(1) | grep $(2) >/dev/null) || $(call missing_version,$(1),$(2))
-endef
-
-# $(1) is lib name, $(2) is error message
-define check_lib
-	(ldconfig -p | grep $(1) > /dev/null) || (echo "$(2)" && false)
-endef
-
-CONFIG = .config.in
-SUPPORTS_I386 = $(shell grep supports_i386=true .config.in &> /dev/null && echo true)
-NO_I386 = "[-] 32bit support is disabled"
 
 default: linux
 
-configure: 
-	@echo "[-] Checking presence of library dependencies..."
-	@$(call check_lib,libjansson,$(EJANSSON))
-	@$(call check_lib,libpcap,$(EPCAP))
-	@echo "[-] Checking presence of 64 bits versions..."
-	@$(call check_version,libjansson,$(AMD64))
-	@$(call check_version,libpcap,$(AMD64))
-ifeq ($(SUPPORTS_I386),true)
-	@echo "[-] Checking presence of 32 bits versions..."
-	@$(call check_version,libjansson,$(I386))
-	@$(call check_version,libpcap,$(I386))
-else
-	@echo $(NO_I386)
-endif
-	@echo "[-] Ok! Dependencies present."
-	@echo "[-] Issue \"make && make install\" to compile & install $(EXECUTABLE)."
-
 linux: $(CONFIG) $(HEADERS) $(SOURCES)
-	@echo "[-] Compiling Linux 64 bits lib version..."
-	$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
-ifeq ($(SUPPORTS_I386),true)
-	@echo "[-] Compiling Linux 32 bits lib version..."
-	$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS)
-	@sed -i -E "s/(ENABLE_I386=).*/\1true/" "bin/$(EXECUTABLE)"
-else
-	@echo $(NO_I386)
-	@sed -i -E "s/(ENABLE_I386=).*/\1false/" "bin/$(EXECUTABLE)"
-endif
-	@git rev-parse HEAD > ./bin/$(LINUX_GIT_HASH)
+	@echo "[-] Compiling Linux 64bit lib version..."
+	@$(CC) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_AMD64) $(SOURCES) $(LINUX_DEPS)
+	@if grep supports_i386=true .config.in >/dev/null 2>&1; then\
+		echo "[-] Compiling Linux 32bit lib version...";\
+		$(CC) $(C_FLAGS) -m32 $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_I386) $(SOURCES) $(LINUX_DEPS);\
+		$(call set_file_opt,$(ENABLE_I386),true);\
+	else\
+		echo "[-] 32bit support is disabled.";\
+		$(call set_file_opt,$(ENABLE_I386),false);\
+	fi
+	@$(call set_file_opt,$(LINUX_GIT_HASH),$(shell git rev-parse HEAD))
 
 android: $(HEADERS) $(SOURCES)
 ifndef CC_ANDROID
 	$(error CC_ANDROID variable not set. See README for compilation instructions)
 endif
 	@echo "[-] Compiling Android lib version..."
-	$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
-	@git rev-parse HEAD > ./bin/$(ANDROID_GIT_HASH)
+	@$(CC_ANDROID) $(C_FLAGS) $(W_FLAGS) $(L_FLAGS) -o ./bin/$(LIB_ARM) $(SOURCES) -Wl,-Bstatic -ljansson -lpcap -Wl,-Bdynamic -ldl -llog
+	@$(call set_file_opt,$(ANDROID_GIT_HASH),$(shell git rev-parse HEAD))
 
-install: linux
+install:
 	mkdir -p $(DEPS_PATH)
 	install -m 0444 ./bin/* $(DEPS_PATH)
 	chmod 0755 $(DEPS_PATH)/$(EXECUTABLE)
@@ -124,7 +89,7 @@ uninstall:
 	@rm $(BIN_PATH)/$(EXECUTABLE)
 
 clean:
-	@rm -f ./bin/*.so* *hash $(CONFIG) 
+	@rm -f ./bin/*.so* *hash $(CONFIG)
 
 tests: linux install
 	cd tests && rake
@@ -133,7 +98,6 @@ index:
 	ctags -R .
 
 $(CONFIG):
-	./configure
+	@test -f $(CONFIG) || ./configure
 
-.PHONY: configure tests clean index android $(CONFIG) 
-
+.PHONY: configure tests clean index android $(CONFIG)

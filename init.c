@@ -117,16 +117,16 @@ error_out:
 
 static void get_options(void) {
         conf_opt_b = get_long_opt_or_defaultval(OPT_B, 4096);
-        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
 #ifdef __ANDROID__
         conf_opt_d = alloc_android_opt_d();
 #else
+        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
         conf_opt_d = alloc_str_opt(OPT_D);
 #endif
         conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
         conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
-        conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
         conf_opt_t = get_long_opt_or_defaultval(OPT_T, 1000);
+        conf_opt_u = get_long_opt_or_defaultval(OPT_U, 0);
         conf_opt_v = get_long_opt_or_defaultval(OPT_V, 0);
 }
 

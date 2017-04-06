@@ -3,6 +3,7 @@
 *.pyc
 *.py
 tags
-*linux_git_hash
-*android_git_hash
 .config.in
+linux_git_hash
+android_git_hash
+enable_i386
