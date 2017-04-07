@@ -341,7 +341,7 @@ describe 'tcp_spy' do
       it "#{syscall} should have the correct JSON fields" do
         run_c_program(syscall)
         pattern = [
-          shared_fields.merge({details: DETAILS[syscall]})
+          shared_fields.merge({details: DETAILS[syscall]}).ignore_extra_keys!
         ].ignore_extra_values!
         assert_json_match(pattern, read_json_as_array)
       end
