@@ -178,12 +178,9 @@ bool *start_capture(const char *filter_str, const char *path) {
         args->switch_flag = switch_flag;
 
         pthread_t thread;
-        int rc = pthread_create(&thread, NULL, capture_thread, args);
-        if (rc) goto error4;
-
+        if (my_pthread_create(&thread, NULL, capture_thread, args)) goto error4;
         return switch_flag;
 error4:
-        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
         free(args);
         free(switch_flag);
         pcap_dump_close(dump);
@@ -203,15 +200,13 @@ int stop_capture(bool *switch_flag, int delay_ms) {
         args->delay_ms = delay_ms;
 
         // Start thread
-        pthread_t delay_thread;
-        int rc = pthread_create(&delay_thread, NULL, delayed_stop_thread, args);
-        if (rc != 0) {
+        pthread_t thread;
+        if (my_pthread_create(&thread, NULL, delayed_stop_thread, args)) {
                 *(switch_flag) = false;
                 goto error;
         }
         return 0;
 error:
-        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
         LOG(ERROR, "Ending packet capture immediately.");
         LOG_FUNC_ERROR;
         return -1;

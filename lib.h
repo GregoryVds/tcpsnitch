@@ -43,6 +43,8 @@ bool mutex_unlock(pthread_mutex_t *mutex);
 bool mutex_destroy(pthread_mutex_t *mutex);
 bool mutex_init(pthread_mutex_t *mutex);
 
+int my_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                      void *(*start_routine)(void *), void *arg);
 void *my_malloc(size_t size);
 void *my_calloc(size_t size);
 int my_fputs(const char *s, FILE *stream);

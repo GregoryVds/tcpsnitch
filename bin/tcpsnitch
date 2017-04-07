@@ -55,7 +55,7 @@ usage() {
     echo "${_skip} [ -u <usec> ] [ --version ] <app> [<args>]"
     echo ""
     echo "<app>       cmd/package to spy on."
-    echo "<args>      args to cmd."
+    echo "<args>      args to <app>."
     echo "-a          instrument & launch app on connected android device."
     echo "-b <bytes>  dump tcp_info every <bytes> (0 means NO dump, def 0)."
     echo "-c          activate capture of pcap traces."
@@ -65,10 +65,10 @@ usage() {
     echo "-k <pkg>    kill instrumented android <pkg> and pull traces."
     echo "-l <lvl>    verbosity of logs to stderr (0 to 5, defaults to 2)."
     echo "-n          do (n)ot send traces to web server."
-    echo "-p          pedantic, ask a lot a annoying questions."
+    echo "-p          pedantic, ask a lot of annoying questions."
     echo "-t <msec>   dump to JSON file every <msec> (def. 1000)."
     echo "-u <usec>   dump tcp_info every <usec> (0 means NO dump, def 0)."
-    echo "-v          activate verbose output."
+    echo "-v          activate verbose output (not really implemented)."
     echo "--version   print ${NAME} version."
 }
 

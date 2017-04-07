@@ -49,9 +49,8 @@ static const int android_log_priorities_map[] = {
 #endif
 
 /* We do not want to open/close a new stream each time we log a single line to
-   file. Closing the stream would always trigger a write to kernel space.
-   Instead we open it once, and let the system automatically close the stream
-   when the process ends. Not sure this is the best solution? */
+   file. Instead we open it once, and let the system automatically close the
+   stream when the process ends. Not sure this is the best solution? */
 static FILE *log_file = NULL;
 static LogLevel stderr_lvl = WARN;
 static LogLevel file_lvl = WARN;
@@ -103,30 +102,19 @@ static void log_to_logcat(LogLevel log_lvl, const char *str, const char *file,
                             "(%s:%d) %s", file, line, str);
 }
 #else
-static void unbuffered_stderr(const char *str) {
-        char *msg = malloc(sizeof(char) * (strlen(str) + 2));
-        if (msg) {
-                strcpy(msg, str);
-                strcat(msg, "\n");
-                write(STDOUT_FD, msg, strlen(msg));
-                free(msg);
-        } else
-                write(STDOUT_FD, str, strlen(str));
-}
-
 static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
                           int line) {
-        if (_stderr)
+        if (_stderr) // Write on tcpsnitch _stderr
                 log_to_stream(log_lvl, str, file, line, _stderr);
-        else
-                unbuffered_stderr(str);
+        else // Default to regular stderr (the same as the main process)
+                log_to_stream(log_lvl, str, file, line, stderr);
 }
 #endif
 
 static void set_log_path(const char *path) {
         if (log_file != NULL) fclose(log_file);
 
-        if (!path) {
+        if (!path) { // reset_tcpsnitch pass a NULL pointer.
                 log_file = NULL;
                 return;
         }

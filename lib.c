@@ -266,6 +266,17 @@ error:
         return false;
 }
 
+int my_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                      void *(*start_routine)(void *), void *arg) {
+        int rc = pthread_create(thread, attr, start_routine, arg);
+        if (rc) goto error;
+        return rc;
+error:
+        LOG(ERROR, "pthread_create_failed(). %s.", strerror(rc));
+        LOG_FUNC_ERROR;
+        return rc;
+}
+
 void *my_malloc(size_t size) {
         void *ret = malloc(size);
         if (!ret) goto error;
