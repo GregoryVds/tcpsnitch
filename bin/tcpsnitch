@@ -206,6 +206,13 @@ zip_trace() {
 upload_trace() {
     if [[ $OPT_N -eq "1" ]]; then exit; fi
 
+    # Test if trace is empty
+    if ! ls ${OPT_D}/*/*.json >/dev/null 2>/dev/null; then
+        error "Nothing to trace. Please report a bug if you have reasons to believe the trace should not be empty"
+    fi
+
+    zip_trace
+
     declare form="app_trace[archive]=@${OPT_D}/archive.tar.gz"
 
     if [[ $OPT_P -eq "1" ]]; then
@@ -365,7 +372,8 @@ tcpsnitch_linux() {
     # Filter out some errors
     } 2>&1 | grep -E -v "$HIDDEN_ERRORS" 1>&2
 
-    zip_trace
+    info "Trace saved in ${OPT_D}"
+
     upload_trace
 }
 
@@ -445,7 +453,6 @@ tcpsnitch_android_teardown() {
     get_android_package "${2}"
     kill_android_package
     pull_trace_for_android_package
-    zip_trace
     upload_trace
 }
 
