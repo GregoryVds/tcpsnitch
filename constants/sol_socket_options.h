@@ -1,0 +1,155 @@
+static const IntStrPair SOL_SOCKET_OPTIONS[] = {
+#ifdef SO_DEBUG
+    ADD(SO_DEBUG),
+#endif
+#ifdef SO_REUSEADDR
+    ADD(SO_REUSEADDR),
+#endif
+#ifdef SO_TYPE
+    ADD(SO_TYPE),
+#endif
+#ifdef SO_ERROR
+    ADD(SO_ERROR),
+#endif
+#ifdef SO_DONTROUTE
+    ADD(SO_DONTROUTE),
+#endif
+#ifdef SO_BROADCAST
+    ADD(SO_BROADCAST),
+#endif
+#ifdef SO_SNDBUF
+    ADD(SO_SNDBUF),
+#endif
+#ifdef SO_RCVBUF
+    ADD(SO_RCVBUF),
+#endif
+#ifdef SO_SNDBUFFORCE
+    ADD(SO_SNDBUFFORCE),
+#endif
+#ifdef SO_RCVBUFFORCE
+    ADD(SO_RCVBUFFORCE),
+#endif
+#ifdef SO_KEEPALIVE
+    ADD(SO_KEEPALIVE),
+#endif
+#ifdef SO_OOBINLINE
+    ADD(SO_OOBINLINE),
+#endif
+#ifdef SO_NO_CHECK
+    ADD(SO_NO_CHECK),
+#endif
+#ifdef SO_PRIORITY
+    ADD(SO_PRIORITY),
+#endif
+#ifdef SO_LINGER
+    ADD(SO_LINGER),
+#endif
+#ifdef SO_BSDCOMPAT
+    ADD(SO_BSDCOMPAT),
+#endif
+#ifdef SO_REUSEPORT
+    ADD(SO_REUSEPORT),
+#endif
+#ifdef SO_PASSCRED
+    ADD(SO_PASSCRED),
+#endif
+#ifdef SO_PASSCRED
+    ADD(SO_PASSCRED),
+#endif
+#ifdef SO_PEERCRED
+    ADD(SO_PEERCRED),
+#endif
+#ifdef SO_RCVLOWAT
+    ADD(SO_RCVLOWAT),
+#endif
+#ifdef SO_SNDLOWAT
+    ADD(SO_SNDLOWAT),
+#endif
+#ifdef SO_RCVTIMEO
+    ADD(SO_RCVTIMEO),
+#endif
+#ifdef SO_SNDTIMEO
+    ADD(SO_SNDTIMEO),
+#endif
+#ifdef SO_SECURITY_AUTHENTICATION
+    ADD(SO_SECURITY_AUTHENTICATION),
+#endif
+#ifdef SO_SECURITY_ENCRYPTION_TRANSPORT
+    ADD(SO_SECURITY_ENCRYPTION_TRANSPORT),
+#endif
+#ifdef SO_SECURITY_ENCRYPTION_NETWORK
+    ADD(SO_SECURITY_ENCRYPTION_NETWORK),
+#endif
+#ifdef SO_BINDTODEVICE
+    ADD(SO_BINDTODEVICE),
+#endif
+#ifdef SO_ATTACH_FILTER
+    ADD(SO_ATTACH_FILTER),
+#endif
+#ifdef SO_DETACH_FILTER
+    ADD(SO_DETACH_FILTER),
+#endif
+#ifdef SO_GET_FILTER
+    ADD(SO_GET_FILTER),
+#endif
+#ifdef SO_PEERNAME
+    ADD(SO_PEERNAME),
+#endif
+#ifdef SO_TIMESTAMP
+    ADD(SO_TIMESTAMP),
+#endif
+#ifdef SO_TIMESTAMP
+    ADD(SO_TIMESTAMP),
+#endif
+#ifdef SO_ACCEPTCONN
+    ADD(SO_ACCEPTCONN),
+#endif
+#ifdef SO_PEERSEC
+    ADD(SO_PEERSEC),
+#endif
+#ifdef SO_PASSSEC
+    ADD(SO_PASSSEC),
+#endif
+#ifdef SO_TIMESTAMPNS
+    ADD(SO_TIMESTAMPNS),
+#endif
+#ifdef SO_MARK
+    ADD(SO_MARK),
+#endif
+#ifdef SO_TIMESTAMPING
+    ADD(SO_TIMESTAMPING),
+#endif
+#ifdef SO_PROTOCOL
+    ADD(SO_PROTOCOL),
+#endif
+#ifdef SO_DOMAIN
+    ADD(SO_DOMAIN),
+#endif
+#ifdef SO_RXQ_OVFL
+    ADD(SO_RXQ_OVFL),
+#endif
+#ifdef SO_WIFI_STATUS
+    ADD(SO_WIFI_STATUS),
+#endif
+#ifdef SO_PEEK_OFF
+    ADD(SO_PEEK_OFF),
+#endif
+#ifdef SO_NOFCS
+    ADD(SO_NOFCS),
+#endif
+#ifdef SO_LOCK_FILTER
+    ADD(SO_LOCK_FILTER),
+#endif
+#ifdef SO_SELECT_ERR_QUEUE
+    ADD(SO_SELECT_ERR_QUEUE),
+#endif
+#ifdef SO_BUSY_POLL
+    ADD(SO_BUSY_POLL),
+#endif
+#ifdef SO_MAX_PACING_RATE
+    ADD(SO_MAX_PACING_RATE),
+#endif
+#ifdef SO_BPF_EXTENSIONS
+    ADD(SO_BPF_EXTENSIONS)
+#endif
+};

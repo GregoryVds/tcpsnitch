@@ -3,6 +3,7 @@
 #include "json_builder.h"
 #include <jansson.h>
 #include <netdb.h>
+#include "constants.h"
 #include "fcntl.h"
 #include "init.h"
 #include "lib.h"

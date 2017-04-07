@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "init.h"
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
@@ -11,7 +12,6 @@
 #include <android/log.h>
 #include <sys/system_properties.h>
 #endif
-#include "constants.h"
 #include "lib.h"
 #include "logger.h"
 #include "sock_events.h"

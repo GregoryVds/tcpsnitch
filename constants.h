@@ -1,27 +1,64 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#define _GNU_SOURCE
 
-#define STDOUT_FD 3
-#define STDERR_FD 4
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
+#include <arpa/inet.h>
+#include <asm-generic/ioctls.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/ax25.h>
+#include <linux/if_eql.h>
+#include <linux/if_plip.h>
+#include <linux/if_ppp.h>
+#include <linux/ipx.h>
+#include <linux/mroute.h>
+#include <linux/sockios.h>
+#include <linux/wireless.h>
+#include <net/ethernet.h>
+#include <netinet/tcp.h>
+#include <netpacket/packet.h>
+#include <stdbool.h>
+#include <sys/socket.h>
 #ifdef __ANDROID__
-#define OPT_B "be.ucl.tcpsnitch.opt_b"
-#define OPT_C "be.ucl.tcpsnitch.opt_c"
-#define OPT_D "be.ucl.tcpsnitch.opt_d"
-#define OPT_F "be.ucl.tcpsnitch.opt_f"
-#define OPT_L "be.ucl.tcpsnitch.opt_l"
-#define OPT_T "be.ucl.tcpsnitch.opt_t"
-#define OPT_U "be.ucl.tcpsnitch.opt_u"
-#define OPT_V "be.ucl.tcpsnitch.opt_v"
+#include <linux/udp.h>
 #else
-#define OPT_B "TCPSNITCH_OPT_B"
-#define OPT_C "TCPSNITCH_OPT_C"
-#define OPT_D "TCPSNITCH_OPT_D"
-#define OPT_F "TCPSNITCH_OPT_F"
-#define OPT_L "TCPSNITCH_OPT_L"
-#define OPT_T "TCPSNITCH_OPT_T"
-#define OPT_U "TCPSNITCH_OPT_U"
-#define OPT_V "TCPSNITCH_OPT_V"
+#include <netinet/udp.h>
 #endif
+#include <unistd.h>
+#include "lib.h"
+
+#define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
+
+#define ADD(constant) \
+        { constant, #constant }
+/* We use #ifdef directives to produce code that is easily portable on multiple
+ * libc versions which may define different set of constants. */
+
+typedef struct {
+        int cons;
+        const char str[40];
+} IntStrPair;
+
+#include "constants/errnos.h"
+#include "constants/fcntl_cmds.h"
+#include "constants/ioctl_requests.h"
+#include "constants/ipproto_ip_options.h"
+#include "constants/ipproto_ipv6_options.h"
+#include "constants/ipproto_tcp_options.h"
+#include "constants/ipproto_udp_options.h"
+#include "constants/socket_domains.h"
+#include "constants/socket_types.h"
+#include "constants/sockopt_levels.h"
+#include "constants/sol_packet_options.h"
+#include "constants/sol_socket_options.h"
+
+char *alloc_errno_str(int err);
+char *alloc_fcntl_cmd_str(int cmd);
+char *alloc_ioctl_request_str(int request);
+char *alloc_sockoptname(int level, int optname);
+char *alloc_sockopt_level(int level);
+char *alloc_sock_domain_str(int domain);
+char *alloc_sock_type_str(int type);
 
 #endif

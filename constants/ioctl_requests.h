@@ -1,0 +1,669 @@
+static const IntStrPair IOCTL_REQUESTS[] = {
+#ifdef FIONREAD
+    ADD(FIONREAD),
+#endif
+// <include/asm-i386/socket.h>
+#ifdef FIOSETOWN
+    ADD(FIOSETOWN),
+#endif
+#ifdef SIOCSPGRP
+    ADD(SIOCSPGRP),
+#endif
+#ifdef FIOGETOWN
+    ADD(FIOGETOWN),
+#endif
+#ifdef SIOCGPGRP
+    ADD(SIOCGPGRP),
+#endif
+#ifdef SIOCATMAR
+    ADD(SIOCATMAR),
+#endif
+#ifdef SIOCGSTAMP
+    ADD(SIOCGSTAMP),
+#endif
+// <include/asm-i386/termios.h>
+#ifdef TCGETS
+    ADD(TCGETS),
+#endif
+#ifdef TCSETS
+    ADD(TCSETS),
+#endif
+#ifdef TCSETSW
+    ADD(TCSETSW),
+#endif
+#ifdef TCSETSF
+    ADD(TCSETSF),
+#endif
+#ifdef TCGETA
+    ADD(TCGETA),
+#endif
+#ifdef TCSETA
+    ADD(TCSETA),
+#endif
+#ifdef TCSETAW
+    ADD(TCSETAW),
+#endif
+#ifdef TCSETAF
+    ADD(TCSETAF),
+#endif
+#ifdef TCSBRK
+    ADD(TCSBRK),
+#endif
+#ifdef TCXONC
+    ADD(TCXONC),
+#endif
+#ifdef TCFLSH
+    ADD(TCFLSH),
+#endif
+#ifdef TIOCEXCL
+    ADD(TIOCEXCL),
+#endif
+#ifdef TIOCNXCL
+    ADD(TIOCNXCL),
+#endif
+#ifdef TIOCSCTTY
+    ADD(TIOCSCTTY),
+#endif
+#ifdef TIOCGPGRP
+    ADD(TIOCGPGRP),
+#endif
+#ifdef TIOCSPGRP
+    ADD(TIOCSPGRP),
+#endif
+#ifdef TIOCOUTQ
+    ADD(TIOCOUTQ),
+#endif
+#ifdef TIOCSTI
+    ADD(TIOCSTI),
+#endif
+#ifdef TIOCGWINSZ
+    ADD(TIOCGWINSZ),
+#endif
+#ifdef TIOCSWINSZ
+    ADD(TIOCSWINSZ),
+#endif
+#ifdef TIOCMGET
+    ADD(TIOCMGET),
+#endif
+#ifdef TIOCMBIS
+    ADD(TIOCMBIS),
+#endif
+#ifdef TIOCMBIC
+    ADD(TIOCMBIC),
+#endif
+#ifdef TIOCMSET
+    ADD(TIOCMSET),
+#endif
+#ifdef TIOCGSOFTCAR
+    ADD(TIOCGSOFTCAR),
+#endif
+#ifdef TIOCSSOFTCAR
+    ADD(TIOCSSOFTCAR),
+#endif
+#ifdef FIONREAD
+    ADD(FIONREAD),
+#endif
+#ifdef TIOCINQ
+    ADD(TIOCINQ),
+#endif
+#ifdef TIOCLINUX
+    ADD(TIOCLINUX),
+#endif
+#ifdef TIOCCONS
+    ADD(TIOCCONS),
+#endif
+#ifdef TIOCGSERIAL
+    ADD(TIOCGSERIAL),
+#endif
+#ifdef TIOCSSERIAL
+    ADD(TIOCSSERIAL),
+#endif
+#ifdef TIOCPKT
+    ADD(TIOCPKT),
+#endif
+#ifdef FIONBIO
+    ADD(FIONBIO),
+#endif
+#ifdef TIOCNOTTY
+    ADD(TIOCNOTTY),
+#endif
+#ifdef TIOCSETD
+    ADD(TIOCSETD),
+#endif
+#ifdef TIOCGETD
+    ADD(TIOCGETD),
+#endif
+#ifdef TCSBRKP
+    ADD(TCSBRKP),
+#endif
+#ifdef TIOCTTYGSTRUCT
+    ADD(TIOCTTYGSTRUCT),
+#endif
+#ifdef FIONCLEX
+    ADD(FIONCLEX),
+#endif
+#ifdef FIOCLEX
+    ADD(FIOCLEX),
+#endif
+#ifdef FIOASYNC
+    ADD(FIOASYNC),
+#endif
+#ifdef TIOCSERCONFIG
+    ADD(TIOCSERCONFIG),
+#endif
+#ifdef TIOCSERGWILD
+    ADD(TIOCSERGWILD),
+#endif
+#ifdef TIOCSERSWILD
+    ADD(TIOCSERSWILD),
+#endif
+#ifdef TIOCGLCKTRMIOS
+    ADD(TIOCGLCKTRMIOS),
+#endif
+#ifdef TIOCSLCKTRMIOS
+    ADD(TIOCSLCKTRMIOS),
+#endif
+#ifdef TIOCSERGSTRUCT
+    ADD(TIOCSERGSTRUCT),
+#endif
+#ifdef TIOCSERGETLSR
+    ADD(TIOCSERGETLSR),
+#endif
+#ifdef TIOCSERGETMULTI
+    ADD(TIOCSERGETMULTI),
+#endif
+#ifdef TIOCSERSETMULTI
+    ADD(TIOCSERSETMULTI),
+#endif
+// <include/linux/ax25.h>
+#ifdef SIOCAX25GETUID
+    ADD(SIOCAX25GETUID),
+#endif
+#ifdef SIOCAX25ADDUID
+    ADD(SIOCAX25ADDUID),
+#endif
+#ifdef SIOCAX25DELUID
+    ADD(SIOCAX25DELUID),
+#endif
+#ifdef SIOCAX25NOUID
+    ADD(SIOCAX25NOUID),
+#endif
+#ifdef SIOCAX25DIGCTL
+    ADD(SIOCAX25DIGCTL),
+#endif
+#ifdef SIOCAX25GETPARMS
+    ADD(SIOCAX25GETPARMS),
+#endif
+#ifdef SIOCAX25SETPARMS
+    ADD(SIOCAX25SETPARMS),
+#endif
+// <include/linux/,if_eql.h>
+#ifdef EQL_ENSLAVE
+    ADD(EQL_ENSLAVE),
+#endif
+#ifdef EQL_EMANCIPATE
+    ADD(EQL_EMANCIPATE),
+#endif
+#ifdef EQL_GETSLAVECFG
+    ADD(EQL_GETSLAVECFG),
+#endif
+#ifdef EQL_SETSLAVECFG
+    ADD(EQL_SETSLAVECFG),
+#endif
+#ifdef EQL_GETMASTRCFG
+    ADD(EQL_GETMASTRCFG),
+#endif
+#ifdef EQL_SETMASTRCFG
+    ADD(EQL_SETMASTRCFG),
+#endif
+// <include/linux/if_plip.h>
+#ifdef SIOCDEVPLIP
+    ADD(SIOCDEVPLIP),
+#endif
+// <include/linux/if_ppp.h>
+#ifdef PPPIOCGFLAGS
+    ADD(PPPIOCGFLAGS),
+#endif
+#ifdef PPPIOCSFLAGS
+    ADD(PPPIOCSFLAGS),
+#endif
+#ifdef PPPIOCGASYNCMAP
+    ADD(PPPIOCGASYNCMAP),
+#endif
+#ifdef PPPIOCSASYNCMAP
+    ADD(PPPIOCSASYNCMAP),
+#endif
+#ifdef PPPIOCGUNIT
+    ADD(PPPIOCGUNIT),
+#endif
+#ifdef PPPIOCSINPSIG
+    ADD(PPPIOCSINPSIG),
+#endif
+#ifdef PPPIOCSDEBUG
+    ADD(PPPIOCSDEBUG),
+#endif
+#ifdef PPPIOCGDEBUG
+    ADD(PPPIOCGDEBUG),
+#endif
+#ifdef PPPIOCGSTAT
+    ADD(PPPIOCGSTAT),
+#endif
+#ifdef PPPIOCGTIME
+    ADD(PPPIOCGTIME),
+#endif
+#ifdef PPPIOCGXASYNCMAP
+    ADD(PPPIOCGXASYNCMAP),
+#endif
+#ifdef PPPIOCSXASYNCMAP
+    ADD(PPPIOCSXASYNCMAP),
+#endif
+#ifdef PPPIOCSMRU
+    ADD(PPPIOCSMRU),
+#endif
+#ifdef PPPIOCRASYNCMAP
+    ADD(PPPIOCRASYNCMAP),
+#endif
+#ifdef PPPIOCSMAXCID
+    ADD(PPPIOCSMAXCID),
+#endif
+// <include/linux/ipx.h>
+#ifdef SIOCAIPXITFCRT
+    ADD(SIOCAIPXITFCRT),
+#endif
+#ifdef SIOCAIPXPRISLT
+    ADD(SIOCAIPXPRISLT),
+#endif
+#ifdef SIOCIPXCFGDATA
+    ADD(SIOCIPXCFGDATA),
+#endif
+// <include/linux/mroute.h>
+#ifdef SIOCGETVIFCNT
+    ADD(SIOCGETVIFCNT),
+#endif
+#ifdef SIOCGETSGCNT
+    ADD(SIOCGETSGCNT),
+#endif
+// <include/uapi/linux/wireless.h>
+#ifdef SIOCSIWCOMMIT
+    ADD(SIOCSIWCOMMIT),
+#endif
+#ifdef SIOCGIWNAME
+    ADD(SIOCGIWNAME),
+#endif
+#ifdef SIOCSIWNWID
+    ADD(SIOCSIWNWID),
+#endif
+#ifdef SIOCGIWNWID
+    ADD(SIOCGIWNWID),
+#endif
+#ifdef SIOCSIWFREQ
+    ADD(SIOCSIWFREQ),
+#endif
+#ifdef SIOCGIWFREQ
+    ADD(SIOCGIWFREQ),
+#endif
+#ifdef SIOCSIWMODE
+    ADD(SIOCSIWMODE),
+#endif
+#ifdef SIOCGIWMODE
+    ADD(SIOCGIWMODE),
+#endif
+#ifdef SIOCSIWSENS
+    ADD(SIOCSIWSENS),
+#endif
+#ifdef SIOCGIWSENS
+    ADD(SIOCGIWSENS),
+#endif
+#ifdef SIOCSIWRANGE
+    ADD(SIOCSIWRANGE),
+#endif
+#ifdef SIOCGIWRANGE
+    ADD(SIOCGIWRANGE),
+#endif
+#ifdef SIOCSIWPRIV
+    ADD(SIOCSIWPRIV),
+#endif
+#ifdef SIOCGIWPRIV
+    ADD(SIOCGIWPRIV),
+#endif
+#ifdef SIOCSIWSTATS
+    ADD(SIOCSIWSTATS),
+#endif
+#ifdef SIOCGIWSTATS
+    ADD(SIOCGIWSTATS),
+#endif
+#ifdef SIOCSIWSPY
+    ADD(SIOCSIWSPY),
+#endif
+#ifdef SIOCGIWSPY
+    ADD(SIOCGIWSPY),
+#endif
+#ifdef SIOCSIWTHRSPY
+    ADD(SIOCSIWTHRSPY),
+#endif
+#ifdef SIOCGIWTHRSPY
+    ADD(SIOCGIWTHRSPY),
+#endif
+#ifdef SIOCSIWAP
+    ADD(SIOCSIWAP),
+#endif
+#ifdef SIOCGIWAP
+    ADD(SIOCGIWAP),
+#endif
+#ifdef SIOCGIWAPLIST
+    ADD(SIOCGIWAPLIST),
+#endif
+#ifdef SIOCSIWSCAN
+    ADD(SIOCSIWSCAN),
+#endif
+#ifdef SIOCGIWSCAN
+    ADD(SIOCGIWSCAN),
+#endif
+#ifdef SIOCSIWESSID
+    ADD(SIOCSIWESSID),
+#endif
+#ifdef SIOCGIWESSID
+    ADD(SIOCGIWESSID),
+#endif
+#ifdef SIOCSIWNICKN
+    ADD(SIOCSIWNICKN),
+#endif
+#ifdef SIOCGIWNICKN
+    ADD(SIOCGIWNICKN),
+#endif
+#ifdef SIOCSIWRATE
+    ADD(SIOCSIWRATE),
+#endif
+#ifdef SIOCGIWRATE
+    ADD(SIOCGIWRATE),
+#endif
+#ifdef SIOCSIWRTS
+    ADD(SIOCSIWRTS),
+#endif
+#ifdef SIOCGIWRTS
+    ADD(SIOCGIWRTS),
+#endif
+#ifdef SIOCSIWFRAG
+    ADD(SIOCSIWFRAG),
+#endif
+#ifdef SIOCGIWFRAG
+    ADD(SIOCGIWFRAG),
+#endif
+#ifdef SIOCSIWTXPOW
+    ADD(SIOCSIWTXPOW),
+#endif
+#ifdef SIOCGIWTXPOW
+    ADD(SIOCGIWTXPOW),
+#endif
+#ifdef SIOCSIWRETRY
+    ADD(SIOCSIWRETRY),
+#endif
+#ifdef SIOCGIWRETRY
+    ADD(SIOCGIWRETRY),
+#endif
+#ifdef SIOCSIWENCODE
+    ADD(SIOCSIWENCODE),
+#endif
+#ifdef SIOCGIWENCODE
+    ADD(SIOCGIWENCODE),
+#endif
+#ifdef SIOCSIWPOWER
+    ADD(SIOCSIWPOWER),
+#endif
+#ifdef SIOCGIWPOWER
+    ADD(SIOCGIWPOWER),
+#endif
+#ifdef SIOCSIWGENIE
+    ADD(SIOCSIWGENIE),
+#endif
+#ifdef SIOCGIWGENIE
+    ADD(SIOCGIWGENIE),
+#endif
+#ifdef SIOCSIWMLME
+    ADD(SIOCSIWMLME),
+#endif
+#ifdef SIOCSIWAUTH
+    ADD(SIOCSIWAUTH),
+#endif
+#ifdef SIOCGIWAUTH
+    ADD(SIOCGIWAUTH),
+#endif
+#ifdef SIOCSIWENCODEEXT
+    ADD(SIOCSIWENCODEEXT),
+#endif
+#ifdef SIOCGIWENCODEEXT
+    ADD(SIOCGIWENCODEEXT),
+#endif
+#ifdef SIOCSIWPMKSA
+    ADD(SIOCSIWPMKSA),
+#endif
+// <include/uapi/linux/sockios.h> see netdevice(7)
+#ifdef SIOCADDRT
+    ADD(SIOCADDRT),
+#endif
+#ifdef SIOCDELRT
+    ADD(SIOCDELRT),
+#endif
+#ifdef SIOCGIFNAME
+    ADD(SIOCGIFNAME),
+#endif
+#ifdef SIOCSIFLINK
+    ADD(SIOCSIFLINK),
+#endif
+#ifdef SIOCGIFCONF
+    ADD(SIOCGIFCONF),
+#endif
+#ifdef SIOCGIFFLAGS
+    ADD(SIOCGIFFLAGS),
+#endif
+#ifdef SIOCSIFFLAGS
+    ADD(SIOCSIFFLAGS),
+#endif
+#ifdef SIOCGIFADDR
+    ADD(SIOCGIFADDR),
+#endif
+#ifdef SIOCSIFADDR
+    ADD(SIOCSIFADDR),
+#endif
+#ifdef SIOCGIFDSTADDR
+    ADD(SIOCGIFDSTADDR),
+#endif
+#ifdef SIOCSIFDSTADDR
+    ADD(SIOCSIFDSTADDR),
+#endif
+#ifdef SIOCGIFBRDADDR
+    ADD(SIOCGIFBRDADDR),
+#endif
+#ifdef SIOCSIFBRDADDR
+    ADD(SIOCSIFBRDADDR),
+#endif
+#ifdef SIOCGIFNETMASK
+    ADD(SIOCGIFNETMASK),
+#endif
+#ifdef SIOCSIFNETMASK
+    ADD(SIOCSIFNETMASK),
+#endif
+#ifdef SIOCGIFMETRIC
+    ADD(SIOCGIFMETRIC),
+#endif
+#ifdef SIOCSIFMETRIC
+    ADD(SIOCSIFMETRIC),
+#endif
+#ifdef SIOCGIFMEM
+    ADD(SIOCGIFMEM),
+#endif
+#ifdef SIOCSIFMEM
+    ADD(SIOCSIFMEM),
+#endif
+#ifdef SIOCGIFMTU
+    ADD(SIOCGIFMTU),
+#endif
+#ifdef SIOCSIFMTU
+    ADD(SIOCSIFMTU),
+#endif
+#ifdef OLD_SIOCGIFHWADDR
+    ADD(OLD_SIOCGIFHWADDR),
+#endif
+#ifdef SIOCSIFHWADDR
+    ADD(SIOCSIFHWADDR),
+#endif
+#ifdef SIOCGIFENCAP
+    ADD(SIOCGIFENCAP),
+#endif
+#ifdef SIOCSIFENCAP
+    ADD(SIOCSIFENCAP),
+#endif
+#ifdef SIOCGIFHWADDR
+    ADD(SIOCGIFHWADDR),
+#endif
+#ifdef SIOCGIFSLAVE
+    ADD(SIOCGIFSLAVE),
+#endif
+#ifdef SIOCSIFSLAVE
+    ADD(SIOCSIFSLAVE),
+#endif
+#ifdef SIOCADDMULTI
+    ADD(SIOCADDMULTI),
+#endif
+#ifdef SIOCDELMULTI
+    ADD(SIOCDELMULTI),
+#endif
+#ifdef SIOCGIFINDEX
+    ADD(SIOCGIFINDEX),
+#endif
+#ifdef SIOGIFINDEX
+    ADD(SIOGIFINDEX),
+#endif
+#ifdef SIOCSIFPFLAGS
+    ADD(SIOCSIFPFLAGS),
+#endif
+#ifdef SIOCGIFPFLAGS
+    ADD(SIOCGIFPFLAGS),
+#endif
+#ifdef SIOCDIFADDR
+    ADD(SIOCDIFADDR),
+#endif
+#ifdef SIOCSIFHWBROADCAST
+    ADD(SIOCSIFHWBROADCAST),
+#endif
+#ifdef SIOCGIFCOUNT
+    ADD(SIOCGIFCOUNT),
+#endif
+#ifdef SIOCGIFBR
+    ADD(SIOCGIFBR),
+#endif
+#ifdef SIOCSIFBR
+    ADD(SIOCSIFBR),
+#endif
+#ifdef SIOCGIFTXQLEN
+    ADD(SIOCGIFTXQLEN),
+#endif
+#ifdef SIOCSIFXQLEN
+    ADD(SIOCSIFTXQLEN),
+#endif
+#ifdef SIOCETHTOOL
+    ADD(SIOCETHTOOL),
+#endif
+#ifdef SIOCGMIIPHY
+    ADD(SIOCGMIIPHY),
+#endif
+#ifdef SIOCGMIIREG
+    ADD(SIOCGMIIREG),
+#endif
+#ifdef SIOCSMIIREG
+    ADD(SIOCSMIIREG),
+#endif
+#ifdef SIOCWANDEV
+    ADD(SIOCWANDEV),
+#endif
+#ifdef SIOCOUTQNSD
+    ADD(SIOCOUTQNSD),
+#endif
+#ifdef SIOCADDDLCI
+    ADD(SIOCADDDLCI),
+#endif
+#ifdef SIOCDELDLCI
+    ADD(SIOCDELDLCI),
+#endif
+#ifdef SIOCGIFVLAN
+    ADD(SIOCGIFVLAN),
+#endif
+#ifdef SIOCSIFVLAN
+    ADD(SIOCSIFVLAN),
+#endif
+#ifdef SIOCBONDENSLAVE
+    ADD(SIOCBONDENSLAVE),
+#endif
+#ifdef SIOCBONDRELEASE
+    ADD(SIOCBONDRELEASE),
+#endif
+#ifdef SIOCBONDSETHWADDR
+    ADD(SIOCBONDSETHWADDR),
+#endif
+#ifdef SIOCBONDSLAVEINFOQUERY
+    ADD(SIOCBONDSLAVEINFOQUERY),
+#endif
+#ifdef SIOCBONDINFOQUERY
+    ADD(SIOCBONDINFOQUERY),
+#endif
+#ifdef SIOCBONDCHANGEACTIVE
+    ADD(SIOCBONDCHANGEACTIVE),
+#endif
+#ifdef SIOCBRADDBR
+    ADD(SIOCBRADDBR),
+#endif
+#ifdef SIOCBRDELBR
+    ADD(SIOCBRDELBR),
+#endif
+#ifdef SIOCBRADDIF
+    ADD(SIOCBRADDIF),
+#endif
+#ifdef SIOCBRDELIF
+    ADD(SIOCBRDELIF),
+#endif
+#ifdef SIOCSHWTSTAMP
+    ADD(SIOCSHWTSTAMP),
+#endif
+#ifdef SIOCGHWTSTAMP
+    ADD(SIOCGHWTSTAMP),
+#endif
+#ifdef SIOCDEVPRIVATE
+    ADD(SIOCDEVPRIVATE),
+#endif
+#ifdef SIOCPROTOPRIVATE
+    ADD(SIOCPROTOPRIVATE),
+#endif
+#ifdef SIOCADDRTOLD
+    ADD(SIOCADDRTOLD), ,
+#endif
+#ifdef SIOCADDRTOLD
+    ADD(SIOCADDRTOLD),
+#endif
+#ifdef SIOCDELRTOLD
+    ADD(SIOCDELRTOLD),
+#endif
+#ifdef SIOCDARP
+    ADD(SIOCDARP),
+#endif
+#ifdef SIOCGARP
+    ADD(SIOCGARP),
+#endif
+#ifdef SIOCSARP
+    ADD(SIOCSARP),
+#endif
+#ifdef SIOCDRARP
+    ADD(SIOCDRARP),
+#endif
+#ifdef SIOCGRARP
+    ADD(SIOCGRARP),
+#endif
+#ifdef SIOCSRARP
+    ADD(SIOCSRARP),
+#endif
+#ifdef SIOCGIFMAP
+    ADD(SIOCGIFMAP),
+#endif
+#ifdef SIOCSIFMAP
+    ADD(SIOCSIFMAP)
+#endif
+};

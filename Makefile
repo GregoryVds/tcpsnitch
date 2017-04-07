@@ -46,9 +46,10 @@ LINUX_DEPS=$(shell if rpm -q -f /usr/bin/rpm >/dev/null 2>&1; then echo $(RPM_BA
 
 # Source files
 HEADERS=lib.h sock_events.h string_builders.h json_builder.h packet_sniffer.h \
-	logger.h init.h resizable_array.h verbose_mode.h
+	logger.h init.h resizable_array.h verbose_mode.h constants.h
 SOURCES=libc_overrides.c lib.c sock_events.c string_builders.c json_builder.c \
 	packet_sniffer.c logger.c init.c resizable_array.c verbose_mode.c \
+	constants.c
 
 # $(1) is file name, $(2) is config value
 define set_file_opt
