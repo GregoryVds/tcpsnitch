@@ -21,6 +21,7 @@ readonly SCRIPT_DIR=$(dirname "$(realpath "$0")")
 readonly PROP_PREFIX="be.ucl.${NAME}"
 readonly HIDDEN_ERRORS="wrong ELF class"
 readonly TOP_PID=$$
+readonly CWD=$(pwd)
 
 # Option default values
 OPT_A=0
@@ -208,7 +209,7 @@ upload_trace() {
 
     # Test if trace is empty
     if ! ls ${OPT_D}/*/*.json >/dev/null 2>/dev/null; then
-        error "Nothing to trace. Please report a bug if you have reasons to believe the trace should not be empty"
+        error "Nothing to trace. Please report a bug if you have reasons to believe the trace should not be empty (https://github.com/GregoryVds/tcpsnitch/issues)"
     fi
 
     zip_trace
@@ -349,9 +350,10 @@ tcpsnitch_linux() {
     done
 
     local _preload_opt=""
-    ${ENABLE_I386} && _preload_opt+="./${I386_LIB} "
-    _preload_opt+="./${AMD64_LIB}"
+    ${ENABLE_I386} && _preload_opt+="$(realpath "$I386_LIB") "
+    _preload_opt+=$(realpath "$AMD64_LIB")
 
+    cd "$CWD"
     # libtcpsnitch uses fd 3 & 4 as stdout & stderr repectively. This allows to
     # distinguish the standard outputs of tcpsnitch and of the traced process.
     # The distinction is however not used at the moment s standard streams of
