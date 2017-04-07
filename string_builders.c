@@ -336,8 +336,11 @@ char *alloc_sockoptname(int level, int optname) {
                         MAP_GET(IPPROTO_IPV6_OPTIONS, optname);
                 case IPPROTO_UDP:
                         MAP_GET(IPPROTO_UDP_OPTIONS, optname);
+                case SOL_PACKET:
+                        MAP_GET(SOL_PACKET_OPTIONS, optname);
                 default:
                         LOG(WARN, "Unknown sockopt level: %d.", level);
+                        LOG_FUNC_WARN;
                         MAP_GET(SOL_SOCKET_OPTIONS, optname);
         }
         // Unreachable
