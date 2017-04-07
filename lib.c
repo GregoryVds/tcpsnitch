@@ -16,6 +16,7 @@
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
+#include "init.h"
 #include "lib.h"
 #include "logger.h"
 #include "string_builders.h"
@@ -67,7 +68,13 @@ bool is_inet_socket(int fd) {
         socklen_t optlen = sizeof(optval);
         if (my_getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen))
                 goto error;
-        return (optval == AF_INET || optval == AF_INET6 || optval == AF_PACKET);
+        return (optval == AF_INET || optval == AF_INET6 ||
+/* pcap_open_live() will open an AF_PACKET socket. We will thus run into a
+ * deadlock if we do trace AF_PACKET sockets while sniffing packets. Also, we
+ * actually capture our own socket activity. We should find a way not to track
+ * libpcap sockets. Until we find a proper solution to do that, we simply do not
+ * trace AF_PACKET sockets when capture pcap traces. */
+                (conf_opt_c ? false : (optval == AF_PACKET)));
 error:
         LOG(ERROR, "Assume socket is not a INET socket.");
         return false;

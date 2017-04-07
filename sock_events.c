@@ -419,6 +419,7 @@ void sock_start_capture(int fd, const struct sockaddr *addr_to) {
 
         const char *capture_filter = alloc_capture_filter(addr_from, addr_to);
         if (!capture_filter) goto error1;
+        // See deadlock note in is_inet_socket.
         sock->capture_switch = start_capture(capture_filter, pcap_file_path);
 
         free(pcap_file_path);
