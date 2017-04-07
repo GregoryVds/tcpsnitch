@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <netpacket/packet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,17 +26,35 @@ char *alloc_ip_str(const struct sockaddr *addr) {
 
         // Convert host from network to printable
         const char *r;
-        if (addr->sa_family == AF_INET) {
-                const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
-                r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, n);
-        } else if (addr->sa_family == AF_INET6) {
-                const struct sockaddr_in6 *v6 =
-                    (const struct sockaddr_in6 *)addr;
-                r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, n);
-        } else
-                goto error1;
+        switch (addr->sa_family) {
+                case AF_INET: {
+                        const struct sockaddr_in *v4 =
+                            (const struct sockaddr_in *)addr;
+                        r = inet_ntop(AF_INET, &(v4->sin_addr), addr_str, n);
+                        if (!r) goto error2;
+                        break;
+                }
+                case AF_INET6: {
+                        const struct sockaddr_in6 *v6 =
+                            (const struct sockaddr_in6 *)addr;
+                        r = inet_ntop(AF_INET6, &(v6->sin6_addr), addr_str, n);
+                        if (!r) goto error2;
+                        break;
+                }
+                case AF_PACKET: {
+                        const struct sockaddr_ll *ll =
+                            (const struct sockaddr_ll *)addr;
+                        int len = 0;
+                        for (int i = 0; i < 6; i++)
+                                len +=
+                                    sprintf(addr_str + len, "%02X%s",
+                                            ll->sll_addr[i], i < 5 ? ":" : "");
+                        break;
+                }
+                default:
+                        goto error1;
+        }
 
-        if (!r) goto error2;
         return addr_str;
 error2:
         LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
@@ -57,22 +76,28 @@ char *alloc_port_str(const struct sockaddr *addr) {
 
         // Convert port to string
         int n;
-        if (addr->sa_family == AF_INET) {
-                const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
-                n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v4->sin_port));
-        } else if (addr->sa_family == AF_INET6) {
-                const struct sockaddr_in6 *v6 =
-                    (const struct sockaddr_in6 *)addr;
-                n = snprintf(port_str, PORT_WIDTH, "%d", ntohs(v6->sin6_port));
-        } else
-                goto error1;
+        switch (addr->sa_family) {
+                case AF_INET: {
+                        const struct sockaddr_in *v4 =
+                            (const struct sockaddr_in *)addr;
+                        n = snprintf(port_str, PORT_WIDTH, "%d",
+                                     ntohs(v4->sin_port));
+                        if (n < 0) goto error2;
+                }
+                case AF_INET6: {
+                        const struct sockaddr_in6 *v6 =
+                            (const struct sockaddr_in6 *)addr;
+                        n = snprintf(port_str, PORT_WIDTH, "%d",
+                                     ntohs(v6->sin6_port));
+                        if (n < 0) goto error2;
+                }
+                case AF_PACKET:
+                        break;  // No notion of port here
+                default:
+                        goto error1;
+        }
 
-        if (n < 0) goto error2;
-        if (n >= PORT_WIDTH) goto error3;
         return port_str;
-error3:
-        LOG(ERROR, "snprintf() failed (truncated).");
-        goto cleanup_out;
 error2:
         LOG(ERROR, "snprintf() failed. %s.", strerror(errno));
         goto cleanup_out;
@@ -164,7 +189,7 @@ char *alloc_android_opt_d(void) {
 
 char *alloc_file_name(int file_name, const char *extension) {
         int n = get_int_len(file_name) + strlen(extension) + 1;
-        char *str = my_malloc(n*sizeof(char));
+        char *str = my_malloc(n * sizeof(char));
         sprintf(str, "%d%s", file_name, extension);
         char *ret = alloc_concat_path(logs_dir_path, str);
         free(str);
