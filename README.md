@@ -1,15 +1,15 @@
 # Tcpsnitch
 
-`tcpsnitch` is a tracing tool designed to investigate the interactions between an application, the TCP/IP stack and the network.
+`tcpsnitch` is a tracing tool designed to investigate the interactions between an application and the TCP/IP stack. `tcpsnitch` runs the specified command until it exits and intercepts all libc function calls on internet sockets.
 
 ## Overview
 
-`tcpsnitch` runs the specified command until it exits and intercepts all libc function calls on internet sockets. For instance, one may run the following command to trace the `curl` program:
+To start gently, one may run the following command to trace the `curl` program:
 ```bash
 $ tcpsnitch curl google.com
 ```
 
-For each opened socket, `tcpsnitch` builds an ordered list of function calls, where each function invocation is called an **event**. For each event, `tcpsnitch` records the arguments, the return value and various information such as the current timestamp. For instance, a `connect()` event might look like this in a socket trace:
+For each opened internet socket, `tcpsnitch` builds an ordered list of function calls (a function invocation is called an **event** in the remaining of this document). For each event, `tcpsnitch` records the arguments, the return value and various information such as the current timestamp or the thread id. Specifically, a `connect()` event might look like this in a socket trace:
 
 ```JSON
 {
@@ -28,7 +28,7 @@ For each opened socket, `tcpsnitch` builds an ordered list of function calls, wh
 }
 ```
 
-Socket traces are written to text files where each line is a JSON object representing a single event. For instance, the head of such a trace could like this:
+Socket traces are written to text files where each line is a JSON object representing a single event. The head of such a trace could like this:
 
 ```JSON
 {"type": "socket", "timestamp_usec": 1491043720731840, "return_value": 6, "success": true, "thread_id": 17313, "details": {"sock_info": {"domain": "AF_INET", "type": "SOCK_DGRAM", "protocol": 0, "SOCK_CLOEXEC": false, "SOCK_NONBLOCK": true}}}

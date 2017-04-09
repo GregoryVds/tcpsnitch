@@ -83,16 +83,15 @@ static void fill_timestamp(Timestamp *timestamp) {
         timestamp->usec = now.tv_nsec / 10000000;
 }
 
-static void log_to_stream(LogLevel log_lvl, const char *formated_str,
-                          const char *file, int line, FILE *stream) {
+static void log_to_file(LogLevel log_lvl, const char *formated_str,
+                        const char *file, int line, FILE *stream) {
         Timestamp ts;
         fill_timestamp(&ts);
         fprintf(stream,
-                "%s%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d (%s:%d) "
-                "%s%s\n",
-                colors[log_lvl], ts.year, ts.mon, ts.day, ts.hour, ts.min,
-                ts.sec, ts.usec, log_level_str(log_lvl), getpid(), file, line,
-                formated_str, ANSI_COLOR_RESET);
+                "%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d (%s:%d) "
+                "%s\n",
+                ts.year, ts.mon, ts.day, ts.hour, ts.min, ts.sec, ts.usec,
+                log_level_str(log_lvl), getpid(), file, line, formated_str);
 }
 
 #ifdef __ANDROID__
@@ -102,19 +101,24 @@ static void log_to_logcat(LogLevel log_lvl, const char *str, const char *file,
                             "(%s:%d) %s", file, line, str);
 }
 #else
-static void log_to_stderr(LogLevel log_lvl, const char *str, const char *file,
-                          int line) {
-        if (_stderr) // Write on tcpsnitch _stderr
-                log_to_stream(log_lvl, str, file, line, _stderr);
-        else // Default to regular stderr (the same as the main process)
-                log_to_stream(log_lvl, str, file, line, stderr);
+static void log_to_stderr(LogLevel log_lvl, const char *formated_str,
+                          const char *file, int line) {
+        FILE *stream = (_stderr ? _stderr : stderr);
+        Timestamp ts;
+        fill_timestamp(&ts);
+        fprintf(stream,
+                "%s%02d.%02d.%02d-%02d:%02d:%02d.%02d - [%s] - %d (%s:%d) "
+                "%s%s\n",
+                colors[log_lvl], ts.year, ts.mon, ts.day, ts.hour, ts.min,
+                ts.sec, ts.usec, log_level_str(log_lvl), getpid(), file, line,
+                formated_str, ANSI_COLOR_RESET);
 }
 #endif
 
-static void set_log_path(const char *path) {
+static void set_log_file(const char *path) {
         if (log_file != NULL) fclose(log_file);
 
-        if (!path) { // reset_tcpsnitch pass a NULL pointer.
+        if (!path) {  // reset_tcpsnitch pass a NULL pointer.
                 log_file = NULL;
                 return;
         }
@@ -135,7 +139,7 @@ static void set_log_path(const char *path) {
 /* Public functions */
 
 void logger_init(const char *path, LogLevel _stdout_lvl, LogLevel _file_lvl) {
-        set_log_path(path);
+        set_log_file(path);
         stderr_lvl = _stdout_lvl;
         file_lvl = _file_lvl;
 }
@@ -148,7 +152,7 @@ void logger(LogLevel log_lvl, const char *str, const char *file, int line) {
                 log_to_stderr(log_lvl, str, file, line);
 #endif
         if (log_file && log_lvl <= file_lvl)
-                log_to_stream(log_lvl, str, file, line, log_file);
+                log_to_file(log_lvl, str, file, line, log_file);
 }
 
 #ifndef __ANDROID__
