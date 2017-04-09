@@ -38,11 +38,11 @@ typedef struct {
         int usec;
 } Timestamp;
 
+#ifndef __ANDROID__
 static const char *colors[] = {ANSI_COLOR_GREEN, ANSI_COLOR_RED,
                                ANSI_COLOR_YELLOW, ANSI_COLOR_WHITE,
                                ANSI_COLOR_WHITE};
-
-#ifdef __ANDROID__
+#else
 static const int android_log_priorities_map[] = {
     ANDROID_LOG_FATAL, ANDROID_LOG_ERROR, ANDROID_LOG_WARN, ANDROID_LOG_INFO,
     ANDROID_LOG_DEBUG};

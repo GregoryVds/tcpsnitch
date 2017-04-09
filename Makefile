@@ -90,7 +90,7 @@ uninstall:
 	@rm $(BIN_PATH)/$(EXECUTABLE)
 
 clean:
-	@rm -f ./bin/*.so* *hash $(CONFIG)
+	@rm -f ./bin/*.so* ./bin/*hash ./bin/enable_i386 $(CONFIG)
 
 tests: linux install
 	cd tests && rake

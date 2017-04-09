@@ -158,12 +158,6 @@ info() {
     echo "${1}."
 }
 
-get_file_opts() {
-    readonly LINUX_GIT_HASH=$(cat linux_git_hash)
-    readonly ANDROID_GIT_HASH=$(cat android_git_hash)
-    readonly ENABLE_I386=$(cat enable_i386)
-}
-
 is_integer() {
     [[ "$1" =~ ^[0-9]+$ ]]
 }
@@ -320,9 +314,10 @@ tcpsnitch_linux() {
 
     # Test if libs are present
     cd_script_dir
-    get_file_opts
     $ENABLE_I386 && assert_lib_present "$I386_LIB"
     assert_lib_present "$AMD64_LIB"
+    readonly LINUX_GIT_HASH=$(cat linux_git_hash)
+    readonly ENABLE_I386=$(cat enable_i386)
 
     create_opt_d_dir
 
@@ -388,8 +383,8 @@ tcpsnitch_linux() {
 
 tcpsnitch_android() {
     cd_script_dir
-    get_file_opts
     assert_lib_present "$ARM_LIB"
+    readonly ANDROID_GIT_HASH=$(cat android_git_hash)
     get_android_package "$cmd"
     kill_android_package
     create_opt_d_dir
