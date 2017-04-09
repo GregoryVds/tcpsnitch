@@ -40,8 +40,7 @@ Socket traces are written to text files where each line is a JSON object represe
 
 As a single command may forks multiple processes (and `tcpsnitch` follows forks), all socket traces belonging to a given process are put together in a directory, named after the traced process. Inside such a directory, socket traces are named based on the order they were opened by the process.
 
-By default, traces are saved in a random folder under `/tmp` and uploaded to a [web application]
-(http://ns328523.ip-37-187-114.eu) designed to centralize, visualize and analyze the traces. For each trace, a quantitative analysis is performed to provide various statistics about the trace. Note that all uploaded traces are public and available for anyone to consult and download.
+By default, traces are saved in a random folder under `/tmp` and automatically uploaded to a www.tcpsnitch.org, a platform designed to centralize, visualize and analyze the traces. Note that all uploaded traces are public and available for anyone to consult and download.
 
 As visible on the next code snippet, `tcpsnitch` gives you the URL at which your trace is available.
 
@@ -49,7 +48,7 @@ As visible on the next code snippet, `tcpsnitch` gives you the URL at which your
 $ tcpsnitch curl google.com
 Trace saved in /tmp/tmp.4ERKizKyU3.
 Uploading trace....
-Trace successfully uploaded at http://ns328523.ip-37-187-114.eu/app_traces/20.
+Trace successfully uploaded at http://tcpsnitch.org/app_traces/20.
 Trace archive will be imported shortly. Refresh this page in a few minutes...
 ```
 
@@ -60,7 +59,7 @@ Finally, `tcpsnitch` also allows to extract the `TCP_INFO` socket option at user
 ## Compatibility
 
 `tcpsnitch` allows tracing applications on:
-- Linux 64-bit (tested on Ubuntu 16.04, Debian 8.6, CentOS 7, Fedora 25, Elementary 0.4, Mint 18).
+- Linux 64-bit (tested on Ubuntu 16, Debian 8, CentOS 7, Fedora 25, Elementary 0.4, Mint 18).
 - Android (tested on Android API 23).
 
 As `tcpsnitch` works by intercepting calls to libc functions using the `LD_PRELOAD` environment variable, tracing cannot be performed for applications which are statically linked with libc.
@@ -151,7 +150,7 @@ A few preliminary setup steps must be done once on the device:
 When the device is accesible via `adb`, the usage is almost the same as on Linux:
 
 1. Issue the regular `tcpsnitch` command with the option `-a` to indicate that you want to trace an application on the connected Android device. Note that `<cmd>` argument must match the name of a package installed on the device via a simple `grep`. For instance, to trace the Firefox application whose package name is `org.firefox.com`, one may isssue `tcpsnitch -a firefox`. `tcpsnitch` will inform you of the matching package found and immediately start the application.
-2. When you are done interacting with the application, issue `tcpsnitch -k <package>` to kill the application and terminate the tracing process. The traces will be pulled from the device and saved on your disk in `/tmp` before being uploaded to the [web application](http://ns328523.ip-37-187-114.eu).
+2. When you are done interacting with the application, issue `tcpsnitch -k <package>` to kill the application and terminate the tracing process. The traces will be pulled from the device and saved on your disk in `/tmp` before being uploaded to www.tcpsnitch.org.
 
 **Important:** you must restart your Android device to completely deactivate the tracing. As `tcpsnitch` uses Android properties to setup the `LD_PRELOAD` library, and these properties cannot be unset, rebooting the device must be done to remove the properties (maybe someone knows a better solution?).
 
@@ -168,7 +167,7 @@ Found Android package: 'org.mozilla.firefox'.
 Pulling trace from Android device....
 Trace saved in /tmp/tmp.MidCH9rm3x.
 Uploading trace....
-Trace successfully uploaded at http://ns328523.ip-37-187-114.eu/app_traces/21.
+Trace successfully uploaded at http://tcpsnitch.org/app_traces/21.
 Trace archive will be imported shortly. Refresh this page in a few minutes...
 ```
 
