@@ -314,10 +314,10 @@ tcpsnitch_linux() {
 
     # Test if libs are present
     cd_script_dir
+    readonly ENABLE_I386=$(cat enable_i386 2>/dev/null || false)
     $ENABLE_I386 && assert_lib_present "$I386_LIB"
     assert_lib_present "$AMD64_LIB"
     readonly LINUX_GIT_HASH=$(cat linux_git_hash)
-    readonly ENABLE_I386=$(cat enable_i386)
 
     create_opt_d_dir
 
