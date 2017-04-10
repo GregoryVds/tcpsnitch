@@ -48,7 +48,7 @@ As visible on the next code snippet, `tcpsnitch` gives you the URL at which your
 $ tcpsnitch curl google.com
 Trace saved in /tmp/tmp.4ERKizKyU3.
 Uploading trace....
-Trace successfully uploaded at http://tcpsnitch.org/app_traces/20.
+Trace successfully uploaded at https://tcpsnitch.org/app_traces/20.
 Trace archive will be imported shortly. Refresh this page in a few minutes...
 ```
 
@@ -167,7 +167,7 @@ Found Android package: 'org.mozilla.firefox'.
 Pulling trace from Android device....
 Trace saved in /tmp/tmp.MidCH9rm3x.
 Uploading trace....
-Trace successfully uploaded at http://tcpsnitch.org/app_traces/21.
+Trace successfully uploaded at https://tcpsnitch.org/app_traces/21.
 Trace archive will be imported shortly. Refresh this page in a few minutes...
 ```
 
