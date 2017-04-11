@@ -1,4 +1,4 @@
-# Tcpsnitch
+![TCPsnitch logo](https://tcpsnitch.org/assets/logo/snitch200x120.png "TCPSnitch")
 
 `tcpsnitch` is a tracing tool designed to investigate the interactions between an application and the TCP/IP stack. `tcpsnitch` runs the specified command until it exits and intercepts all libc function calls on internet sockets.
 
