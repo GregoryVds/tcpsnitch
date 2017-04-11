@@ -40,7 +40,7 @@ Socket traces are written to text files where each line is a JSON object represe
 
 As a single command may forks multiple processes (and `tcpsnitch` follows forks), all socket traces belonging to a given process are put together in a directory, named after the traced process. Inside such a directory, socket traces are named based on the order they were opened by the process.
 
-By default, traces are saved in a random folder under `/tmp` and automatically uploaded to a www.tcpsnitch.org, a platform designed to centralize, visualize and analyze the traces. Note that all uploaded traces are public and available for anyone to consult and download.
+By default, traces are saved in a random directory under `/tmp` and automatically uploaded to www.tcpsnitch.org, a platform designed to centralize, visualize and analyze the traces. Note that all uploaded traces are public and available for anyone to consult and download.
 
 As visible on the next code snippet, `tcpsnitch` gives you the URL at which your trace is available.
 
@@ -250,7 +250,7 @@ You are ready to go! See Android usage section for how to start tracing applicat
 
 ## FAQ
 
-### How does it works?
+### How does it work?
 
 An interesting feature of the Linux dynamic linker (`ld.so`) is the ability to link user-specified shared librairies before the librairies specified in the list of dependencies of a program. This feature can be controlled with the `LD_PRELOAD` environment variable which contains a (possibly empty) list of additional user-specified librairies. In particular, this `LD_PRELOAD` variable may force the dynamic linker to link a user-specified shared library before the `libc` library. As a result, any function defined in this user-specified library take precedence over a function with the same signature defined in `libc`.
 
