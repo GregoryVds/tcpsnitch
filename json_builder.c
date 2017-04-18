@@ -297,7 +297,7 @@ static void add_sockopt(json_t *details, const Sockopt *sockopt) {
         add(details, "level", json_string(level));
         free(level);
 
-        char *optname = alloc_sockoptname(sockopt->level, sockopt->optname);
+        char *optname = alloc_sockopt_name(sockopt->level, sockopt->optname);
         add(details, "optname", json_string(optname));
         free(optname);
 

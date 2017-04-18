@@ -1,4 +1,4 @@
-static const IntStrPair IPPROTO_IPV6_OPTIONS[] = {
+static const IntStrPair SOL_IPV6_OPTIONS[] = {
 #ifdef IPV6_ADDRFORM
     ADD(IPV6_ADDRFORM),
 #endif

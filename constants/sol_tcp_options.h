@@ -1,4 +1,4 @@
-static const IntStrPair IPPROTO_TCP_OPTIONS[] = {
+static const IntStrPair SOL_TCP_OPTIONS[] = {
 #ifdef TCP_NODELAY
     ADD(TCP_NODELAY),
 #endif

@@ -43,20 +43,21 @@ typedef struct {
 #include "constants/errnos.h"
 #include "constants/fcntl_cmds.h"
 #include "constants/ioctl_requests.h"
-#include "constants/ipproto_ip_options.h"
-#include "constants/ipproto_ipv6_options.h"
-#include "constants/ipproto_tcp_options.h"
-#include "constants/ipproto_udp_options.h"
 #include "constants/socket_domains.h"
 #include "constants/socket_types.h"
 #include "constants/sockopt_levels.h"
-#include "constants/sol_packet_options.h"
 #include "constants/sol_socket_options.h"
+#include "constants/sol_tcp_options.h"
+#include "constants/sol_udp_options.h"
+#include "constants/sol_ip_options.h"
+#include "constants/sol_ipv6_options.h"
+#include "constants/sol_packet_options.h"
+#include "constants/sol_raw_options.h"
 
 char *alloc_errno_str(int err);
 char *alloc_fcntl_cmd_str(int cmd);
 char *alloc_ioctl_request_str(int request);
-char *alloc_sockoptname(int level, int optname);
+char *alloc_sockopt_name(int level, int optname);
 char *alloc_sockopt_level(int level);
 char *alloc_sock_domain_str(int domain);
 char *alloc_sock_type_str(int type);

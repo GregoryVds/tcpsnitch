@@ -40,20 +40,22 @@ char *alloc_sock_type_str(int type) { MAP_GET(SOCKET_TYPES, type); }
 
 char *alloc_sockopt_level(int level) { MAP_GET(SOCKOPT_LEVELS, level); }
 
-char *alloc_sockoptname(int level, int optname) {
+char *alloc_sockopt_name(int level, int optname) {
         switch (level) {
                 case SOL_SOCKET:
                         MAP_GET(SOL_SOCKET_OPTIONS, optname);
-                case IPPROTO_TCP:
-                        MAP_GET(IPPROTO_TCP_OPTIONS, optname);
-                case IPPROTO_IP:
-                        MAP_GET(IPPROTO_IP_OPTIONS, optname);
-                case IPPROTO_IPV6:
-                        MAP_GET(IPPROTO_IPV6_OPTIONS, optname);
-                case IPPROTO_UDP:
-                        MAP_GET(IPPROTO_UDP_OPTIONS, optname);
+                case SOL_TCP:
+                        MAP_GET(SOL_TCP_OPTIONS, optname);
+                case SOL_UDP:
+                        MAP_GET(SOL_UDP_OPTIONS, optname);
+                case SOL_IP:
+                        MAP_GET(SOL_IP_OPTIONS, optname);
+                case SOL_IPV6:
+                        MAP_GET(SOL_IPV6_OPTIONS, optname);
                 case SOL_PACKET:
                         MAP_GET(SOL_PACKET_OPTIONS, optname);
+                case SOL_RAW:
+                        MAP_GET(SOL_RAW_OPTIONS, optname);
                 default:
                         LOG(WARN, "Unknown sockopt level: %d.", level);
                         LOG_FUNC_WARN;
