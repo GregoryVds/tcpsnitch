@@ -64,7 +64,7 @@ describe 'tcp_spy' do
 
   sock_info = {
     domain: String,
-    protocol: Integer,
+    protocol: String,
     SOCK_CLOEXEC: Boolean,
     SOCK_NONBLOCK: Boolean,
     type: String

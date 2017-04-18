@@ -21,6 +21,8 @@ char *alloc_app_name(void);
 
 char *alloc_error_str(int err);
 
+char *alloc_str_from_int(int n);
+
 #ifdef __ANDROID__
 char *alloc_property(const char *property);
 #endif

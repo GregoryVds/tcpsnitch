@@ -257,6 +257,13 @@ char *alloc_error_str(int err) {
         return alloc_str;
 }
 
+char *alloc_str_from_int(int i) {
+        int n = get_int_len(i) + 1;
+        char *str = (char *)my_malloc(sizeof(char)*n);
+        snprintf(str, n, "%d", i);
+        return str;
+}
+
 #ifdef __ANDROID__
 char *alloc_property(const char *property) {
         char *prop = my_malloc(sizeof(char) * (PROP_VALUE_MAX + 1));

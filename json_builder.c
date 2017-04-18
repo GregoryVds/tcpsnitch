@@ -48,7 +48,15 @@ static json_t *build_sock_info(const SockInfo *sock_info) {
         add(json_si, "type", json_string(type));
         free(type);
 
-        add(json_si, "protocol", json_integer(sock_info->protocol));
+        struct protoent *p = NULL;
+        if (sock_info->protocol) p = getprotobynumber(sock_info->protocol);
+        if (p) add(json_si, "protocol", json_string(p->p_name));
+        else {
+                char *proto_str = alloc_str_from_int(sock_info->protocol);
+                add(json_si, "protocol", json_string(proto_str));
+                free(proto_str);
+        }
+
         add(json_si, "SOCK_CLOEXEC", json_boolean(sock_info->sock_cloexec));
         add(json_si, "SOCK_NONBLOCK", json_boolean(sock_info->sock_nonblock));
 
