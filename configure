@@ -53,7 +53,7 @@ assert_lib_present() {
 assert_lib_version_present() {
     declare lib="$1"
     declare version="$2"
-    if ! file $(realpath $(/sbin/ldconfig -p | grep "$lib" | awk '{print $NF}')) | grep "$version" >/dev/null; then
+    if ! file $(readlink -f $(/sbin/ldconfig -p | grep "$lib" | awk '{print $NF}')) | grep "$version" >/dev/null; then
         missing_lib_version $lib $version
     fi
 }

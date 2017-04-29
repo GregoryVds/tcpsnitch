@@ -18,7 +18,7 @@ readonly SERVER_ENDPOINT="${SERVER}/app_traces"
 readonly I386_LIB="lib${NAME}.so.${VERSION}-i386"
 readonly AMD64_LIB="lib${NAME}.so.${VERSION}-x86-64"
 readonly ARM_LIB="lib${NAME}.so.${VERSION}-arm"
-readonly SCRIPT_DIR=$(dirname "$(realpath "$0")")
+readonly SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 readonly PROP_PREFIX="be.ucl.${NAME}"
 readonly HIDDEN_ERRORS="wrong ELF class"
 readonly TOP_PID=$$
@@ -99,7 +99,7 @@ parse_options() {
                 if [[ ! -d "${OPTARG}" ]] ; then
                     error "invalid -d argument: '${OPTARG}'"
                 fi
-                OPT_D=$(realpath "$OPTARG")
+                OPT_D=$(readlink -f "$OPTARG")
                 ;;
             f)
                 assert_int "${OPTARG}" "invalid -f argument: '${OPTARG}'" 
@@ -300,7 +300,7 @@ pull_trace_for_android_package() {
 tcpsnitch_linux() {
     if [ -f "$cmd" ]; then
         # Resolve absolute path for $1 & update positional parameter accordingly
-        cmd=$(realpath "$cmd")
+        cmd=$(readlink -f "$cmd")
         set -- "$cmd" "${@:2}"
 
         if ! [[ -x "$cmd" ]]; then
@@ -346,8 +346,8 @@ tcpsnitch_linux() {
     done
 
     local _preload_opt=""
-    ${ENABLE_I386} && _preload_opt+="$(realpath "$I386_LIB") "
-    _preload_opt+=$(realpath "$AMD64_LIB")
+    ${ENABLE_I386} && _preload_opt+="$(readlink -f "$I386_LIB") "
+    _preload_opt+=$(readlink -f "$AMD64_LIB")
 
     cd "$CWD"
     # libtcpsnitch uses fd 3 & 4 as stdout & stderr repectively. This allows to
