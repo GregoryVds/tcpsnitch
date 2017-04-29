@@ -10,7 +10,6 @@
 #include <linux/ax25.h>
 #include <linux/if_eql.h>
 #include <linux/if_plip.h>
-#include <linux/if_ppp.h>
 #include <linux/ipx.h>
 #include <linux/mroute.h>
 #include <linux/sockios.h>
