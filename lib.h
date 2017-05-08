@@ -15,12 +15,19 @@
 int my_getsockopt(int sockfd, int level, int optname, void *optval,
                   socklen_t *optlen);
 
+FILE *my_fdopen(int fd, const char *mode);
+
+#ifdef __ANDROID__
+int my_ioctl(int fd, int request, ...);
+#else
+int my_ioctl(int fd, unsigned long int request, ...);
+#endif
+
 bool is_fd(int fd);
 bool is_socket(int fd);
 bool is_inet_socket(int fd);
 bool is_tcp_socket(int fd);
 
-FILE *my_fdopen(int fd, const char *mode);
 int append_string_to_file(const char *str, const char *path);
 
 int fill_tcp_info(int fd, struct tcp_info *info);

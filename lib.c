@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +42,44 @@ error:
         return ret;
 }
 
+typedef FILE *(*orig_fdopen_type)(int fd, const char *mode);
+
+orig_fdopen_type orig_fdopen;
+
+FILE *my_fdopen(int fd, const char *mode) {
+        if (!orig_fdopen)
+                orig_fdopen = (orig_fdopen_type)dlsym(RTLD_NEXT, "fdopen");
+        return orig_fdopen(fd, mode);
+}
+
+#ifdef __ANDROID__
+typedef int (*ioctl_type)(int fd, int request, ...);
+#else
+typedef int (*ioctl_type)(int fd, unsigned long int request, ...);
+#endif
+
+ioctl_type orig_ioctl;
+
+#ifdef __ANDROID__
+int my_ioctl(int fd, int request, ...) {
+#else
+int my_ioctl(int fd, unsigned long int request, ...) {
+#endif
+        va_list argp;
+        va_start(argp, request);
+        void *value = va_arg(argp, void *);
+        va_end(argp);
+
+        if (!orig_ioctl) orig_ioctl = (ioctl_type)dlsym(RTLD_NEXT, "ioctl");
+        int ret = orig_ioctl(fd, request, value);
+        if (ret == -1) goto error;
+        return ret;
+error:
+        LOG(ERROR, "ioctl() failed. %s.", strerror(errno));
+        LOG_FUNC_ERROR;
+        return ret;
+}
+
 typedef int (*orig_fcntl_type)(int fd, int cmd, ...);
 orig_fcntl_type orig_fcntl;
 
@@ -69,11 +108,12 @@ bool is_inet_socket(int fd) {
         if (my_getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &optval, &optlen))
                 goto error;
         return (optval == AF_INET || optval == AF_INET6 ||
-/* pcap_open_live() will open an AF_PACKET socket. We will thus run into a
- * deadlock if we do trace AF_PACKET sockets while sniffing packets. Also, we
- * actually capture our own socket activity. We should find a way not to track
- * libpcap sockets. Until we find a proper solution to do that, we simply do not
- * trace AF_PACKET sockets when capture pcap traces. */
+                /* pcap_open_live() will open an AF_PACKET socket. We will thus
+                 * run into a deadlock if we do trace AF_PACKET sockets while
+                 * sniffing packets. Also, we actually capture our own socket
+                 * activity. We should find a way not to track libpcap sockets.
+                 * Until we find a proper solution to do that we simply do not
+                 * trace AF_PACKET sockets when capture pcap traces. */
                 (conf_opt_c ? false : (optval == AF_PACKET)));
 error:
         LOG(ERROR, "Assume socket is not a INET socket.");
@@ -92,16 +132,6 @@ error:
         LOG_FUNC_ERROR;
         LOG(ERROR, "Assume socket is not a TCP socket.");
         return false;
-}
-
-typedef FILE *(*orig_fdopen_type)(int fd, const char *mode);
-
-orig_fdopen_type orig_fdopen;
-
-FILE *my_fdopen(int fd, const char *mode) {
-        if (!orig_fdopen)
-                orig_fdopen = (orig_fdopen_type)dlsym(RTLD_NEXT, "fdopen");
-        return orig_fdopen(fd, mode);
 }
 
 int append_string_to_file(const char *str, const char *path) {

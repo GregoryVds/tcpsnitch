@@ -29,4 +29,5 @@ char *alloc_property(const char *property);
 
 char *alloc_str_opt(const char *opt);
 
+char *alloc_iface_name(int fd, int iface_index);
 #endif

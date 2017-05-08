@@ -8,6 +8,7 @@
 #include "init.h"
 #include "lib.h"
 #include "logger.h"
+#include "string.h"
 #include "string_builders.h"
 #include "sys/epoll.h"
 
@@ -50,7 +51,8 @@ static json_t *build_sock_info(const SockInfo *sock_info) {
 
         struct protoent *p = NULL;
         if (sock_info->protocol) p = getprotobynumber(sock_info->protocol);
-        if (p) add(json_si, "protocol", json_string(p->p_name));
+        if (p)
+                add(json_si, "protocol", json_string(p->p_name));
         else {
                 char *proto_str = alloc_str_from_int(sock_info->protocol);
                 add(json_si, "protocol", json_string(proto_str));
@@ -240,54 +242,149 @@ static json_t *build_linger(const struct linger *linger) {
         return json_linger;
 }
 
+static json_t *build_in_addr(int af, const struct in_addr *in_addr) {
+        json_t *json_in_addr = my_json_object();
+        static const int n = INET6_ADDRSTRLEN;
+        char *str = (char *)my_malloc(sizeof(char) * n);
+        if (!inet_ntop(af, in_addr, str, n)) goto error;
+        add(json_in_addr, "in_addr", json_string(str));
+        free(str);
+        return json_in_addr;
+error:
+        LOG(ERROR, "inet_ntop() failed. %s.", strerror(errno));
+        LOG_FUNC_ERROR;
+        return NULL;
+}
+
+static json_t *build_ip_mreqn(const struct ip_mreqn *ip_mreqn,
+                              bool includes_ifindex, int fd) {
+        json_t *json_ip_mreqn = my_json_object();
+        add(json_ip_mreqn, "imr_multiaddr",
+            build_in_addr(AF_INET, &ip_mreqn->imr_multiaddr));
+        add(json_ip_mreqn, "imr_address",
+            build_in_addr(AF_INET, &ip_mreqn->imr_address));
+        if (includes_ifindex) {
+                add(json_ip_mreqn, "imr_ifindex",
+                    json_integer(ip_mreqn->imr_ifindex));
+                if (ip_mreqn->imr_ifindex != 0) {
+                        char *if_name =
+                            alloc_iface_name(fd, ip_mreqn->imr_ifindex);
+                        add(json_ip_mreqn, "imr_ifname", json_string(if_name));
+                        free(if_name);
+                }
+        }
+        return json_ip_mreqn;
+}
+
+static json_t *build_ipv6_mreq(const struct ipv6_mreq *ipv6_mreq, int fd) {
+        json_t *json_ipv6_mreq = my_json_object();
+        add(json_ipv6_mreq, "ipv6mr_multiaddr",
+            build_in_addr(
+                AF_INET6,
+                (const struct in_addr *)&ipv6_mreq->ipv6mr_multiaddr));
+        add(json_ipv6_mreq, "ipv6mr_interface",
+            json_integer(ipv6_mreq->ipv6mr_interface));
+        if (ipv6_mreq->ipv6mr_interface != 0) {
+                char *if_name =
+                    alloc_iface_name(fd, ipv6_mreq->ipv6mr_interface);
+                add(json_ipv6_mreq, "ipv6mr_interface_name",
+                    json_string(if_name));
+                free(if_name);
+        }
+        return json_ipv6_mreq;
+}
+
+static json_t *build_sol_socket_optval(const Sockopt *sockopt) {
+        switch (sockopt->optname) {
+                case SO_RCVTIMEO:
+                case SO_SNDTIMEO:
+                        return build_timeval((struct timeval *)sockopt->optval);
+                case SO_LINGER:
+                        return build_linger((struct linger *)sockopt->optval);
+                case SO_RCVBUF:
+                case SO_SNDBUF:
+                case SO_ERROR:
+                        return json_integer(*((int *)sockopt->optval));
+                case SO_KEEPALIVE:
+                case SO_DEBUG:
+                case SO_REUSEADDR:
+                case SO_BROADCAST:
+                        return json_boolean(*((int *)sockopt->optval));
+        }
+        return NULL;
+}
+
+static json_t *build_sol_tcp_optval(const Sockopt *sockopt) {
+        switch (sockopt->optname) {
+                case TCP_KEEPINTVL:
+                case TCP_KEEPIDLE:
+                        return json_integer(*((int *)sockopt->optval));
+                case TCP_NODELAY:
+                        return json_boolean(*((int *)sockopt->optval));
+        }
+        return NULL;
+}
+
+static json_t *build_sol_ip_optval(const Sockopt *sockopt) {
+        switch (sockopt->optname) {
+                case IP_ADD_MEMBERSHIP:
+                case IP_DROP_MEMBERSHIP:
+                        return build_ip_mreqn(
+                            (struct ip_mreqn *)sockopt->optval,
+                            sockopt->optlen == sizeof(struct ip_mreqn),
+                            sockopt->fd);
+                case IP_MULTICAST_IF:
+                        if (sockopt->getsockopt ||
+                            sockopt->optlen == sizeof(struct in_addr)) {
+                                return build_in_addr(
+                                    AF_INET, (struct in_addr *)sockopt->optval);
+                        } else {
+                                return build_ip_mreqn(
+                                    (struct ip_mreqn *)sockopt->optval,
+                                    sockopt->optlen == sizeof(struct ip_mreqn),
+                                    sockopt->fd);
+                        }
+                case IP_MULTICAST_TTL:
+                        return json_integer(
+                            *((unsigned char *)sockopt->optval));
+                case IP_MULTICAST_LOOP:
+                        return json_boolean(*((int *)sockopt->optval));
+        }
+        return NULL;
+}
+
+static json_t *build_sol_ipv6_optval(const Sockopt *sockopt) {
+        switch (sockopt->optname) {
+                case IPV6_ADD_MEMBERSHIP:
+                case IPV6_DROP_MEMBERSHIP:
+                        return build_ipv6_mreq(
+                            (struct ipv6_mreq *)sockopt->optval, sockopt->fd);
+                case IPV6_MULTICAST_HOPS:
+                        return json_integer(*((int *)sockopt->optval));
+                case IPV6_MULTICAST_IF: {
+                        char *if_name = alloc_iface_name(
+                            sockopt->fd, *(int *)sockopt->optval);
+                        json_t *optval = json_string(if_name);
+                        free(if_name);
+                        return optval;
+                }
+                case IPV6_V6ONLY:
+                case IPV6_MULTICAST_LOOP:
+                        return json_boolean(*((int *)sockopt->optval));
+        }
+        return NULL;
+}
+
 static json_t *build_optval(const Sockopt *sockopt) {
         switch (sockopt->level) {
                 case SOL_SOCKET:
-                        switch (sockopt->optname) {
-                                case SO_RCVTIMEO:
-                                case SO_SNDTIMEO:
-                                        return build_timeval(
-                                            (struct timeval *)sockopt->optval);
-                                        break;
-                                case SO_LINGER:
-                                        return build_linger(
-                                            (struct linger *)sockopt->optval);
-                                        break;
-                                case SO_RCVBUF:
-                                case SO_SNDBUF:
-                                case SO_ERROR:
-                                        return json_integer(
-                                            *((int *)sockopt->optval));
-                                        break;
-                                case SO_KEEPALIVE:
-                                case SO_DEBUG:
-                                case SO_REUSEADDR:
-                                        return json_boolean(
-                                            *((int *)sockopt->optval));
-                                        break;
-                        }
-                        break;
-                case IPPROTO_TCP:
-                        switch (sockopt->optname) {
-                                case TCP_KEEPINTVL:
-                                case TCP_KEEPIDLE:
-                                        return json_integer(
-                                            *((int *)sockopt->optval));
-                                        break;
-                                case TCP_NODELAY:
-                                        return json_boolean(
-                                            *((int *)sockopt->optval));
-                                        break;
-                        }
-                        break;
-                case IPPROTO_IPV6:
-                        switch (sockopt->optname) {
-                                case IPV6_V6ONLY:
-                                        return json_boolean(
-                                            *((int *)sockopt->optval));
-                                        break;
-                        }
-                        break;
+                        return build_sol_socket_optval(sockopt);
+                case SOL_TCP:
+                        return build_sol_tcp_optval(sockopt);
+                case SOL_IP:
+                        return build_sol_ip_optval(sockopt);
+                case SOL_IPV6:
+                        return build_sol_ipv6_optval(sockopt);
         }
         return NULL;
 }
@@ -341,59 +438,68 @@ static void build_shared_fields(json_t *json_ev, const SockEvent *ev) {
         add(json_ev, "details", json_details);
 
 static json_t *build_sock_ev_socket(const SockEvSocket *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_forked_socket(const SockEvForkedSocket *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_ev, "fake_call", json_boolean(true));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_ghost_socket(const SockEvGhostSocket *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_ev, "fake_call", json_boolean(true));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_bind(const SockEvBind *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         return json_ev;
 }
 
 static json_t *build_sock_ev_connect(const SockEvConnect *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         return json_ev;
 }
 
 static json_t *build_sock_ev_shutdown(const SockEvShutdown *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "SHUT_RD", json_boolean(ev->shut_rd));
         add(json_details, "SHUT_WR", json_boolean(ev->shut_wr));
         return json_ev;
 }
 
 static json_t *build_sock_ev_listen(const SockEvListen *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "backlog", json_integer(ev->backlog));
         return json_ev;
 }
 
 static json_t *build_sock_ev_accept(const SockEvAccept *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_accept4(const SockEvAccept4 *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         add(json_details, "flags", json_integer(ev->flags));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
@@ -401,33 +507,38 @@ static json_t *build_sock_ev_accept4(const SockEvAccept4 *ev) {
 }
 
 static json_t *build_sock_ev_getsockopt(const SockEvGetsockopt *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add_sockopt(json_details, &ev->sockopt);
         return json_ev;
 }
 
 static json_t *build_sock_ev_setsockopt(const SockEvSetsockopt *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add_sockopt(json_details, &ev->sockopt);
         return json_ev;
 }
 
 static json_t *build_sock_ev_send(const SockEvSend *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
         return json_ev;
 }
 
 static json_t *build_sock_ev_recv(const SockEvRecv *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
         return json_ev;
 }
 
 static json_t *build_sock_ev_sendto(const SockEvSendto *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "addr", build_addr(&ev->addr));
@@ -435,7 +546,8 @@ static json_t *build_sock_ev_sendto(const SockEvSendto *ev) {
 }
 
 static json_t *build_sock_ev_recvfrom(const SockEvRecvfrom *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "addr", build_addr(&ev->addr));
@@ -443,7 +555,8 @@ static json_t *build_sock_ev_recvfrom(const SockEvRecvfrom *ev) {
 }
 
 static json_t *build_sock_ev_sendmsg(const SockEvSendmsg *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
@@ -451,7 +564,8 @@ static json_t *build_sock_ev_sendmsg(const SockEvSendmsg *ev) {
 }
 
 static json_t *build_sock_ev_recvmsg(const SockEvRecvmsg *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "msghdr", build_msghdr(&(ev->msghdr)));
@@ -460,7 +574,8 @@ static json_t *build_sock_ev_recvmsg(const SockEvRecvmsg *ev) {
 
 #if !defined(__ANDROID__) || __ANDROID_API__ >= 21
 static json_t *build_sock_ev_sendmmsg(const SockEvSendmmsg *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_send_flags(ev->flags));
         add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
@@ -470,7 +585,8 @@ static json_t *build_sock_ev_sendmmsg(const SockEvSendmmsg *ev) {
 }
 
 static json_t *build_sock_ev_recvmmsg(const SockEvRecvmmsg *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "flags", build_recv_flags(ev->flags));
         add(json_details, "mmsghdr_count", json_integer(ev->mmsghdr_count));
@@ -482,60 +598,70 @@ static json_t *build_sock_ev_recvmmsg(const SockEvRecvmmsg *ev) {
 #endif
 
 static json_t *build_sock_ev_getsockname(const SockEvGetsockname *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         return json_ev;
 }
 
 static json_t *build_sock_ev_getpeername(const SockEvGetpeername *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "addr", build_addr(&ev->addr));
         return json_ev;
 }
 
 static json_t *build_sock_ev_sockatmark(const SockEvSockatmark *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         return json_ev;
 }
 
 static json_t *build_sock_ev_isfdtype(const SockEvIsfdtype *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "fdtype", json_integer(ev->fdtype));
         return json_ev;
 }
 
 static json_t *build_sock_ev_write(const SockEvWrite *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         return json_ev;
 }
 
 static json_t *build_sock_ev_read(const SockEvRead *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         return json_ev;
 }
 
 static json_t *build_sock_ev_close(const SockEvClose *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         return json_ev;
 }
 
 static json_t *build_sock_ev_dup(const SockEvDup *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_dup2(const SockEvDup2 *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "newfd", json_integer(ev->newfd));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
         return json_ev;
 }
 
 static json_t *build_sock_ev_dup3(const SockEvDup3 *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "newfd", json_integer(ev->newfd));
         add(json_details, "O_CLOEXEC", json_boolean(ev->o_cloexec));
         add(json_details, "sock_info", build_sock_info(&ev->sock_info));
@@ -543,21 +669,24 @@ static json_t *build_sock_ev_dup3(const SockEvDup3 *ev) {
 }
 
 static json_t *build_sock_ev_writev(const SockEvWritev *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "iovec", build_iovec(&ev->iovec));
         return json_ev;
 }
 
 static json_t *build_sock_ev_readv(const SockEvReadv *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         add(json_details, "iovec", build_iovec(&ev->iovec));
         return json_ev;
 }
 
 static json_t *build_sock_ev_ioctl(const SockEvIoctl *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         char *request = alloc_ioctl_request_str(ev->request);
         add(json_details, "request", json_string(request));
         free(request);
@@ -565,13 +694,15 @@ static json_t *build_sock_ev_ioctl(const SockEvIoctl *ev) {
 }
 
 static json_t *build_sock_ev_sendfile(const SockEvSendfile *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "bytes", json_integer(ev->bytes));
         return json_ev;
 }
 
 static json_t *build_sock_ev_poll(const SockEvPoll *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", build_timeout(&ev->timeout));
         add(json_details, "requested_events",
             build_poll_events(&ev->requested_events));
@@ -581,7 +712,8 @@ static json_t *build_sock_ev_poll(const SockEvPoll *ev) {
 }
 
 static json_t *build_sock_ev_ppoll(const SockEvPpoll *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", build_timeout(&ev->timeout));
         add(json_details, "requested_events",
             build_poll_events(&ev->requested_events));
@@ -591,7 +723,8 @@ static json_t *build_sock_ev_ppoll(const SockEvPpoll *ev) {
 }
 
 static json_t *build_sock_ev_select(const SockEvSelect *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", build_timeout(&ev->timeout));
         add(json_details, "requested_events",
             build_select_events(&ev->requested_events));
@@ -601,7 +734,8 @@ static json_t *build_sock_ev_select(const SockEvSelect *ev) {
 }
 
 static json_t *build_sock_ev_pselect(const SockEvPselect *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", build_timeout(&ev->timeout));
         add(json_details, "requested_events",
             build_select_events(&ev->requested_events));
@@ -611,7 +745,8 @@ static json_t *build_sock_ev_pselect(const SockEvPselect *ev) {
 }
 
 static json_t *build_sock_ev_fcntl(const SockEvFcntl *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         json_t *d = json_details;
 
         char *cmd_str = alloc_fcntl_cmd_str(ev->cmd);
@@ -652,7 +787,8 @@ static json_t *build_sock_ev_fcntl(const SockEvFcntl *ev) {
 }
 
 static json_t *build_sock_ev_epoll_ctl(const SockEvEpollCtl *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
 
         const char *op;
         switch (ev->op) {
@@ -674,7 +810,8 @@ static json_t *build_sock_ev_epoll_ctl(const SockEvEpollCtl *ev) {
 }
 
 static json_t *build_sock_ev_epoll_wait(const SockEvEpollWait *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", json_integer(ev->timeout));
         add(json_details, "returned_events",
             build_epoll_events(ev->returned_events));
@@ -682,7 +819,8 @@ static json_t *build_sock_ev_epoll_wait(const SockEvEpollWait *ev) {
 }
 
 static json_t *build_sock_ev_epoll_pwait(const SockEvEpollPwait *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "timeout", json_integer(ev->timeout));
         add(json_details, "returned_events",
             build_epoll_events(ev->returned_events));
@@ -690,13 +828,15 @@ static json_t *build_sock_ev_epoll_pwait(const SockEvEpollPwait *ev) {
 }
 
 static json_t *build_sock_ev_fdopen(const SockEvFdopen *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_details, "mode", json_string(ev->mode));
         return json_ev;
 }
 
 static json_t *build_sock_ev_tcp_info(const SockEvTcpInfo *ev) {
-        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t *json_details
+        BUILD_EV_PRELUDE()  // Inst. json_t *json_ev & json_t
+                            // *json_details
         add(json_ev, "fake_call", json_boolean(true));
 
         struct tcp_info i = ev->info;
@@ -758,7 +898,8 @@ static json_t *build_sock_ev(const SockEvent *ev) {
                             (const SockEvForkedSocket *)ev);
                         break;
                 case SOCK_EV_GHOST_SOCKET:
-                        r = build_sock_ev_ghost_socket((const SockEvGhostSocket *)ev);
+                        r = build_sock_ev_ghost_socket(
+                            (const SockEvGhostSocket *)ev);
                         break;
                 case SOCK_EV_BIND:
                         r = build_sock_ev_bind((const SockEvBind *)ev);

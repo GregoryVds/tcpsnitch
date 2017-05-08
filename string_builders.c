@@ -4,11 +4,13 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <net/if.h>
 #include <netdb.h>
 #include <netpacket/packet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
@@ -259,7 +261,7 @@ char *alloc_error_str(int err) {
 
 char *alloc_str_from_int(int i) {
         int n = get_int_len(i) + 1;
-        char *str = (char *)my_malloc(sizeof(char)*n);
+        char *str = (char *)my_malloc(sizeof(char) * n);
         snprintf(str, n, "%d", i);
         return str;
 }
@@ -292,4 +294,16 @@ error:
         LOG_FUNC_ERROR;
         return NULL;
 #endif
+}
+
+char *alloc_iface_name(int fd, int iface_index) {
+        struct ifreq ifr;
+        ifr.ifr_ifindex = iface_index;
+        if (my_ioctl(fd, SIOCGIFNAME, &ifr) == -1) goto error;
+        char *str = (char *)my_malloc(sizeof(char) * IF_NAMESIZE);
+        strncpy(str, ifr.ifr_name, IF_NAMESIZE);
+        return str;
+error:
+        LOG_FUNC_ERROR;
+        return NULL;
 }

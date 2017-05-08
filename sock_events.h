@@ -150,6 +150,8 @@ typedef struct {
         int optname;
         void *optval;
         socklen_t optlen;
+        bool getsockopt;
+        int fd;
 } Sockopt;
 
 typedef struct {

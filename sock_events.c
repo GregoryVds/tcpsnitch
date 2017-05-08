@@ -276,12 +276,15 @@ static unsigned int fill_mmsghdr_vec(Mmsghdr *mmsghdr_vec1,
 }
 
 static void fill_sockopt(Sockopt *sockopt, int level, int optname,
-                         const void *optval, socklen_t optlen) {
+                         const void *optval, socklen_t optlen,
+                         bool getsockopt, int fd) {
         sockopt->level = level;
         sockopt->optname = optname;
         sockopt->optlen = optlen;
         sockopt->optval = my_malloc(optlen);
         memcpy(sockopt->optval, optval, optlen);
+        sockopt->getsockopt = getsockopt;
+        sockopt->fd = fd;
         return;
 }
 
@@ -653,7 +656,7 @@ void sock_ev_getsockopt(int fd, int ret, int err, int level, int optname,
         // Inst. local vars Socket *sock & SockEvGetsockopt *ev
         SOCK_EV_PRELUDE(SOCK_EV_GETSOCKOPT, SockEvGetsockopt);
 
-        fill_sockopt(&ev->sockopt, level, optname, optval, *optlen);
+        fill_sockopt(&ev->sockopt, level, optname, optval, *optlen, true, fd);
 
         SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
@@ -663,7 +666,7 @@ void sock_ev_setsockopt(int fd, int ret, int err, int level, int optname,
         // Inst. local vars Socket *sock & SockEvSetsockopt *ev
         SOCK_EV_PRELUDE(SOCK_EV_SETSOCKOPT, SockEvSetsockopt);
 
-        fill_sockopt(&ev->sockopt, level, optname, optval, optlen);
+        fill_sockopt(&ev->sockopt, level, optname, optval, optlen, false, fd);
 
         SOCK_EV_POSTLUDE(SOCK_EV_SETSOCKOPT);
 }
