@@ -426,6 +426,7 @@ tcpsnitch_android() {
     # With "wrap." being 5 chars, we have 26 chars left the app name.
     adb shell setprop wrap."${PACKAGE:0:26}" LD_PRELOAD="${LIBPATH}/${ARM_LIB}"
     adb shell setprop "${PROP_PREFIX}.opt_b" "$OPT_B"
+    adb shell setprop "${PROP_PREFIX}.opt_c" "$OPT_C"
     adb shell setprop "${PROP_PREFIX}.opt_d" "$LOGS_DIR"
     adb shell setprop "${PROP_PREFIX}.opt_f" "$OPT_F"
     adb shell setprop "${PROP_PREFIX}.opt_l" "$OPT_L"

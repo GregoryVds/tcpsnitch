@@ -114,9 +114,9 @@ static void get_options(void) {
 #ifdef __ANDROID__
         conf_opt_d = alloc_android_opt_d();
 #else
-        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
         conf_opt_d = alloc_str_opt(OPT_D);
 #endif
+        conf_opt_c = get_long_opt_or_defaultval(OPT_C, 0);
         conf_opt_f = get_long_opt_or_defaultval(OPT_F, WARN);
         conf_opt_l = get_long_opt_or_defaultval(OPT_L, WARN);
         conf_opt_t = get_long_opt_or_defaultval(OPT_T, 1000);
