@@ -59,7 +59,7 @@ usage() {
     echo "<args>      args to <app>."
     echo "-a          instrument & launch app on connected android device."
     echo "-b <bytes>  dump tcp_info every <bytes> (0 means NO dump, def 0)."
-    echo "-c          activate capture of pcap traces."
+    echo "-c          activate capture of pcap traces (only on Linux)."
     echo "-d <dir>    dir to save traces (defaults to random dir in /tmp)."
     echo "-f <lvl>    verbosity of logs to file (0 to 5, defaults to 2)."
     echo "-h          show this help text."
