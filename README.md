@@ -77,7 +77,7 @@ For users that want to trace Android applications, scroll down to the "Compilati
 Tested on Ubuntu 16 & 14, Debian 8, Elementary 0.4, Mint 18
 
 ```
-sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install make gcc gcc-multilib libc6-dev libc6-dev-i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
+sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install make gcc gcc-multilib libc6-dev libc6-dev:i386 libjansson-dev libjansson-dev:i386 libpcap0.8 libpcap0.8:i386 libpcap0.8-dev
 ```
 
 #### RPM based Linux
